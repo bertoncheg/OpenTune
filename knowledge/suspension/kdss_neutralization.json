@@ -1,0 +1,70 @@
+{
+  "service_type": "KDSS Hydraulic Neutralization",
+  "system": "suspension",
+  "vehicles_seen": [
+    "2021 Lexus GX460",
+    "2020 Lexus GX460",
+    "2019 Toyota 4Runner TRD Pro"
+  ],
+  "common_symptoms": [
+    "KDSS warning light",
+    "C1840 fault code",
+    "suspension stiffness",
+    "ride height deviation",
+    "KDSS hydraulic circuit malfunction"
+  ],
+  "physical_solution": "With vehicle on level ground engine off, locate KDSS hydraulic accumulator at rear axle. Disconnect accumulator line and allow pressure to bleed fully. Reconnect line torqued to 25 Nm, start engine, perform KDSS calibration via service mode.",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Clear active DTCs with Mode 04"
+      },
+      {
+        "step": 2,
+        "description": "Enter KDSS service mode via UDS 10 03"
+      },
+      {
+        "step": 3,
+        "description": "Read hydraulic pressure via UDS 22 D1 40"
+      },
+      {
+        "step": 4,
+        "description": "Neutralize hydraulic pressure \u2014 bleed at accumulator"
+      },
+      {
+        "step": 5,
+        "description": "Reconnect line, torque to 25 Nm"
+      },
+      {
+        "step": 6,
+        "description": "Exit service mode, drive 5 mph for 200 m to complete calibration"
+      }
+    ],
+    "ecu_addresses": [
+      "0x7D0"
+    ],
+    "bytes_exchanged": [
+      "10 03",
+      "22 D1 40",
+      "31 01 02 01"
+    ]
+  },
+  "success_rate": 0.94,
+  "total_cases": 17,
+  "outcomes": [
+    {
+      "vehicle": "2021 Lexus GX460",
+      "outcome": "fixed",
+      "notes": "Pressure 340 kPa vs 280 kPa spec \u2014 bleeding resolved",
+      "date": "2026-01-15T10:30:00Z"
+    },
+    {
+      "vehicle": "2020 Lexus GX460",
+      "outcome": "fixed",
+      "notes": "Post-lift-kit install \u2014 standard neutralization",
+      "date": "2026-02-10T14:00:00Z"
+    }
+  ],
+  "last_updated": "2026-03-01T00:00:00Z"
+}

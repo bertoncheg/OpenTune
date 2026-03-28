@@ -1,0 +1,52 @@
+{
+  "service_type": "Steering Angle Sensor Reset / Calibration",
+  "system": "steering",
+  "vehicles_seen": [
+    "2021 Toyota Tacoma",
+    "2020 Toyota RAV4",
+    "2019 Lexus NX"
+  ],
+  "common_symptoms": [
+    "C1511 steering angle sensor fault",
+    "VSC warning light",
+    "TRAC warning light",
+    "post-alignment warning light"
+  ],
+  "physical_solution": "After wheel alignment or steering component replacement, reset and recalibrate steering angle sensor. Vehicle must be on flat ground, wheels straight.",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Set wheels to straight-ahead position on level surface"
+      },
+      {
+        "step": 2,
+        "description": "Enter SAS calibration mode via UDS 10 03"
+      },
+      {
+        "step": 3,
+        "description": "Send SAS zero-point write: 2E D1 20 00 00"
+      },
+      {
+        "step": 4,
+        "description": "Turn steering lock-to-lock once slowly"
+      },
+      {
+        "step": 5,
+        "description": "Clear C1511, verify VSC/TRAC lights off"
+      }
+    ],
+    "ecu_addresses": [
+      "0x7B0"
+    ],
+    "bytes_exchanged": [
+      "10 03",
+      "2E D1 20 00 00",
+      "31 01 01 00"
+    ]
+  },
+  "success_rate": 0.96,
+  "total_cases": 41,
+  "outcomes": [],
+  "last_updated": "2026-03-10T00:00:00Z"
+}

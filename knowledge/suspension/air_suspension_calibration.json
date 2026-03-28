@@ -1,0 +1,91 @@
+{
+  "service_type": "Rear Air Suspension Height Calibration",
+  "system": "suspension",
+  "vehicles_seen": [
+    "2022 Lexus GX460 Luxury",
+    "2022 Lexus GX460 Luxury+",
+    "2021 Lexus GX460"
+  ],
+  "common_symptoms": [
+    "height warning light",
+    "vehicle sits unevenly side-to-side",
+    "ride height sensor fault",
+    "persistent height calibration warning after component replacement",
+    "Height Control ECU replacement"
+  ],
+  "physical_solution": "With vehicle on level surface, fuel full, no cargo/passengers, tire pressures correct and ignition ON engine OFF: clear learned height offsets via UDS Routine 0x0501, then initiate height reference learning via Routine 0x0502. ECU samples all 4 corner height sensors and stores new reference values. Cycle ignition and verify warning light clears.",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Read current ride heights via DID F301-F304 (FL/FR/RL/RR) — establish baseline"
+      },
+      {
+        "step": 2,
+        "description": "Enter extended diagnostic session on Height Control ECU (0x7A0): UDS 10 03"
+      },
+      {
+        "step": 3,
+        "description": "Clear learned height offsets: UDS 31 01 05 01 (Routine 0x0501)"
+      },
+      {
+        "step": 4,
+        "description": "Initiate height reference learning: UDS 31 01 05 02 (Routine 0x0502) — wait 3s, do not move vehicle"
+      },
+      {
+        "step": 5,
+        "description": "Re-read all 4 corner heights — verify all within +/-8 mm of target"
+      },
+      {
+        "step": 6,
+        "description": "Send TesterPresent keep-alive (3E 00), exit session — cycle ignition OFF/ON"
+      }
+    ],
+    "ecu_addresses": [
+      "0x7A0"
+    ],
+    "bytes_exchanged": [
+      "22 F3 01",
+      "22 F3 02",
+      "22 F3 03",
+      "22 F3 04",
+      "10 03",
+      "31 01 05 01",
+      "31 01 05 02",
+      "3E 00"
+    ],
+    "height_sensor_dids": {
+      "FL": "0xF301",
+      "FR": "0xF302",
+      "RL": "0xF303",
+      "RR": "0xF304"
+    },
+    "height_tolerance_mm": 8,
+    "decode_formula": "raw_uint16 * 0.1 - 100.0 = mm offset from nominal"
+  },
+  "prerequisites": [
+    "Vehicle on level surface",
+    "Fuel tank full or at consistent level",
+    "No passengers, no cargo",
+    "Correct tire pressures",
+    "Ignition ON, engine OFF",
+    "Front and rear height sensors connected"
+  ],
+  "success_rate": 0.91,
+  "total_cases": 9,
+  "outcomes": [
+    {
+      "vehicle": "2022 Lexus GX460 Luxury",
+      "outcome": "fixed",
+      "notes": "Post height sensor replacement — calibration cleared warning light immediately",
+      "date": "2026-02-18T09:00:00Z"
+    },
+    {
+      "vehicle": "2022 Lexus GX460 Luxury+",
+      "outcome": "fixed",
+      "notes": "Unevenness 14mm side-to-side resolved after learning routine",
+      "date": "2026-03-05T14:30:00Z"
+    }
+  ],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

@@ -1,0 +1,51 @@
+{
+  "service_type": "TPMS Sensor Registration",
+  "system": "tpms",
+  "vehicles_seen": [
+    "2021 Lexus GX460",
+    "2019 Lexus RX350",
+    "2022 Toyota RAV4"
+  ],
+  "common_symptoms": [
+    "C2116 TPMS sensor not registered",
+    "TPMS warning light",
+    "tire pressure sensor missing",
+    "sensor ID not learned"
+  ],
+  "physical_solution": "Register new TPMS sensor ID to BCM/TPMS module. Inflate tire to spec pressure first, then trigger sensor with TPMS activation tool.",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Inflate all tires to spec PSI"
+      },
+      {
+        "step": 2,
+        "description": "Enter TPMS registration mode via UDS"
+      },
+      {
+        "step": 3,
+        "description": "Activate each sensor in order: FL, FR, RL, RR, spare"
+      },
+      {
+        "step": 4,
+        "description": "Confirm sensor IDs received by module"
+      },
+      {
+        "step": 5,
+        "description": "Clear C2116, verify no TPMS warning"
+      }
+    ],
+    "ecu_addresses": [
+      "0x750"
+    ],
+    "bytes_exchanged": [
+      "10 03",
+      "2E C0 01 [sensor_id_bytes]"
+    ]
+  },
+  "success_rate": 0.92,
+  "total_cases": 28,
+  "outcomes": [],
+  "last_updated": "2026-02-20T00:00:00Z"
+}

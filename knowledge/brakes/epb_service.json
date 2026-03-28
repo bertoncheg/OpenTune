@@ -1,0 +1,50 @@
+{
+  "service_type": "EPB (Electric Parking Brake) Service Mode",
+  "system": "brakes",
+  "vehicles_seen": [
+    "2019 Toyota Camry",
+    "2020 Honda CR-V",
+    "2021 Subaru Outback"
+  ],
+  "common_symptoms": [
+    "C1xxx EPB fault",
+    "parking brake warning light",
+    "unable to retract caliper for pad change"
+  ],
+  "physical_solution": "Activate EPB service mode to retract rear caliper pistons before pad/rotor replacement. Must release brake fully before piston retract.",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Connect scanner, key on engine off"
+      },
+      {
+        "step": 2,
+        "description": "Enter EPB service mode \u2014 caliper retracts automatically"
+      },
+      {
+        "step": 3,
+        "description": "Replace brake pads and rotors"
+      },
+      {
+        "step": 4,
+        "description": "Apply brake firmly 5 times to re-seat pads"
+      },
+      {
+        "step": 5,
+        "description": "Exit EPB service mode, verify parking brake function"
+      }
+    ],
+    "ecu_addresses": [
+      "0x760"
+    ],
+    "bytes_exchanged": [
+      "28 03 01",
+      "31 01 F0 00"
+    ]
+  },
+  "success_rate": 0.98,
+  "total_cases": 34,
+  "outcomes": [],
+  "last_updated": "2026-02-15T00:00:00Z"
+}

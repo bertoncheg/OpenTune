@@ -1,0 +1,51 @@
+{
+  "service_type": "Throttle Body Relearn",
+  "system": "fuel_system",
+  "vehicles_seen": [
+    "2018 Toyota Camry",
+    "2020 Nissan Altima",
+    "2019 Honda Accord"
+  ],
+  "common_symptoms": [
+    "P0507 idle RPM high",
+    "rough idle after cleaning",
+    "high idle 1200+ RPM",
+    "throttle response erratic"
+  ],
+  "physical_solution": "After throttle body cleaning or replacement, run ECM idle relearn to reset idle air control parameters. Vehicle must be fully warmed up (90 \u00b0C coolant).",
+  "technical_solution": {
+    "procedure_steps": [
+      {
+        "step": 1,
+        "description": "Warm engine to operating temp (90 \u00b0C coolant)"
+      },
+      {
+        "step": 2,
+        "description": "Enter ECM idle relearn via UDS 31 01 02 09"
+      },
+      {
+        "step": 3,
+        "description": "Let engine idle for 3 minutes without A/C load"
+      },
+      {
+        "step": 4,
+        "description": "Verify RPM settles to 650\u2013800 RPM"
+      },
+      {
+        "step": 5,
+        "description": "Clear P0507, road test, confirm idle stable"
+      }
+    ],
+    "ecu_addresses": [
+      "0x7E0"
+    ],
+    "bytes_exchanged": [
+      "10 03",
+      "31 01 02 09"
+    ]
+  },
+  "success_rate": 0.89,
+  "total_cases": 22,
+  "outcomes": [],
+  "last_updated": "2026-01-28T00:00:00Z"
+}
