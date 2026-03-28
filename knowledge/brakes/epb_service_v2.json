@@ -1,0 +1,130 @@
+{
+  "procedure_id": "EPB_SERVICE",
+  "title": "Electric Parking Brake Service Mode",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/epb_service.py",
+  "system": "BRAKES",
+  "applicable_makes": ["Toyota", "Lexus"],
+  "applicable_models": ["GX 460", "IS", "GS", "LS", "ES", "RX", "NX", "Camry", "RAV4", "Highlander"],
+  "year_range": { "min": 2012, "max": 2024 },
+  "dtc_codes": ["C1600", "C1601", "C1602", "C1605"],
+  "symptoms": [
+    "Rear brake pad replacement required (EPB integrated caliper)",
+    "EPB caliper replacement",
+    "Rear rotor replacement",
+    "C1605 EPB Rear Caliper Service Required code"
+  ],
+  "prerequisites": {
+    "OPEN_mode": [
+      "Vehicle stopped and stationary",
+      "Parking brake released",
+      "Ignition ON",
+      "Shift selector in PARK or NEUTRAL",
+      "Brake pedal NOT depressed"
+    ],
+    "CLOSE_mode": [
+      "New brake pads installed correctly",
+      "Caliper hardware reassembled and torqued to spec",
+      "Vehicle stopped and stationary",
+      "Ignition ON",
+      "Brake fluid reservoir at correct level"
+    ]
+  },
+  "warnings": [
+    "SAFETY CRITICAL: Always verify caliper position before driving",
+    "Do NOT sit in vehicle or place hands near calipers during retraction",
+    "Retraction/extension takes 3-5 seconds — motor movement audible",
+    "Do NOT drive until CLOSE mode completed after pad installation",
+    "New pads require ~200 miles bedding-in — avoid hard stops initially"
+  ],
+  "ecu_addresses": {
+    "ABS_ECU": "0x760"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Pre-Checks",
+      "technical_detail": "Verify ABS/EPB ECU communication (TesterPresent 0x3E 0x80 to 0x760). Confirm all mode-specific prerequisites met (visual checks only — cannot verify electronically).",
+      "uds_command": "3E 80",
+      "expected_response": "7E or 7F (ECU online at 0x760)",
+      "caution": "All visual pre-checks must be confirmed by mechanic before proceeding"
+    },
+    {
+      "step_number": 2,
+      "description": "Enter Extended Diagnostic Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03 to ABS/EPB ECU (0x760). Required to access EPB IOControl commands.",
+      "uds_command": "10 03",
+      "expected_response": "50 03",
+      "caution": "If rejected: verify ignition is ON and vehicle is stopped"
+    },
+    {
+      "step_number": 3,
+      "description": "EPB OPEN: Retract Rear Calipers — OR — EPB CLOSE: Extend Rear Calipers",
+      "technical_detail": "UDS IOControlByIdentifier (0x2F) for DID 0xC200 (Toyota EPB piston control). Control option byte 0x03 = enableInputOutputControl. Command byte: 0x01=retract (OPEN/service), 0x02=extend (CLOSE/restore). Full request: 2F C2 00 03 [CMD].",
+      "uds_command": "2F C2 00 03 01 (OPEN) | 2F C2 00 03 02 (CLOSE)",
+      "expected_response": "6F C2 00 03 [status]",
+      "caution": "If IOControl rejected: check parking brake released, vehicle stationary, no active EPB fault codes"
+    },
+    {
+      "step_number": 4,
+      "description": "Wait for Caliper Mechanical Movement",
+      "technical_detail": "Wait 5 seconds for electric motor to complete caliper movement. Send TesterPresent (0x3E 0x80) every 1 second to keep session alive during wait.",
+      "uds_command": "3E 80 (every 1s during wait)",
+      "expected_response": "7E",
+      "caution": "Listen for motor stopping — should complete within 5 seconds"
+    },
+    {
+      "step_number": 5,
+      "description": "Verify Caliper Position",
+      "technical_detail": "Read DID 0xC200 to confirm caliper moved to correct position. UDS ReadDataByIdentifier (0x22).",
+      "uds_command": "22 C2 00",
+      "expected_response": "62 C2 00 [position_bytes]",
+      "caution": "Non-fatal if read fails — verify position visually if needed"
+    },
+    {
+      "step_number": 6,
+      "description": "Release EPB Control to ECU",
+      "technical_detail": "IOControlByIdentifier with control option 0x00 (returnControlToECU). Returns EPB motor control back to ABS ECU normal operation.",
+      "uds_command": "2F C2 00 00",
+      "expected_response": "6F C2 00 00",
+      "caution": "Non-fatal if this step fails, but always attempt before closing session"
+    },
+    {
+      "step_number": 7,
+      "description": "Return to Default Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x01. After OPEN: install pads then run CLOSE. After CLOSE: pump pedal 5-10 times, verify fluid level, test parking brake.",
+      "uds_command": "10 01",
+      "expected_response": "50 01",
+      "caution": "After CLOSE: pump brake pedal 5-10 times to seat pads before driving"
+    }
+  ],
+  "bytes_exchanged": {
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "epb_open": "2F C2 00 03 01",
+    "epb_close": "2F C2 00 03 02",
+    "epb_command_response": "6F C2 00 03 [status]",
+    "verify_position": "22 C2 00",
+    "verify_response": "62 C2 00 [position]",
+    "release_control": "2F C2 00 00",
+    "session_close": "10 01"
+  },
+  "did_map": {
+    "0xC200": "EPB Rear Caliper Piston Control (IOControl: 0x01=retract, 0x02=extend)"
+  },
+  "modes": {
+    "OPEN": {
+      "command_byte": "0x01",
+      "purpose": "Retract pistons to service position for brake pad installation"
+    },
+    "CLOSE": {
+      "command_byte": "0x02",
+      "purpose": "Extend pistons back to operating position after pad installation"
+    }
+  },
+  "outcome_summary": "Electronically retracts (OPEN) or extends (CLOSE) rear EPB caliper pistons to facilitate brake pad/rotor service. Eliminates need for manual mechanical retraction tool on EPB-equipped vehicles.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}

@@ -1,0 +1,122 @@
+{
+  "procedure_id": "AIR_SUSPENSION_CAL",
+  "title": "Rear Air Suspension Height Calibration",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/air_suspension_calibration.py",
+  "system": "SUSPENSION",
+  "applicable_makes": ["Lexus"],
+  "applicable_models": ["GX 460 Luxury", "GX 460 Luxury+"],
+  "year_range": { "min": 2014, "max": 2023 },
+  "dtc_codes": [],
+  "symptoms": [
+    "Persistent height warning light",
+    "Vehicle sits unevenly side-to-side",
+    "After suspension component replacement",
+    "After ride height sensor replacement",
+    "After Height Control ECU replacement"
+  ],
+  "prerequisites": [
+    "Vehicle on level surface",
+    "Fuel tank full (or consistent level — affects ride height)",
+    "No passengers, all cargo removed from vehicle",
+    "Tire pressures correct to spec",
+    "Ignition ON (engine OFF or running — engine not required)",
+    "Front and rear height sensors connected"
+  ],
+  "warnings": [
+    "Do NOT move vehicle or add weight during height learning step (Step 4)",
+    "Ensure vehicle is on a perfectly level surface — floor slope will be recorded as calibration offset",
+    "Fuel level affects ride height — maintain consistent fuel level between calibration sessions"
+  ],
+  "ecu_addresses": {
+    "HEIGHT_CONTROL_ECU": "0x7A0"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Read Current Ride Heights",
+      "technical_detail": "Read all 4 corner height sensors to establish pre-calibration baseline. DIDs: FL=0xF301, FR=0xF302, RL=0xF303, RR=0xF304. Formula: (raw_u16 * 0.1) - 100.0 = mm offset from nominal. Tolerance: ±8mm from target.",
+      "uds_command": "22 F3 01 (repeat for F302, F303, F304)",
+      "expected_response": "62 F3 01 [HI] [LO]",
+      "caution": "Document pre-calibration values for comparison after procedure"
+    },
+    {
+      "step_number": 2,
+      "description": "Enter Extended Diagnostic Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03 to Height Control ECU (0x7A0).",
+      "uds_command": "10 03",
+      "expected_response": "50 03",
+      "caution": "If rejected, check ignition state and adapter connection"
+    },
+    {
+      "step_number": 3,
+      "description": "Clear Learned Height Offsets",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0501. Clears all previously learned height calibration data. Vehicle will re-learn from scratch.",
+      "uds_command": "31 01 05 01",
+      "expected_response": "71 01 05 01",
+      "caution": "Non-critical if routine not acknowledged — may not be required on all variants"
+    },
+    {
+      "step_number": 4,
+      "description": "Start Height Reference Learning",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0502. ECU samples all 4 height sensors and records current position as the calibrated reference. 3-second sampling delay follows.",
+      "uds_command": "31 01 05 02",
+      "expected_response": "71 01 05 02",
+      "caution": "CRITICAL: Do NOT move vehicle or add/remove weight during this step. Allow 3 seconds after command for ECU to sample sensors."
+    },
+    {
+      "step_number": 5,
+      "description": "Verify Height Calibration",
+      "technical_detail": "Re-read all 4 corner height sensors. Verify each corner reads within ±8mm of zero offset (nominal). Formula: (raw_u16 * 0.1) - 100.0 = mm offset. Success = abs(mm) <= 8 for all corners.",
+      "uds_command": "22 F3 01 (repeat for F302, F303, F304)",
+      "expected_response": "62 F3 0x [HI] [LO] with decoded offset within ±8mm",
+      "caution": "If any corner out of range: check sensor connections; verify vehicle is on level surface; repeat calibration"
+    },
+    {
+      "step_number": 6,
+      "description": "Finalize and Exit Session",
+      "technical_detail": "Send TesterPresent (0x3E 0x00) to acknowledge, then allow session to expire naturally.",
+      "uds_command": "3E 00",
+      "expected_response": "7E",
+      "caution": "Cycle ignition OFF→ON and verify height warning light is clear. Drive at normal speeds — ECU will fine-tune height offsets automatically."
+    }
+  ],
+  "bytes_exchanged": {
+    "read_height_fl": "22 F3 01",
+    "read_height_fr": "22 F3 02",
+    "read_height_rl": "22 F3 03",
+    "read_height_rr": "22 F3 04",
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "routine_reset": "31 01 05 01",
+    "routine_reset_response": "71 01 05 01",
+    "routine_learn": "31 01 05 02",
+    "routine_learn_response": "71 01 05 02",
+    "tester_present": "3E 00"
+  },
+  "did_map": {
+    "0xF301": "Front Left Height Sensor (mm offset, formula: raw_u16 * 0.1 - 100.0)",
+    "0xF302": "Front Right Height Sensor (mm offset, formula: raw_u16 * 0.1 - 100.0)",
+    "0xF303": "Rear Left Height Sensor (mm offset, formula: raw_u16 * 0.1 - 100.0)",
+    "0xF304": "Rear Right Height Sensor (mm offset, formula: raw_u16 * 0.1 - 100.0)",
+    "0xF310": "Compressor Status / Pressure",
+    "0xF320": "Current Target Height Mode"
+  },
+  "height_sensor_formula": {
+    "description": "Toyota height sensor raw-to-mm conversion",
+    "formula": "(raw_u16 * 0.1) - 100.0",
+    "unit": "mm",
+    "resolution": "0.1 mm",
+    "offset": "-100.0 mm",
+    "tolerance_mm": 8
+  },
+  "routine_ids": {
+    "0x0501": "Clear Learned Height Offsets",
+    "0x0502": "Initiate Height Reference Learning"
+  },
+  "outcome_summary": "Resets and re-learns ride height reference points for all 4 corners. Resolves height warning lights and side-to-side lean after suspension or sensor service. ECU tolerance is ±8mm per corner.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}

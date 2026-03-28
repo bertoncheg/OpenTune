@@ -1,0 +1,160 @@
+{
+  "makes": ["Toyota", "Lexus"],
+  "platform": "GX 460 / Land Cruiser J200",
+  "model_years": "2010-2023",
+  "source": "obdagent-toyota/core/toyota_ecus.py",
+  "notes": "CAN addresses sourced from Toyota TIS, community reverse-engineering, and known Techstream mappings. Physical addressing uses 11-bit CAN IDs. Request side: 0x7Ex (tester). Response side: 0x7Ex + 0x08 (ECU reply). Functional broadcast address: 0x7DF.",
+  "ecus": [
+    {
+      "key": "ENGINE",
+      "name": "Engine Control Module",
+      "address": "0x700",
+      "response_address": "0x708",
+      "description": "1GR-FE / 2UZ-FE / 3UR-FE V8 engine management",
+      "buses": ["HS-CAN"],
+      "systems": ["Engine management", "Fuel injection", "Ignition", "VVT-i", "Throttle control"],
+      "notes": "Supports standard OBD2 Mode 01-09 + Toyota enhanced services"
+    },
+    {
+      "key": "TRANSMISSION",
+      "name": "Electronically Controlled Transmission ECU (ECT)",
+      "address": "0x701",
+      "response_address": "0x709",
+      "description": "6-speed automatic (A760E/A960E), shift logic, TCC",
+      "buses": ["HS-CAN"],
+      "systems": ["Automatic transmission", "Torque converter clutch", "Shift solenoids"]
+    },
+    {
+      "key": "ABS",
+      "name": "Skid Control ECU (ABS/VSC/TRAC)",
+      "address": "0x760",
+      "response_address": "0x768",
+      "description": "ABS, Vehicle Stability Control, Traction Control",
+      "buses": ["HS-CAN"],
+      "systems": ["ABS", "VSC", "TRAC", "Hill-start assist", "Trailer sway control", "EPB service mode", "SAS calibration"],
+      "notes": "Also handles hill-start assist and trailer sway control on late models. EPB DID 0xC200 and SAS Routine 0x0200 both accessed here."
+    },
+    {
+      "key": "SUSPENSION",
+      "name": "Suspension Control ECU",
+      "address": "0x7B0",
+      "response_address": "0x7B8",
+      "description": "Kinetic Dynamic Suspension System (KDSS) hydraulic controller",
+      "buses": ["HS-CAN"],
+      "systems": ["KDSS hydraulic pressure", "Suspension valves", "KDSS pump"],
+      "notes": "Shared address with KDSS on GX460; on LX570 may be separate"
+    },
+    {
+      "key": "KDSS",
+      "name": "KDSS Control ECU",
+      "address": "0x7B0",
+      "response_address": "0x7B8",
+      "description": "KDSS pump, accumulator, and valve management",
+      "buses": ["HS-CAN"],
+      "systems": ["KDSS pump motor", "KDSS hydraulic accumulators", "KDSS solenoid valves FL/FR/RL/RR"],
+      "notes": "GX 460 KDSS is integrated into the suspension ECU module. Same physical address as SUSPENSION key."
+    },
+    {
+      "key": "HEIGHT_CONTROL",
+      "name": "Height Control ECU (Rear Air Suspension)",
+      "address": "0x7A0",
+      "response_address": "0x7A8",
+      "description": "Rear air suspension height control — 2022 GX 460 Luxury/Luxury+",
+      "buses": ["HS-CAN"],
+      "systems": ["Rear air springs", "Height sensors FL/FR/RL/RR", "Compressor relay"],
+      "notes": "Height calibration required after: suspension work, sensor replacement, ride height complaints, or ECU replacement. Address 0x7A0 confirmed on J200 platform 2014+ with AVS."
+    },
+    {
+      "key": "AVS",
+      "name": "Adaptive Variable Suspension ECU (AVS)",
+      "address": "0x7A1",
+      "response_address": "0x7A9",
+      "description": "Adaptive damper control — GX 460 Sport/Luxury AVS shocks",
+      "buses": ["HS-CAN"],
+      "systems": ["Electronically adjustable dampers"],
+      "notes": "Separate from air suspension height control. Calibration needed after shock replacement."
+    },
+    {
+      "key": "BODY",
+      "name": "Body ECU (Smart Junction Box / BCM)",
+      "address": "0x780",
+      "response_address": "0x788",
+      "description": "Power windows, locks, lighting, keyless entry, power tailgate",
+      "buses": ["HS-CAN", "MS-CAN"],
+      "systems": ["Power windows", "Door locks", "Exterior lighting", "Keyless entry", "Power tailgate"]
+    },
+    {
+      "key": "AIRBAG",
+      "name": "Airbag Sensing and Diagnostic Module",
+      "address": "0x750",
+      "response_address": "0x758",
+      "description": "SRS airbags, seatbelt pre-tensioners, occupant detection",
+      "buses": ["HS-CAN"],
+      "systems": ["SRS airbags", "Seatbelt pre-tensioners", "Occupant classification"]
+    },
+    {
+      "key": "STEERING",
+      "name": "Electric Power Steering ECU",
+      "address": "0x770",
+      "response_address": "0x778",
+      "description": "Variable-assist EPS, steering angle sensor",
+      "buses": ["HS-CAN"],
+      "systems": ["Electric power steering", "Steering angle sensor (SAS)"]
+    },
+    {
+      "key": "METER",
+      "name": "Combination Meter Assembly",
+      "address": "0x720",
+      "response_address": "0x728",
+      "description": "Instrument cluster, odometer, fuel gauge, warning indicators",
+      "buses": ["HS-CAN"],
+      "systems": ["Instrument cluster", "Odometer", "Fuel gauge", "Warning lights"]
+    },
+    {
+      "key": "GATEWAY",
+      "name": "Central Gateway ECU",
+      "address": "0x7C0",
+      "response_address": "0x7C8",
+      "description": "CAN gateway between HS-CAN and MS-CAN buses",
+      "buses": ["HS-CAN", "MS-CAN"],
+      "systems": ["CAN bus gateway", "Network routing"]
+    },
+    {
+      "key": "HVAC",
+      "name": "Air Conditioning Amplifier",
+      "address": "0x740",
+      "response_address": "0x748",
+      "description": "Automatic climate control, dual-zone A/C",
+      "buses": ["MS-CAN"],
+      "systems": ["Climate control", "Dual-zone HVAC", "Blend door actuators"]
+    },
+    {
+      "key": "TPMS",
+      "name": "TPMS Receiver / Controller",
+      "address": "0x730",
+      "response_address": "0x738",
+      "description": "Tire Pressure Monitoring System — direct sensors",
+      "buses": ["HS-CAN"],
+      "systems": ["TPMS 433MHz receiver", "Sensor ID registration"],
+      "notes": "Sensor IDs must be programmed after tire rotation or sensor replacement"
+    },
+    {
+      "key": "4WD",
+      "name": "4WD Control ECU (Transfer Case)",
+      "address": "0x710",
+      "response_address": "0x718",
+      "description": "Full-time 4WD, active Torsen center differential, 4LO",
+      "buses": ["HS-CAN"],
+      "systems": ["Transfer case control", "Center differential", "4LO engagement", "ATRAC"]
+    },
+    {
+      "key": "CRUISE",
+      "name": "Cruise Control / PCS ECU",
+      "address": "0x790",
+      "response_address": "0x798",
+      "description": "Adaptive cruise control, pre-collision system (late models)",
+      "buses": ["HS-CAN"],
+      "systems": ["Cruise control", "Adaptive cruise (late models)", "Pre-collision system (PCS)"]
+    }
+  ]
+}

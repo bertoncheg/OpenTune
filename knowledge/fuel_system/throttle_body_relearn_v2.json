@@ -1,0 +1,90 @@
+{
+  "procedure_id": "THROTTLE_RELEARN",
+  "title": "Throttle Body Relearn",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/throttle_body_relearn.py",
+  "system": "ENGINE",
+  "applicable_makes": ["Toyota", "Lexus"],
+  "applicable_models": ["GX 460", "Land Cruiser", "4Runner", "Tacoma", "Tundra", "Sequoia", "Camry", "Avalon", "RAV4", "Highlander", "Sienna", "IS", "GS", "LS", "ES", "RX", "NX"],
+  "year_range": { "min": 2002, "max": 2024 },
+  "dtc_codes": ["P0120", "P0121", "P0505"],
+  "symptoms": [
+    "Rough idle after throttle body cleaning or replacement",
+    "Rough idle after battery disconnect",
+    "Idle hunting or stalling at stops",
+    "Poor throttle response",
+    "P0505/P0506/P0507 idle air control codes after battery disconnect or ECU reset"
+  ],
+  "prerequisites": [
+    "Engine at normal operating temperature",
+    "All accessories OFF (A/C, headlights, blower)",
+    "Vehicle stationary with parking brake ON",
+    "Shift selector in PARK"
+  ],
+  "warnings": [
+    "Engine must be at operating temperature — do not run on cold engine",
+    "All electrical accessories must be OFF or learned idle will be too high",
+    "After procedure: turn ignition OFF for 10 seconds before restarting"
+  ],
+  "ecu_addresses": {
+    "ENGINE_ECU": "0x700"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "techstream_path": "Engine → Utility → Throttle / Motor Drive / Learn",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Pre-Checks",
+      "technical_detail": "Verify Engine ECU communication (TesterPresent 0x3E 0x80 to 0x700). Visual checks for operating temperature, accessories off, vehicle stationary.",
+      "uds_command": "3E 80",
+      "expected_response": "7E or 7F (ECU online at 0x700)",
+      "caution": "Cannot electronically verify temperature or accessory state — mechanic must confirm visually"
+    },
+    {
+      "step_number": 2,
+      "description": "Enter Extended Diagnostic Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03 to Engine ECU (0x700).",
+      "uds_command": "10 03",
+      "expected_response": "50 03",
+      "caution": "If rejected: verify ignition state and connection"
+    },
+    {
+      "step_number": 3,
+      "description": "Execute Throttle Learn Routine",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0120. ECM sequence: (1) commands throttle plate fully closed → records minimum ADC count, (2) commands throttle plate fully open → records maximum ADC count, (3) returns to idle position, (4) stores learned values in non-volatile memory. Duration: ~3-5 seconds. After start response (0x71), poll results with sub-function 0x03.",
+      "uds_command": "31 01 01 20",
+      "expected_response": "71 01 01 20",
+      "caution": "Throttle plate will physically move during this routine — normal. Do not touch accelerator pedal."
+    },
+    {
+      "step_number": 4,
+      "description": "Return to Default Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x01. Post-procedure: turn ignition OFF 10 seconds, restart, let idle for 3 minutes. Smooth idle = success.",
+      "uds_command": "10 01",
+      "expected_response": "50 01",
+      "caution": "Turn ignition OFF for at least 10 seconds before restarting to allow ECM to commit learned values"
+    }
+  ],
+  "bytes_exchanged": {
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "routine_start": "31 01 01 20",
+    "routine_start_response": "71 01 01 20",
+    "routine_poll": "31 03 01 20",
+    "session_close": "10 01"
+  },
+  "did_map": {},
+  "routine_ids": {
+    "0x0120": "Throttle Body Motor Drive / Learn (Toyota ENGINE ECU 0x700)"
+  },
+  "post_procedure_steps": [
+    "Turn ignition OFF for 10 seconds",
+    "Start engine and let it idle for 3 minutes",
+    "Verify idle quality is smooth with no hunting or stalling",
+    "Test throttle response at low RPM"
+  ],
+  "outcome_summary": "Commands throttle plate through full range to learn minimum and maximum ADC positions. Stores in non-volatile memory. Resolves rough idle and P0505/P0506/P0507 codes after throttle body service, cleaning, or battery disconnect. ~3-5 second procedure.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}

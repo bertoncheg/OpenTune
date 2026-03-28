@@ -1,0 +1,132 @@
+{
+  "procedure_id": "KDSS_NEUTRALIZE",
+  "title": "KDSS Neutralization",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/kdss_neutralization.py",
+  "system": "SUSPENSION",
+  "applicable_makes": ["Toyota", "Lexus"],
+  "applicable_models": ["GX 460", "Land Cruiser", "Land Cruiser 200"],
+  "year_range": { "min": 2010, "max": 2023 },
+  "dtc_codes": ["C1831", "C1832", "C1833", "C1834", "C1840"],
+  "symptoms": [
+    "KDSS warning lamp on dashboard",
+    "System in fail-safe / reduced suspension articulation",
+    "After KDSS cylinder replacement or accumulator service",
+    "After hydraulic line work",
+    "KDSS pressure sensor out of range"
+  ],
+  "prerequisites": [
+    "Vehicle on a level surface",
+    "Engine running (hydraulic pump needs power)",
+    "KDSS fluid reservoir at MIN mark or above",
+    "No simultaneous active faults in ABS/VSC system",
+    "Vehicle stationary"
+  ],
+  "warnings": [
+    "Do not run with fluid below MIN — pump damage may result",
+    "Engine must be running to provide power to hydraulic pump",
+    "Vehicle must remain stationary throughout procedure",
+    "If neutralization fails after 90 seconds, inspect for hydraulic line disconnection or severe air ingestion"
+  ],
+  "ecu_addresses": {
+    "KDSS_ECU": "0x7B0",
+    "ABS_ECU": "0x760",
+    "ENGINE_ECU": "0x700"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Safety Pre-Checks",
+      "technical_detail": "Verify KDSS ECU communication (TesterPresent 0x3E 0x80), read baseline hydraulic pressures, confirm fluid level adequate.",
+      "uds_command": "3E 80",
+      "expected_response": "7E or 7F (ECU online)",
+      "caution": "Abort if front AND rear pressure both read near zero — indicates missing fluid or disconnected sensor"
+    },
+    {
+      "step_number": 2,
+      "description": "Enter Extended Diagnostic Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03. Required to unlock diagnostic routines and active tests not available in default OBD2 session.",
+      "uds_command": "10 03",
+      "expected_response": "50 03 [P2_HI] [P2_LO] [P2*_HI] [P2*_LO]",
+      "caution": "If rejected, verify ignition state and ECU communication"
+    },
+    {
+      "step_number": 3,
+      "description": "Read Initial KDSS Status",
+      "technical_detail": "Read all KDSS live data DIDs to establish baseline: front pressure (0x1A01), rear pressure (0x1A02), pump status (0x1A03), accumulator (0x1A09), mode (0x1A0A), all 4 valves (0x1A04-0x1A07).",
+      "uds_command": "22 1A 01",
+      "expected_response": "62 1A 01 [HI] [LO]",
+      "caution": "Document baseline pressures before proceeding"
+    },
+    {
+      "step_number": 4,
+      "description": "Clear KDSS DTCs",
+      "technical_detail": "UDS Service 0x14 with group 0xFFFFFF clears all diagnostic groups from KDSS ECU. Non-fatal if this fails — procedure continues.",
+      "uds_command": "14 FF FF FF",
+      "expected_response": "54",
+      "caution": "If root cause (air in system) not fixed, DTCs will return after key cycle"
+    },
+    {
+      "step_number": 5,
+      "description": "Start KDSS Neutralization Routine",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0210. ECU sequence: (1) all 4 KDSS solenoid valves open (cross-connected), (2) hydraulic pump energizes at ~85% PWM duty, (3) fluid circulates pushing trapped air toward reservoir, (4) ECU monitors pressure rise expecting >=6 MPa within 60s, (5) when pressure stabilizes ECU closes valves and shuts pump.",
+      "uds_command": "31 01 02 10",
+      "expected_response": "71 01 02 10 00",
+      "caution": "Status byte 0x00 = started successfully. 0x7F NRC response = ECU rejected — check fluid level and active fault conditions"
+    },
+    {
+      "step_number": 6,
+      "description": "Monitor KDSS Pump Operation",
+      "technical_detail": "Poll Routine Results every 2 seconds using 0x31 0x03. Keep session alive with TesterPresent (0x3E 0x80). Monitor: result_status (0x00=running, 0x01=success, 0x02=fault), ECU progress %, front/rear pressures rising. Timeout: 90 seconds. NRC 0x78 (responsePending) during polling is normal.",
+      "uds_command": "31 03 02 10",
+      "expected_response": "71 03 02 10 01 [progress%] (success) | 71 03 02 10 00 [progress%] (in-progress)",
+      "caution": "If pump runs >90s without completion: severe air ingestion or hydraulic line damage suspected"
+    },
+    {
+      "step_number": 7,
+      "description": "Verify KDSS System Restored",
+      "technical_detail": "Read post-procedure status. Success criteria: front pressure >=6.0 MPa, rear pressure >=6.0 MPa, pump status Off (0), KDSS mode Normal (0), no active DTCs.",
+      "uds_command": "22 1A 01",
+      "expected_response": "62 1A 01 [pressure bytes >= 0x1770 for 6.0 MPa]",
+      "caution": "If pressures still below 6.0 MPa after successful pump run, check for hydraulic leak"
+    },
+    {
+      "step_number": 8,
+      "description": "Return to Default Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x01 returns ECU to default session.",
+      "uds_command": "10 01",
+      "expected_response": "50 01",
+      "caution": "Turn ignition OFF for 10 seconds then restart engine. Verify KDSS warning lamp extinguished on dashboard."
+    }
+  ],
+  "bytes_exchanged": {
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "clear_dtcs": "14 FF FF FF",
+    "clear_dtcs_response": "54",
+    "routine_start": "31 01 02 10",
+    "routine_start_response": "71 01 02 10 00",
+    "routine_poll": "31 03 02 10",
+    "routine_poll_running": "71 03 02 10 00",
+    "routine_poll_success": "71 03 02 10 01",
+    "session_close": "10 01",
+    "tester_present": "3E 80"
+  },
+  "did_map": {
+    "0x1A01": "KDSS Front Hydraulic Pressure (MPa, u16, *0.001)",
+    "0x1A02": "KDSS Rear Hydraulic Pressure (MPa, u16, *0.001)",
+    "0x1A03": "KDSS Pump Motor Status (0=Off, 1=Running, 2=Fault, 3=Priming)",
+    "0x1A04": "KDSS Front Left Valve (0=Closed, 1=Open, 2=Fault)",
+    "0x1A05": "KDSS Front Right Valve (0=Closed, 1=Open, 2=Fault)",
+    "0x1A06": "KDSS Rear Left Valve (0=Closed, 1=Open, 2=Fault)",
+    "0x1A07": "KDSS Rear Right Valve (0=Closed, 1=Open, 2=Fault)",
+    "0x1A08": "KDSS Pump Motor Duty Cycle (%, u8, /2.55)",
+    "0x1A09": "KDSS Accumulator Pressure (MPa, u16, *0.001)",
+    "0x1A0A": "KDSS Operating Mode (0=Normal, 1=Active/Flex, 2=Locked, 3=Fault)"
+  },
+  "outcome_summary": "Purges air from KDSS hydraulic circuit by running pump at ~85% PWM. Restores front and rear circuit pressure to >=6.0 MPa nominal operating range. Clears C1831-C1840 fault codes.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}

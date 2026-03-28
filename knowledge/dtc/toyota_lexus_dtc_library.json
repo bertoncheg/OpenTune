@@ -1,0 +1,837 @@
+{
+  "library_version": "2.0",
+  "source": "obdagent-toyota/procedures/dtc_library.py",
+  "makes": ["Toyota", "Lexus"],
+  "codes": [
+    {
+      "code": "P0100",
+      "description": "Mass Air Flow Circuit Malfunction",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "The airflow sensor is sending bad data to the engine computer.",
+      "common_causes": "Dirty/failed MAF sensor, air leak, wiring fault",
+      "typical_fixes": "Clean or replace MAF sensor; inspect intake for leaks; check wiring",
+      "related_codes": ["P0101", "P0102", "P0103"]
+    },
+    {
+      "code": "P0101",
+      "description": "Mass Air Flow Circuit Range/Performance",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Air mass reading is out of expected range — engine may run rough.",
+      "common_causes": "Dirty MAF sensor, clogged air filter, boost leak",
+      "typical_fixes": "Clean MAF sensor; replace air filter; inspect for boost/intake leaks",
+      "related_codes": ["P0100", "P0171", "P0174"]
+    },
+    {
+      "code": "P0102",
+      "description": "Mass Air Flow Circuit Low Input",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "MAF sensor signal too low — engine running rich or hesitating.",
+      "common_causes": "Damaged MAF, air leak upstream, wiring short to ground",
+      "typical_fixes": "Inspect MAF wiring for shorts; check connector; replace MAF if needed",
+      "related_codes": ["P0100", "P0101"]
+    },
+    {
+      "code": "P0103",
+      "description": "Mass Air Flow Circuit High Input",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "MAF sensor signal too high — potential overfueling.",
+      "common_causes": "Failed MAF sensor, wiring short to power",
+      "typical_fixes": "Inspect wiring for short to power; replace MAF sensor",
+      "related_codes": ["P0100", "P0101"]
+    },
+    {
+      "code": "P0110",
+      "description": "Intake Air Temperature Sensor 1 Circuit",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "The engine can't read intake air temperature correctly.",
+      "common_causes": "Failed IAT sensor, wiring issue",
+      "typical_fixes": "Check IAT sensor resistance; inspect wiring and connector",
+      "related_codes": ["P0113"]
+    },
+    {
+      "code": "P0113",
+      "description": "Intake Air Temperature Circuit High Input",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "IAT sensor reading extremely high — often wiring issue.",
+      "common_causes": "Sensor open circuit, wiring fault",
+      "typical_fixes": "Inspect sensor wiring for open circuit; replace IAT sensor",
+      "related_codes": ["P0110"]
+    },
+    {
+      "code": "P0120",
+      "description": "Throttle/Pedal Position Sensor A Circuit",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Throttle position sensor malfunction. Engine may not accelerate correctly.",
+      "common_causes": "Failed TPS, wiring fault, throttle body issue",
+      "typical_fixes": "Run throttle body relearn; inspect TPS wiring; replace TPS if needed",
+      "related_codes": ["P0121", "P0122", "P0123", "P0505"]
+    },
+    {
+      "code": "P0121",
+      "description": "Throttle/Pedal Position Sensor A Range/Performance",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "TPS reading inconsistent. Throttle relearn may resolve this.",
+      "common_causes": "TPS misalignment, dirty throttle body, failed TPS",
+      "typical_fixes": "Clean throttle body; run THROTTLE_RELEARN procedure; replace TPS if persists",
+      "related_codes": ["P0120", "P0505"]
+    },
+    {
+      "code": "P0122",
+      "description": "Throttle/Pedal Position Sensor A Low",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "TPS voltage too low. Throttle response may be sluggish.",
+      "common_causes": "Short to ground, failed sensor",
+      "typical_fixes": "Check TPS wiring for short to ground; replace sensor",
+      "related_codes": ["P0120", "P0121"]
+    },
+    {
+      "code": "P0123",
+      "description": "Throttle/Pedal Position Sensor A High",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "TPS voltage too high. May cause rough idle or stall.",
+      "common_causes": "Short to power, failed sensor",
+      "typical_fixes": "Check TPS wiring for short to power; replace sensor",
+      "related_codes": ["P0120", "P0121"]
+    },
+    {
+      "code": "P0130",
+      "description": "O2 Sensor Circuit (Bank 1 Sensor 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Front oxygen sensor not responding correctly. Fuel economy may suffer.",
+      "common_causes": "Failed O2 sensor, exhaust leak, wiring fault",
+      "typical_fixes": "Inspect for exhaust leaks before sensor; test sensor heater; replace O2 sensor",
+      "related_codes": ["P0133", "P0135", "P0171", "P0172"]
+    },
+    {
+      "code": "P0133",
+      "description": "O2 Sensor Circuit Slow Response (Bank 1 Sensor 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Front O2 sensor responding too slowly — likely worn out.",
+      "common_causes": "Aged O2 sensor, contamination from coolant leak or oil burn",
+      "typical_fixes": "Replace upstream O2 sensor; check for coolant or oil consumption",
+      "related_codes": ["P0130"]
+    },
+    {
+      "code": "P0135",
+      "description": "O2 Sensor Heater Circuit (Bank 1 Sensor 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "O2 sensor heater not working — takes longer to warm up, affects cold start emissions.",
+      "common_causes": "Failed sensor heater, blown fuse, wiring",
+      "typical_fixes": "Check O2 heater fuse; test heater resistance; replace sensor if heater open",
+      "related_codes": ["P0130"]
+    },
+    {
+      "code": "P0136",
+      "description": "O2 Sensor Circuit (Bank 1 Sensor 2)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Rear O2 sensor malfunction. Catalyst efficiency monitoring affected.",
+      "common_causes": "Failed O2 sensor, exhaust leak",
+      "typical_fixes": "Replace downstream O2 sensor; inspect for exhaust leaks",
+      "related_codes": ["P0141", "P0420"]
+    },
+    {
+      "code": "P0141",
+      "description": "O2 Sensor Heater Circuit (Bank 1 Sensor 2)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Rear O2 heater not working.",
+      "common_causes": "Failed sensor, wiring, fuse",
+      "typical_fixes": "Check fuse; test heater circuit; replace downstream O2 sensor",
+      "related_codes": ["P0136"]
+    },
+    {
+      "code": "P0150",
+      "description": "O2 Sensor Circuit (Bank 2 Sensor 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Bank 2 front O2 sensor malfunction.",
+      "common_causes": "Failed O2 sensor",
+      "typical_fixes": "Replace Bank 2 upstream O2 sensor; check wiring",
+      "related_codes": ["P0155", "P0174", "P0175"]
+    },
+    {
+      "code": "P0155",
+      "description": "O2 Sensor Heater Circuit (Bank 2 Sensor 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Bank 2 O2 heater circuit fault.",
+      "common_causes": "Wiring, failed sensor",
+      "typical_fixes": "Test Bank 2 O2 heater circuit; replace sensor if failed",
+      "related_codes": ["P0150"]
+    },
+    {
+      "code": "P0171",
+      "description": "System Too Lean (Bank 1)",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Engine is running lean — not enough fuel for the air coming in. Check for vacuum leaks first.",
+      "common_causes": "Vacuum leak, dirty fuel injectors, weak fuel pump, faulty MAF",
+      "typical_fixes": "Smoke test for vacuum leaks; clean injectors; check fuel pressure; clean/replace MAF",
+      "related_codes": ["P0174", "P0101", "P0300"]
+    },
+    {
+      "code": "P0172",
+      "description": "System Too Rich (Bank 1)",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Engine is running rich — too much fuel. May smell like fuel, poor economy.",
+      "common_causes": "Stuck-open injector, high fuel pressure, failed O2 sensor",
+      "typical_fixes": "Check fuel pressure; inspect injectors; replace upstream O2 if faulty",
+      "related_codes": ["P0175", "P0130"]
+    },
+    {
+      "code": "P0174",
+      "description": "System Too Lean (Bank 2)",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Bank 2 running lean. Same as P0171 but on the other side of V6/V8 engine.",
+      "common_causes": "Vacuum leak near Bank 2, dirty injectors",
+      "typical_fixes": "Smoke test Bank 2 area; clean injectors; check MAF",
+      "related_codes": ["P0171", "P0150"]
+    },
+    {
+      "code": "P0175",
+      "description": "System Too Rich (Bank 2)",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Bank 2 running rich.",
+      "common_causes": "Injector issue, fuel pressure",
+      "typical_fixes": "Check fuel pressure; inspect Bank 2 injectors",
+      "related_codes": ["P0172", "P0150"]
+    },
+    {
+      "code": "P0300",
+      "description": "Random/Multiple Cylinder Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Engine is misfiring on multiple cylinders. Rough idle, possible hesitation.",
+      "common_causes": "Worn spark plugs, faulty ignition coils, low compression, vacuum leak",
+      "typical_fixes": "Replace spark plugs; test and replace ignition coils; compression test; check for vacuum leaks",
+      "related_codes": ["P0301", "P0302", "P0303", "P0304", "P0171"]
+    },
+    {
+      "code": "P0301",
+      "description": "Cylinder 1 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 1 misfiring. Rough idle or vibration.",
+      "common_causes": "Spark plug, ignition coil, injector, low compression on cyl 1",
+      "typical_fixes": "Swap coil to another cylinder to isolate; replace plug; check compression",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0302",
+      "description": "Cylinder 2 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 2 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 2",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 2",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0303",
+      "description": "Cylinder 3 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 3 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 3",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 3",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0304",
+      "description": "Cylinder 4 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 4 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 4",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 4",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0305",
+      "description": "Cylinder 5 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 5 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 5",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 5",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0306",
+      "description": "Cylinder 6 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 6 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 6",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 6",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0307",
+      "description": "Cylinder 7 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 7 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 7",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 7",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0308",
+      "description": "Cylinder 8 Misfire Detected",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cylinder 8 misfiring.",
+      "common_causes": "Plug, coil, injector on cyl 8",
+      "typical_fixes": "Swap coil; replace plug; check compression on cylinder 8",
+      "related_codes": ["P0300"]
+    },
+    {
+      "code": "P0335",
+      "description": "Crankshaft Position Sensor A Circuit",
+      "system": "ENGINE",
+      "severity": "CRITICAL",
+      "symptoms": "Crankshaft position sensor malfunction. Engine may crank but not start.",
+      "common_causes": "Failed CKP sensor, damaged reluctor ring, wiring",
+      "typical_fixes": "Replace CKP sensor; inspect reluctor ring for damage; check wiring",
+      "related_codes": ["P0340"]
+    },
+    {
+      "code": "P0340",
+      "description": "Camshaft Position Sensor A Circuit (Bank 1)",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Cam sensor fault. Engine may run rough or not start.",
+      "common_causes": "Failed cam sensor, timing chain stretch, wiring",
+      "typical_fixes": "Replace cam sensor; check timing chain stretch; inspect wiring",
+      "related_codes": ["P0335"]
+    },
+    {
+      "code": "P0420",
+      "description": "Catalyst System Efficiency Below Threshold (Bank 1)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Catalytic converter is worn out and not cleaning exhaust properly.",
+      "common_causes": "Failed catalytic converter, O2 sensor fault, exhaust leak before cat",
+      "typical_fixes": "Verify with oscilloscope on rear O2; replace catalytic converter; check for exhaust leaks",
+      "related_codes": ["P0430", "P0136"]
+    },
+    {
+      "code": "P0430",
+      "description": "Catalyst System Efficiency Below Threshold (Bank 2)",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Bank 2 catalytic converter degraded.",
+      "common_causes": "Failed cat, O2 sensor",
+      "typical_fixes": "Replace Bank 2 catalytic converter; verify rear O2 sensor function",
+      "related_codes": ["P0420"]
+    },
+    {
+      "code": "P0441",
+      "description": "Evaporative Emission Control System Incorrect Purge Flow",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "EVAP purge system malfunction. No drivability impact. Gas smell possible.",
+      "common_causes": "Failed purge valve, loose gas cap, EVAP hose leak",
+      "typical_fixes": "Test purge valve; inspect EVAP hoses; check gas cap seal",
+      "related_codes": ["P0446", "P0455", "P0456"]
+    },
+    {
+      "code": "P0446",
+      "description": "Evaporative Emission Vent Control Circuit",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "EVAP vent valve stuck. Fuel cap area smell possible.",
+      "common_causes": "Stuck vent valve, canister clog",
+      "typical_fixes": "Test vent valve solenoid; inspect charcoal canister",
+      "related_codes": ["P0441", "P0455"]
+    },
+    {
+      "code": "P0455",
+      "description": "Evaporative Emission Large Leak",
+      "system": "ENGINE",
+      "severity": "WATCH",
+      "symptoms": "Large fuel vapor leak detected. Check gas cap first — often the cause.",
+      "common_causes": "Missing/loose gas cap, cracked EVAP hose, failed purge valve",
+      "typical_fixes": "Tighten gas cap; smoke test EVAP system; replace purge valve if needed",
+      "related_codes": ["P0456", "P0441"]
+    },
+    {
+      "code": "P0456",
+      "description": "Evaporative Emission Small Leak",
+      "system": "ENGINE",
+      "severity": "INFO",
+      "symptoms": "Small EVAP leak. Usually gas cap not fully tightened.",
+      "common_causes": "Loose gas cap, micro-crack in EVAP line",
+      "typical_fixes": "Tighten/replace gas cap; smoke test for small EVAP leaks",
+      "related_codes": ["P0455", "P0441"]
+    },
+    {
+      "code": "P0500",
+      "description": "Vehicle Speed Sensor A",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Vehicle speed sensor not reading correctly. Speedometer may be erratic.",
+      "common_causes": "Failed VSS, wiring fault, ABS reluctor ring damage",
+      "typical_fixes": "Check ABS speed sensor outputs; inspect reluctor ring; replace VSS",
+      "related_codes": ["C0200", "C0210"]
+    },
+    {
+      "code": "P0505",
+      "description": "Idle Control System Malfunction",
+      "system": "ENGINE",
+      "severity": "URGENT",
+      "symptoms": "Idle speed control problem. Engine may idle rough or stall at stops.",
+      "common_causes": "Dirty throttle body, failed IAC, vacuum leak",
+      "typical_fixes": "Clean throttle body; run THROTTLE_RELEARN procedure; inspect for vacuum leaks",
+      "related_codes": ["P0120", "P0121"]
+    },
+    {
+      "code": "P0606",
+      "description": "ECM/PCM Processor Fault",
+      "system": "ENGINE",
+      "severity": "CRITICAL",
+      "symptoms": "Engine computer internal failure. Usually requires ECU replacement.",
+      "common_causes": "Failed ECU, firmware corruption, power surge damage",
+      "typical_fixes": "Verify power and ground to ECU; replace ECU if confirmed; re-flash if possible",
+      "related_codes": []
+    },
+    {
+      "code": "P0700",
+      "description": "Transmission Control System Malfunction",
+      "system": "TRANS",
+      "severity": "URGENT",
+      "symptoms": "Transmission computer detected a fault. Check for additional TCM codes.",
+      "common_causes": "See companion codes for specific fault",
+      "typical_fixes": "Read all TCM codes for specifics; check fluid level and condition",
+      "related_codes": ["P0715", "P0720", "P0730", "P0741", "P0750"]
+    },
+    {
+      "code": "P0715",
+      "description": "Input/Turbine Speed Sensor A Circuit",
+      "system": "TRANS",
+      "severity": "URGENT",
+      "symptoms": "Transmission input speed sensor fault. Shift quality may be affected.",
+      "common_causes": "Failed speed sensor, wiring, solenoid body",
+      "typical_fixes": "Inspect sensor wiring; replace input speed sensor; check solenoid body",
+      "related_codes": ["P0720", "P0700"]
+    },
+    {
+      "code": "P0720",
+      "description": "Output Speed Sensor Circuit",
+      "system": "TRANS",
+      "severity": "URGENT",
+      "symptoms": "Transmission output speed sensor fault.",
+      "common_causes": "Failed sensor, wiring, reluctor ring",
+      "typical_fixes": "Replace output speed sensor; inspect reluctor ring",
+      "related_codes": ["P0715", "P0700"]
+    },
+    {
+      "code": "P0730",
+      "description": "Incorrect Gear Ratio",
+      "system": "TRANS",
+      "severity": "CRITICAL",
+      "symptoms": "Transmission slipping — not achieving expected gear ratio. May slip under load.",
+      "common_causes": "Low fluid, worn clutch packs, failed solenoid, fluid contamination",
+      "typical_fixes": "Check fluid level/condition; service transmission; test solenoids",
+      "related_codes": ["P0700", "P0741"]
+    },
+    {
+      "code": "P0741",
+      "description": "Torque Converter Clutch Solenoid Stuck Off",
+      "system": "TRANS",
+      "severity": "URGENT",
+      "symptoms": "Torque converter lockup not engaging. Reduced fuel economy, may shudder.",
+      "common_causes": "Failed TCC solenoid, fluid contamination, low fluid level",
+      "typical_fixes": "Service transmission fluid; replace TCC solenoid; check for contamination",
+      "related_codes": ["P0700", "P0750"]
+    },
+    {
+      "code": "P0750",
+      "description": "Shift Solenoid A Malfunction",
+      "system": "TRANS",
+      "severity": "URGENT",
+      "symptoms": "Transmission shift solenoid A faulty. Shifts may be harsh or skipped.",
+      "common_causes": "Failed solenoid, dirty fluid, wiring",
+      "typical_fixes": "Change transmission fluid; replace shift solenoid A; check wiring",
+      "related_codes": ["P0700", "P0741"]
+    },
+    {
+      "code": "C0200",
+      "description": "Right Front Wheel Speed Sensor Circuit Malfunction",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "Right front ABS wheel speed sensor bad. ABS warning light on.",
+      "common_causes": "Failed wheel speed sensor, damaged tone ring, wiring",
+      "typical_fixes": "Replace right front wheel speed sensor; inspect tone ring for damage",
+      "related_codes": ["C0205", "C1201"]
+    },
+    {
+      "code": "C0205",
+      "description": "Right Front Wheel Speed Sensor Intermittent",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "Right front speed sensor signal dropping out intermittently.",
+      "common_causes": "Damaged sensor wire, loose connector, corroded tone ring",
+      "typical_fixes": "Flex wiring harness to find intermittent; clean connector; replace sensor",
+      "related_codes": ["C0200"]
+    },
+    {
+      "code": "C0210",
+      "description": "Right Rear Wheel Speed Sensor Circuit Malfunction",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "Right rear ABS speed sensor bad.",
+      "common_causes": "Failed sensor, tone ring, wiring damage",
+      "typical_fixes": "Replace right rear wheel speed sensor; inspect tone ring",
+      "related_codes": ["C1201"]
+    },
+    {
+      "code": "C0215",
+      "description": "Left Front Wheel Speed Sensor Circuit Malfunction",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "Left front ABS speed sensor bad.",
+      "common_causes": "Failed sensor, tone ring",
+      "typical_fixes": "Replace left front wheel speed sensor; inspect tone ring",
+      "related_codes": ["C1201"]
+    },
+    {
+      "code": "C0220",
+      "description": "Left Rear Wheel Speed Sensor Circuit Malfunction",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "Left rear ABS speed sensor bad.",
+      "common_causes": "Failed sensor, tone ring",
+      "typical_fixes": "Replace left rear wheel speed sensor; inspect tone ring",
+      "related_codes": ["C1201"]
+    },
+    {
+      "code": "C1201",
+      "description": "Engine Control System Malfunction",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "ABS ECU detected an engine system fault. Usually paired with engine codes.",
+      "common_causes": "Related to engine DTC — fix engine codes first",
+      "typical_fixes": "Read and resolve engine DTCs first; recheck ABS system",
+      "related_codes": ["C0200", "C0210", "C0215", "C0220"]
+    },
+    {
+      "code": "C1300",
+      "description": "ABS Solenoid Valve Relay Circuit",
+      "system": "ABS",
+      "severity": "URGENT",
+      "symptoms": "ABS hydraulic modulator relay fault. ABS inoperative.",
+      "common_causes": "Failed ABS modulator relay, wiring, failed ABS actuator",
+      "typical_fixes": "Test ABS relay; replace ABS actuator assembly if relay tests good",
+      "related_codes": []
+    },
+    {
+      "code": "C1831",
+      "description": "KDSS Pressure Sensor Malfunction",
+      "system": "SUSPENSION",
+      "severity": "URGENT",
+      "symptoms": "KDSS pressure sensor reading out of range. System may be in fail-safe.",
+      "common_causes": "Failed pressure sensor, air in circuit, low fluid",
+      "typical_fixes": "Run KDSS_NEUTRALIZE procedure; check fluid level; replace pressure sensor if needed",
+      "related_codes": ["C1832", "C1833", "C1834", "C1840"]
+    },
+    {
+      "code": "C1832",
+      "description": "KDSS Pump Motor Malfunction",
+      "system": "SUSPENSION",
+      "severity": "URGENT",
+      "symptoms": "KDSS hydraulic pump fault. System cannot maintain pressure.",
+      "common_causes": "Failed pump motor, low fluid, electrical fault",
+      "typical_fixes": "Check fluid level; test pump motor circuit; run KDSS_NEUTRALIZE; replace pump if failed",
+      "related_codes": ["C1831", "C1833"]
+    },
+    {
+      "code": "C1833",
+      "description": "KDSS Accumulator Pressure Low",
+      "system": "SUSPENSION",
+      "severity": "URGENT",
+      "symptoms": "KDSS accumulator pressure below minimum. Air likely in hydraulic circuit.",
+      "common_causes": "Air in circuit after service, accumulator failure",
+      "typical_fixes": "Run KDSS_NEUTRALIZE procedure to purge air; inspect accumulator",
+      "related_codes": ["C1831", "C1832"]
+    },
+    {
+      "code": "C1834",
+      "description": "KDSS Valve Malfunction",
+      "system": "SUSPENSION",
+      "severity": "URGENT",
+      "symptoms": "One or more KDSS solenoid valves not responding correctly.",
+      "common_causes": "Failed solenoid valve, wiring fault, low fluid",
+      "typical_fixes": "Run KDSS_NEUTRALIZE; test individual valve solenoids; check fluid level",
+      "related_codes": ["C1831", "C1840"]
+    },
+    {
+      "code": "C1840",
+      "description": "KDSS Fluid Level Low",
+      "system": "SUSPENSION",
+      "severity": "URGENT",
+      "symptoms": "KDSS hydraulic fluid level below minimum. Top up and run neutralization.",
+      "common_causes": "Fluid leak, recent service without proper fill",
+      "typical_fixes": "Top up KDSS fluid; inspect for leaks; run KDSS_NEUTRALIZE procedure",
+      "related_codes": ["C1831", "C1833"]
+    },
+    {
+      "code": "C2111",
+      "description": "TPMS Receiver Malfunction",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "TPMS receiver module not working correctly.",
+      "common_causes": "Failed TPMS module, antenna issue",
+      "typical_fixes": "Inspect TPMS antenna connector; replace TPMS receiver module",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C2112",
+      "description": "TPMS Sensor Not Registered",
+      "system": "TPMS",
+      "severity": "INFO",
+      "symptoms": "One or more TPMS sensors not programmed to this vehicle. Common after tire rotation or new sensors.",
+      "common_causes": "Sensor IDs not registered after service",
+      "typical_fixes": "Run TPMS_PROGRAM procedure to register all sensor IDs",
+      "related_codes": ["C2115", "C2116", "C2117", "C2118"]
+    },
+    {
+      "code": "C2113",
+      "description": "TPMS Sensor Battery Low",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "One TPMS sensor has low battery. Sensor will need replacement.",
+      "common_causes": "Aged sensor battery (5–10 year life)",
+      "typical_fixes": "Replace affected TPMS sensor; re-register with TPMS_PROGRAM procedure",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C2114",
+      "description": "TPMS Low Pressure Warning Active",
+      "system": "TPMS",
+      "severity": "URGENT",
+      "symptoms": "One or more tires below minimum pressure. Check and inflate tires.",
+      "common_causes": "Underinflated tire, puncture, temperature drop",
+      "typical_fixes": "Inflate all tires to spec; inspect for puncture or slow leak",
+      "related_codes": []
+    },
+    {
+      "code": "C2115",
+      "description": "TPMS Signal Timeout (Front Left)",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "Front left TPMS sensor not transmitting. Check sensor and register.",
+      "common_causes": "Dead sensor battery, sensor damage",
+      "typical_fixes": "Replace front left TPMS sensor; run TPMS_PROGRAM procedure",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C2116",
+      "description": "TPMS Signal Timeout (Front Right)",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "Front right TPMS sensor not transmitting.",
+      "common_causes": "Dead sensor battery, sensor damage",
+      "typical_fixes": "Replace front right TPMS sensor; run TPMS_PROGRAM procedure",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C2117",
+      "description": "TPMS Signal Timeout (Rear Left)",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "Rear left TPMS sensor not transmitting.",
+      "common_causes": "Dead sensor battery, sensor damage",
+      "typical_fixes": "Replace rear left TPMS sensor; run TPMS_PROGRAM procedure",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C2118",
+      "description": "TPMS Signal Timeout (Rear Right)",
+      "system": "TPMS",
+      "severity": "WATCH",
+      "symptoms": "Rear right TPMS sensor not transmitting.",
+      "common_causes": "Dead sensor battery, sensor damage",
+      "typical_fixes": "Replace rear right TPMS sensor; run TPMS_PROGRAM procedure",
+      "related_codes": ["C2112"]
+    },
+    {
+      "code": "C1511",
+      "description": "Steering Angle Sensor Zero Point Unset",
+      "system": "STEERING",
+      "severity": "URGENT",
+      "symptoms": "Steering angle sensor needs calibration. VSC system limited.",
+      "common_causes": "Sensor replaced, battery disconnect, wheel alignment done",
+      "typical_fixes": "Run SAS_RESET procedure to set zero-point calibration",
+      "related_codes": ["C1513", "C1514", "C1524"]
+    },
+    {
+      "code": "C1512",
+      "description": "Steering Angle Sensor Communication Error",
+      "system": "STEERING",
+      "severity": "URGENT",
+      "symptoms": "Steering angle sensor not communicating on CAN bus.",
+      "common_causes": "Failed SAS, wiring, CAN bus fault",
+      "typical_fixes": "Check CAN bus wiring to SAS; replace steering angle sensor",
+      "related_codes": ["C1511"]
+    },
+    {
+      "code": "C1513",
+      "description": "Steering Angle Sensor Range Error",
+      "system": "STEERING",
+      "severity": "URGENT",
+      "symptoms": "Steering angle sensor reading out of expected range after calibration attempt.",
+      "common_causes": "Sensor misalignment, mechanical issue, failed sensor",
+      "typical_fixes": "Center steering wheel precisely; re-run SAS_RESET; replace sensor if persists",
+      "related_codes": ["C1511", "C1514"]
+    },
+    {
+      "code": "C1514",
+      "description": "Steering Angle Sensor Calibration Required",
+      "system": "STEERING",
+      "severity": "INFO",
+      "symptoms": "SAS requires zero-point calibration. Usually set after alignment.",
+      "common_causes": "Alignment performed, sensor replaced, battery reset",
+      "typical_fixes": "Run SAS_RESET procedure; clear DTC after calibration",
+      "related_codes": ["C1511", "C1513"]
+    },
+    {
+      "code": "C1524",
+      "description": "Yaw Rate Sensor Malfunction",
+      "system": "STEERING",
+      "severity": "URGENT",
+      "symptoms": "Vehicle stability sensor (yaw rate/lateral G) fault. VSC may be disabled.",
+      "common_causes": "Failed yaw sensor, sensor needs initialization",
+      "typical_fixes": "Run SAS_RESET procedure; replace yaw rate sensor if calibration fails",
+      "related_codes": ["C1511"]
+    },
+    {
+      "code": "B1200",
+      "description": "A/C Control Amplifier Malfunction",
+      "system": "BODY",
+      "severity": "WATCH",
+      "symptoms": "Climate control module fault. A/C may not work correctly.",
+      "common_causes": "Failed HVAC module, blend door actuator, refrigerant issue",
+      "typical_fixes": "Check blend door actuators; verify refrigerant charge; replace HVAC module",
+      "related_codes": []
+    },
+    {
+      "code": "B1300",
+      "description": "Door Open Switch Circuit",
+      "system": "BODY",
+      "severity": "INFO",
+      "symptoms": "Door open switch reading incorrectly. Dome light or entry system affected.",
+      "common_causes": "Faulty door switch, wiring, latching mechanism",
+      "typical_fixes": "Test door switch continuity; inspect door latch mechanism; replace switch",
+      "related_codes": []
+    },
+    {
+      "code": "B0100",
+      "description": "Driver's Airbag Squib Open Circuit",
+      "system": "AIRBAG",
+      "severity": "CRITICAL",
+      "symptoms": "Driver airbag circuit has an open. Airbag may not deploy in crash.",
+      "common_causes": "Wiring fault, failed squib, connector issue",
+      "typical_fixes": "Inspect clock spring; check squib connector; replace airbag module",
+      "related_codes": ["B0105"]
+    },
+    {
+      "code": "B0105",
+      "description": "Driver's Airbag Circuit Resistance High",
+      "system": "AIRBAG",
+      "severity": "CRITICAL",
+      "symptoms": "Driver airbag squib resistance out of range. Safety system compromised.",
+      "common_causes": "Corroded connector, partial wire break, wrong squib",
+      "typical_fixes": "Clean squib connector; inspect wiring for partial breaks; verify correct squib resistance",
+      "related_codes": ["B0100"]
+    },
+    {
+      "code": "B0110",
+      "description": "Passenger Airbag Squib Circuit",
+      "system": "AIRBAG",
+      "severity": "CRITICAL",
+      "symptoms": "Passenger airbag circuit fault. Airbag deployment unreliable.",
+      "common_causes": "Wiring, squib, connector",
+      "typical_fixes": "Inspect passenger airbag connector; check squib resistance; replace if out of spec",
+      "related_codes": []
+    },
+    {
+      "code": "C1310",
+      "description": "4WD Control Actuator Circuit",
+      "system": "4WD",
+      "severity": "URGENT",
+      "symptoms": "4WD transfer case actuator fault. 4WD selection may not work.",
+      "common_causes": "Failed actuator, wiring, vacuum line (older models)",
+      "typical_fixes": "Test actuator motor; inspect wiring; replace 4WD actuator",
+      "related_codes": ["C1312"]
+    },
+    {
+      "code": "C1312",
+      "description": "4WD Low Switch Malfunction",
+      "system": "4WD",
+      "severity": "WATCH",
+      "symptoms": "4WD Low switch circuit fault. 4LO engagement may be unreliable.",
+      "common_causes": "Failed switch, wiring fault",
+      "typical_fixes": "Test 4LO switch; inspect wiring harness near transfer case",
+      "related_codes": ["C1310"]
+    },
+    {
+      "code": "C1600",
+      "description": "Electronic Parking Brake Malfunction",
+      "system": "BRAKES",
+      "severity": "URGENT",
+      "symptoms": "Electric parking brake system fault. Manual release may be required.",
+      "common_causes": "Motor failed, stuck caliper, control module fault",
+      "typical_fixes": "Run EPB_SERVICE procedure; inspect caliper and motor; replace if needed",
+      "related_codes": ["C1601", "C1602", "C1605"]
+    },
+    {
+      "code": "C1601",
+      "description": "EPB Actuator Circuit Open",
+      "system": "BRAKES",
+      "severity": "URGENT",
+      "symptoms": "EPB motor circuit open. Parking brake may be stuck or inoperative.",
+      "common_causes": "Broken wire, failed EPB motor, corroded connector",
+      "typical_fixes": "Inspect EPB wiring harness; clean connectors; replace EPB motor if open circuit confirmed",
+      "related_codes": ["C1600", "C1605"]
+    },
+    {
+      "code": "C1602",
+      "description": "EPB Motor Overheated",
+      "system": "BRAKES",
+      "severity": "WATCH",
+      "symptoms": "EPB motor thermal protection triggered from repeated cycling.",
+      "common_causes": "Multiple actuations in short time, motor starting to fail",
+      "typical_fixes": "Allow motor to cool; avoid repeated EPB cycling; run EPB_SERVICE to verify operation",
+      "related_codes": ["C1600"]
+    },
+    {
+      "code": "C1605",
+      "description": "EPB Rear Caliper Service Required",
+      "system": "BRAKES",
+      "severity": "INFO",
+      "symptoms": "EPB caliper retraction needed for brake service. Normal during pad replacement.",
+      "common_causes": "Routine brake pad service",
+      "typical_fixes": "Run EPB_SERVICE OPEN mode to retract calipers; install pads; run EPB_SERVICE CLOSE mode",
+      "related_codes": ["C1600", "C1601"]
+    }
+  ]
+}

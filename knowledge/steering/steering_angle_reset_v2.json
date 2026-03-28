@@ -1,0 +1,116 @@
+{
+  "procedure_id": "SAS_RESET",
+  "title": "SAS Zero-Point Calibration",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/sas_reset.py",
+  "system": "STEERING",
+  "applicable_makes": ["Toyota", "Lexus", "Ford", "GM", "BMW", "VW", "Audi"],
+  "applicable_models": ["Universal — all models with electronic stability control"],
+  "year_range": { "min": 2000, "max": 2024 },
+  "dtc_codes": ["C1511", "C1513", "C1514", "C1524"],
+  "symptoms": [
+    "VSC/ESC warning light on after wheel alignment",
+    "Steering angle sensor replaced",
+    "Battery disconnected (sensor loses calibration)",
+    "DTC C1511 (zero point unset)",
+    "DTC C1513 (range error)",
+    "DTC C1514 (calibration required)",
+    "DTC C1524 (yaw rate sensor fault)"
+  ],
+  "prerequisites": [
+    "Vehicle stationary (speed = 0)",
+    "Steering wheel within ±5° of center (straight ahead)",
+    "No active ABS/VSC fault codes preventing calibration",
+    "Ignition in correct state (ON or key-on-engine-off)"
+  ],
+  "warnings": [
+    "Steering wheel MUST be within ±5° of center before executing calibration",
+    "Vehicle must remain completely stationary during procedure",
+    "Active ABS or brake system faults will prevent calibration — resolve those first",
+    "After calibration: drive >15 mph to confirm VSC warning light clears"
+  ],
+  "ecu_addresses": {
+    "ABS_ECU": "0x760",
+    "ENGINE_ECU": "0x700"
+  },
+  "cross_make_equivalents": {
+    "Toyota_Lexus": "Routine 0x0200 on ABS ECU 0x760",
+    "Ford": "Service 0x2C (WDBI) DID 0xD001 on ABS",
+    "GM": "$00B5 SPS procedure equivalent",
+    "BMW": "ISTA procedure CB001",
+    "VW_Audi": "Channel 4 adaptation in ABS module"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Open Extended Diagnostic Session (ABS ECU)",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03 to ABS ECU (0x760). Required to unlock SAS calibration routines.",
+      "uds_command": "10 03",
+      "expected_response": "50 03 [P2_HI] [P2_LO] [P2*_HI] [P2*_LO]",
+      "caution": "If rejected: verify ignition state and physical connection"
+    },
+    {
+      "step_number": 2,
+      "description": "Verify Preconditions (stationary, wheels straight)",
+      "technical_detail": "Read vehicle speed from ENGINE ECU via DID 0xF40D (standard vehicle speed). Speed must be 0. Steering must be within ±5° (visual confirmation required).",
+      "uds_command": "22 F4 0D",
+      "expected_response": "62 F4 0D [speed_kph]",
+      "caution": "If speed check unavailable, proceed with warning that vehicle must be confirmed stationary"
+    },
+    {
+      "step_number": 3,
+      "description": "Execute SAS Zero-Point Set (Routine 0x0200)",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0200 (Toyota SAS zero-point write). Current steering position is stored as center (0°). Result byte: 0x00 or 0x01 = success. NRC 0x7F = ECU rejected.",
+      "uds_command": "31 01 02 00",
+      "expected_response": "71 01 02 00 [00 or 01]",
+      "caution": "If rejected (NRC): ensure vehicle stationary, steering centered, no active ABS/VSC faults"
+    },
+    {
+      "step_number": 4,
+      "description": "Wait for Calibration Completion",
+      "technical_detail": "2-second delay to allow ECU to store calibration value in non-volatile memory.",
+      "uds_command": "None (delay)",
+      "expected_response": "N/A",
+      "caution": "Do not disconnect adapter or cycle ignition during this delay"
+    },
+    {
+      "step_number": 5,
+      "description": "Verify Calibration — Read SAS Status",
+      "technical_detail": "Read Toyota custom DID 0xF1A0 (SAS calibration status). Response byte: 0x00 = calibration STORED. Other values: check if VSC light clears after restart.",
+      "uds_command": "22 F1 A0",
+      "expected_response": "62 F1 A0 00",
+      "caution": "DID 0xF1A0 may not be supported on all ECU variants — non-fatal if unavailable"
+    },
+    {
+      "step_number": 6,
+      "description": "Clear SAS-Related DTCs",
+      "technical_detail": "UDS Service 0x14 group 0xFFFFFF clears all DTCs from ABS/VSC ECU including C1511, C1513, C1514.",
+      "uds_command": "14 FF FF FF",
+      "expected_response": "54",
+      "caution": "After clearing: cycle ignition OFF→ON→wait 30 seconds. Drive >15 mph to confirm warning light clears."
+    }
+  ],
+  "bytes_exchanged": {
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "read_speed": "22 F4 0D",
+    "routine_start": "31 01 02 00",
+    "routine_response": "71 01 02 00 00",
+    "read_calibration_status": "22 F1 A0",
+    "clear_dtcs": "14 FF FF FF",
+    "clear_response": "54"
+  },
+  "did_map": {
+    "0xF40D": "Vehicle Speed (km/h, u8, direct — sourced from ENGINE ECU 0x700)",
+    "0xF1A0": "SAS Calibration Status (Toyota custom, 0x00=stored)"
+  },
+  "routine_ids": {
+    "0x0200": "SAS Zero-Point Write (Toyota/Lexus — set current position as 0°)",
+    "0x0201": "SAS Calibration Verify (optional)"
+  },
+  "outcome_summary": "Stores current steering wheel position as the sensor zero-point (0°). Resolves C1511/C1514 codes set after alignment, sensor replacement, or battery disconnect. One of the most common post-alignment procedures. ~5 seconds total.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}

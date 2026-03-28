@@ -1,0 +1,103 @@
+{
+  "procedure_id": "TPMS_PROGRAM",
+  "title": "TPMS Sensor Registration",
+  "version": "2.0",
+  "source": "obdagent-toyota/procedures/tpms_programming.py",
+  "system": "TPMS",
+  "applicable_makes": ["Toyota", "Lexus"],
+  "applicable_models": ["GX 460", "Land Cruiser", "4Runner", "Tacoma", "Tundra", "Sequoia", "Sienna", "Camry", "Avalon", "ES", "IS", "GS", "LS", "RX", "NX", "LX"],
+  "year_range": { "min": 2007, "max": 2024 },
+  "dtc_codes": ["C2112", "C2113", "C2115", "C2116", "C2117", "C2118"],
+  "symptoms": [
+    "TPMS warning light on after tire rotation",
+    "TPMS sensors not registering after new sensor installation",
+    "Any wheel swap or tire swap",
+    "C2112 TPMS Sensor Not Registered",
+    "C2115-C2118 individual sensor signal timeout"
+  ],
+  "prerequisites": [
+    "Correct TPMS sensors installed (433 MHz direct type for Toyota/Lexus)",
+    "All 4 tires properly inflated to spec",
+    "Vehicle stationary",
+    "Ignition ON"
+  ],
+  "warnings": [
+    "Toyota direct TPMS uses 433 MHz RF transmissions — sensors transmit when tire pressure changes",
+    "On real hardware each tire must be deflated ~5 PSI then re-inflated to trigger sensor RF transmission during learn mode",
+    "Sensor IDs are 32-bit values stored in TPMS ECU — must match physical sensor positions",
+    "After rotation, re-register in correct position order: FL → FR → RL → RR → Spare"
+  ],
+  "ecu_addresses": {
+    "TPMS_ECU": "0x730"
+  },
+  "uds_session": "Extended Diagnostic Session (0x03)",
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "Read Current TPMS Sensor IDs",
+      "technical_detail": "Read all 5 sensor ID DIDs (FL=0x1501, FR=0x1502, RL=0x1503, RR=0x1504, Spare=0x1505). Sensor IDs are 32-bit (4-byte) values returned bytes 3-6 of ReadDataByIdentifier response. Registered = sensor_id != 0 and sensor_id != 0xFFFFFFFF.",
+      "uds_command": "22 15 01 (repeat for 1502, 1503, 1504, 1505)",
+      "expected_response": "62 15 0x [ID_B3] [ID_B2] [ID_B1] [ID_B0]",
+      "caution": "Document existing sensor IDs before re-registration in case rollback needed"
+    },
+    {
+      "step_number": 2,
+      "description": "Enter TPMS Extended Session",
+      "technical_detail": "UDS Service 0x10 sub-function 0x03 to TPMS ECU (0x730).",
+      "uds_command": "10 03",
+      "expected_response": "50 03",
+      "caution": "If rejected: verify ignition ON and TPMS ECU accessible"
+    },
+    {
+      "step_number": 3,
+      "description": "Start TPMS Registration Routine",
+      "technical_detail": "UDS RoutineControl (0x31) start (0x01) for Routine ID 0x0340. This puts TPMS ECU into 'learn mode'. ECU listens for RF transmissions from each sensor in order: FL → FR → RL → RR → Spare. On real vehicle: deflate each tire ~5 PSI then re-inflate to trigger sensor RF. Sensor IDs are automatically captured and stored to corresponding position DIDs.",
+      "uds_command": "31 01 03 40",
+      "expected_response": "71 01 03 40 [status]",
+      "caution": "On real hardware: must physically trigger each sensor in position order. Do not skip positions or ECU will associate wrong sensor ID to wrong position."
+    },
+    {
+      "step_number": 4,
+      "description": "Verify Registration",
+      "technical_detail": "Re-read all sensor ID DIDs to confirm new IDs stored. Check registered flag (sensor_id != 0 and sensor_id != 0xFFFFFFFF) for all 4 positions.",
+      "uds_command": "22 15 01 (repeat for 1502, 1503, 1504)",
+      "expected_response": "62 15 0x [valid 32-bit sensor ID]",
+      "caution": "Any position still showing 0x00000000 or 0xFFFFFFFF = sensor not registered — repeat learn mode for that position"
+    }
+  ],
+  "bytes_exchanged": {
+    "read_sensor_fl": "22 15 01",
+    "read_sensor_fr": "22 15 02",
+    "read_sensor_rl": "22 15 03",
+    "read_sensor_rr": "22 15 04",
+    "read_sensor_spare": "22 15 05",
+    "sensor_id_response": "62 15 0x [B3] [B2] [B1] [B0] (32-bit ID big-endian)",
+    "session_open": "10 03",
+    "session_open_response": "50 03",
+    "routine_start": "31 01 03 40",
+    "routine_response": "71 01 03 40",
+    "session_close": "10 01"
+  },
+  "did_map": {
+    "0x1501": "TPMS Sensor ID — Front Left (u32 big-endian, 433 MHz sensor RF ID)",
+    "0x1502": "TPMS Sensor ID — Front Right (u32 big-endian)",
+    "0x1503": "TPMS Sensor ID — Rear Left (u32 big-endian)",
+    "0x1504": "TPMS Sensor ID — Rear Right (u32 big-endian)",
+    "0x1505": "TPMS Sensor ID — Spare (u32 big-endian)"
+  },
+  "routine_ids": {
+    "0x0340": "TPMS Sensor ID Registration (learn mode)"
+  },
+  "sensor_id_format": {
+    "bits": 32,
+    "encoding": "big-endian",
+    "frequency_mhz": 433,
+    "unregistered_values": ["0x00000000", "0xFFFFFFFF"]
+  },
+  "registration_order": ["FL", "FR", "RL", "RR", "SP"],
+  "techstream_path": "Body → TPMS → Utility → Initialize/Register",
+  "outcome_summary": "Registers TPMS sensor 32-bit IDs to vehicle in correct position mapping (FL/FR/RL/RR/Spare). Resolves C2112 and C2115-C2118 codes after tire rotation or sensor replacement. Eliminates TPMS warning light.",
+  "success_rate": null,
+  "total_cases": null,
+  "contributor": "OBDAgent research (obdagent-toyota)"
+}
