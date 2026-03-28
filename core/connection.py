@@ -662,8 +662,257 @@ class OBDConnection:
 
     @staticmethod
     def _parse_vin(raw: str) -> VehicleInfo:
-        vin = raw.replace(" ", "").replace("\n", "")[-17:] if len(raw) >= 17 else "UNKNOWN"
-        return VehicleInfo(vin=vin, make="Unknown", model="Unknown", year=0, engine="Unknown")
+        """
+        Parse ELM327 Mode 09 PID 02 (VIN) response.
+
+        Handles two formats:
+          Multi-frame (ATH1 headers on):
+            014
+            490201314A54...
+            49020231414D...
+          Single-frame (ATH0 headers off):
+            49 02 01 31 4A 54 ...
+
+        Each frame: 4902XX<data> where XX = frame number (01, 02, 03...)
+        We strip the frame-number byte and concatenate all data bytes,
+        skip the first length byte, then decode the remaining 17 bytes as ASCII.
+        """
+        vin = "UNKNOWN"
+        try:
+            lines = [l.strip() for l in raw.strip().splitlines() if l.strip()]
+            # Remove ELM prompt/status lines (non-hex or short lines like "014")
+            hex_lines = []
+            for line in lines:
+                clean = line.replace(" ", "")
+                # Keep only lines that look like hex data starting with 4902
+                if clean.upper().startswith("4902"):
+                    hex_lines.append(clean)
+
+            if hex_lines:
+                # Multi-frame: each line is 4902XX<payload>
+                # XX is frame number (01=first, 02=second, ...)
+                # Strip "4902XX" prefix (6 chars) to get payload hex
+                payload_hex = ""
+                for frame in hex_lines:
+                    # frame[0:4] = "4902", frame[4:6] = frame number, frame[6:] = data
+                    payload_hex += frame[6:]
+
+                # payload_hex is now all data bytes concatenated
+                # First byte is a length/count byte — skip it
+                # Remaining bytes are VIN ASCII chars
+                raw_bytes = bytes.fromhex(payload_hex)
+                if len(raw_bytes) > 1:
+                    vin_bytes = raw_bytes[1:]
+                    candidate = "".join(
+                        chr(b) for b in vin_bytes if 0x20 <= b <= 0x7E
+                    )
+                    candidate = candidate.strip()
+                    if len(candidate) >= 17:
+                        vin = candidate[:17]
+
+            # Fallback: try single-line space-separated hex
+            if vin == "UNKNOWN":
+                all_hex = raw.replace("\n", " ").strip()
+                parts = [p for p in all_hex.split() if len(p) == 2]
+                # Find 49 02 sequence
+                for i in range(len(parts) - 1):
+                    if parts[i].upper() == "49" and parts[i + 1].upper() == "02":
+                        # Skip service/pid/frame-count bytes, grab up to 17 data bytes
+                        data_parts = parts[i + 3:]  # skip 49, 02, frame#
+                        candidate_bytes = bytes(int(x, 16) for x in data_parts[:18])
+                        text = "".join(
+                            chr(b) for b in candidate_bytes if 0x20 <= b <= 0x7E
+                        ).strip()
+                        if len(text) >= 17:
+                            vin = text[:17]
+                        break
+
+            # Last resort: take last 34 hex chars from stripped raw, decode as ASCII
+            if vin == "UNKNOWN":
+                stripped = raw.replace(" ", "").replace("\n", "")
+                if len(stripped) >= 34:
+                    try:
+                        candidate = bytes.fromhex(stripped[-34:]).decode("ascii", errors="ignore").strip()
+                        if len(candidate) == 17 and candidate.isprintable():
+                            vin = candidate
+                    except Exception:
+                        pass
+
+        except Exception:
+            vin = "UNKNOWN"
+
+        # Validate: VIN must be 17 printable ASCII non-space chars
+        if len(vin) != 17 or not all(0x21 <= ord(c) <= 0x7E for c in vin):
+            vin = "UNKNOWN"
+
+        return _decode_vin_info(vin)
+
+
+# ---------------------------------------------------------------------------
+# WMI lookup and VIN decode helpers (module-level, used by _parse_vin)
+# ---------------------------------------------------------------------------
+
+_WMI_TABLE: dict[str, tuple[str, str]] = {
+    # Toyota / Lexus
+    "JTJ": ("Lexus", "SUV"),
+    "JTD": ("Lexus", "Sedan"),
+    "JTE": ("Lexus", "SUV"),
+    "JTG": ("Lexus", "SUV"),
+    "JT2": ("Toyota", "Car"),
+    "JT3": ("Toyota", "SUV"),
+    "JT4": ("Toyota", "Truck"),
+    "JT6": ("Toyota", "Van"),
+    "JT8": ("Toyota", "Car"),
+    "JTN": ("Toyota", "Car"),
+    "JTM": ("Toyota", "SUV"),
+    # Honda
+    "1HG": ("Honda", "Car"),
+    "1GY": ("Honda", "SUV"),
+    "2HG": ("Honda", "Car"),
+    "JHM": ("Honda", "Car"),
+    "5FN": ("Honda", "SUV"),
+    # GM / Chevrolet / Buick / Cadillac
+    "1G1": ("Chevrolet", "Car"),
+    "1G6": ("Cadillac", "Car"),
+    "2G1": ("Chevrolet", "Car"),
+    "1GC": ("Chevrolet", "Truck"),
+    "1GT": ("GMC", "Truck"),
+    "2C3": ("Dodge", "Car"),
+    "1GD": ("GMC", "Truck"),
+    "KL4": ("Buick", "SUV"),
+    # Ford / Lincoln / Mercury
+    "1FT": ("Ford", "Truck"),
+    "1FA": ("Ford", "Car"),
+    "1FM": ("Ford", "SUV"),
+    "2FM": ("Ford", "SUV"),
+    "3FA": ("Ford", "Car"),
+    "3FM": ("Ford", "SUV"),
+    "1L1": ("Lincoln", "Car"),
+    "5LM": ("Lincoln", "SUV"),
+    # BMW
+    "WBA": ("BMW", "Car"),
+    "WBS": ("BMW M", "Car"),
+    "WBY": ("BMW", "EV"),
+    "5UX": ("BMW", "SUV"),
+    # Audi / VW / Porsche
+    "WAU": ("Audi", "Car"),
+    "WA1": ("Audi", "SUV"),
+    "1VW": ("Volkswagen", "Car"),
+    "3VW": ("Volkswagen", "Car"),
+    "WP0": ("Porsche", "Car"),
+    "WP1": ("Porsche", "SUV"),
+    # Mercedes-Benz
+    "WDD": ("Mercedes-Benz", "Car"),
+    "4JG": ("Mercedes-Benz", "SUV"),
+    "WDC": ("Mercedes-Benz", "SUV"),
+    # Chrysler / Dodge / Jeep / Ram
+    "1C4": ("Jeep", "SUV"),
+    "1C6": ("Ram", "Truck"),
+    "2C4": ("Chrysler", "Minivan"),
+    "3C6": ("Ram", "Truck"),
+    "1B3": ("Dodge", "Car"),
+    # Hyundai / Kia / Genesis
+    "KMH": ("Hyundai", "Car"),
+    "KNA": ("Kia", "Car"),
+    "KNB": ("Kia", "SUV"),
+    "KM8": ("Hyundai", "SUV"),
+    "KND": ("Kia", "SUV"),
+    "5NP": ("Hyundai", "Car"),
+    "5XY": ("Hyundai", "SUV"),
+    "KNG": ("Genesis", "Car"),
+    # Nissan / Infiniti
+    "JN1": ("Nissan", "Car"),
+    "JN8": ("Nissan", "SUV"),
+    "5N1": ("Nissan", "SUV"),
+    "1N4": ("Nissan", "Car"),
+    "JNK": ("Infiniti", "Car"),
+    # Subaru
+    "JF1": ("Subaru", "Car"),
+    "JF2": ("Subaru", "SUV"),
+    "4S3": ("Subaru", "Car"),
+    "4S4": ("Subaru", "SUV"),
+    # Mazda
+    "JM1": ("Mazda", "Car"),
+    "JM3": ("Mazda", "SUV"),
+    # Mitsubishi
+    "JA3": ("Mitsubishi", "Car"),
+    "JA4": ("Mitsubishi", "SUV"),
+    "4A3": ("Mitsubishi", "Car"),
+    # Renault
+    "VF1": ("Renault", "Car"),
+    "VF3": ("Renault", "Car"),
+    # Land Rover / Jaguar
+    "SAL": ("Land Rover", "SUV"),
+    "SAJ": ("Jaguar", "Car"),
+    "SAR": ("Range Rover", "SUV"),
+    # Volvo
+    "YV1": ("Volvo", "Car"),
+    "YV4": ("Volvo", "SUV"),
+    # Ferrari / Alfa Romeo / Fiat
+    "ZFF": ("Ferrari", "Car"),
+    "ZAR": ("Alfa Romeo", "Car"),
+    "ZFA": ("Fiat", "Car"),
+    # Tesla
+    "5YJ": ("Tesla", "EV"),
+    "7SA": ("Tesla", "EV"),
+    # Acura
+    "19U": ("Acura", "Car"),
+    "5J8": ("Acura", "SUV"),
+    # Cadillac
+    "1GY": ("Cadillac", "SUV"),
+    # Stellantis (newer)
+    "3C4": ("Chrysler", "Minivan"),
+    "2T1": ("Toyota", "Car"),
+}
+
+# VIN position 10 (index 9) year decode
+_YEAR_MAP: dict[str, int] = {
+    "A": 1980, "B": 1981, "C": 1982, "D": 1983, "E": 1984,
+    "F": 1985, "G": 1986, "H": 1987, "J": 1988, "K": 1989,
+    "L": 1990, "M": 1991, "N": 1992, "P": 1993, "R": 1994,
+    "S": 1995, "T": 1996, "V": 1997, "W": 1998, "X": 1999,
+    "Y": 2000,
+    "1": 2001, "2": 2002, "3": 2003, "4": 2004, "5": 2005,
+    "6": 2006, "7": 2007, "8": 2008, "9": 2009,
+    # 2010+ reuses letters (second cycle)
+}
+# Second cycle: A=2010 through R=2025
+_YEAR_MAP_2010 = {
+    "A": 2010, "B": 2011, "C": 2012, "D": 2013, "E": 2014,
+    "F": 2015, "G": 2016, "H": 2017, "J": 2018, "K": 2019,
+    "L": 2020, "M": 2021, "N": 2022, "P": 2023, "R": 2024,
+    "S": 2025,
+}
+
+
+def _decode_vin_year(vin: str) -> int:
+    """Decode model year from VIN position 10 (index 9)."""
+    if len(vin) < 10:
+        return 0
+    char = vin[9].upper()
+    # Use 2010+ cycle if we can disambiguate (VIN check digit at pos 9 of full 17-char VIN
+    # is not I, O, Q; model year can be either cycle — default to recent decade)
+    year_2010 = _YEAR_MAP_2010.get(char, 0)
+    year_1980 = _YEAR_MAP.get(char, 0)
+    if year_2010:
+        return year_2010  # Prefer recent (2010+) since most connected vehicles are newer
+    return year_1980
+
+
+def _decode_vin_info(vin: str) -> "VehicleInfo":
+    """Decode make, model hint, and year from VIN. Returns VehicleInfo."""
+    make = "Unknown"
+    model = "Unknown"
+    year = 0
+
+    if vin != "UNKNOWN" and len(vin) == 17:
+        wmi = vin[:3].upper()
+        entry = _WMI_TABLE.get(wmi)
+        if entry:
+            make, model = entry
+        year = _decode_vin_year(vin)
+
+    return VehicleInfo(vin=vin, make=make, model=model, year=year, engine="Unknown")
 
     @staticmethod
     def _parse_dtc_response(raw: str) -> list[str]:

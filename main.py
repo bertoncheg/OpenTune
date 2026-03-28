@@ -31,6 +31,7 @@ from pathlib import Path
 
 from config import OPENTUNE_VERSION, ANTHROPIC_API_KEY, CLAUDE_MODEL, SESSION_LOG_DIR
 from core.connection import OBDConnection, ConnectionMode, DTC, LiveData
+from core.vehicle_researcher import VehicleResearcher
 from core.scanner import ECUScanner, LiveMonitor, ScanResult
 from core.session_logger import SessionLogger
 from core.component_test import ComponentTester, COMPONENT_TESTS
@@ -232,7 +233,7 @@ def render_scan_result(result: ScanResult) -> None:
     ecu_table.add_column("STATUS", width=14)
 
     for ecu, status in result.ecu_map.items():
-        style = "green" if status == "OK" else "dim red"
+        style = "green" if status == "OK" else ("dim" if status == "UNKNOWN" else "dim red")
         ecu_table.add_row(ecu, Text(status, style=style))
 
     console.print(
@@ -1121,10 +1122,20 @@ def run_main_menu(
     profiles: VehicleProfileManager,
     knowledge: KnowledgeEngine,
     manual_vehicle: dict = {},
+    researcher: Optional[VehicleResearcher] = None,
 ) -> None:
     scanner = ECUScanner(conn)
+    _research_printed = False
 
     while True:
+        # Check if background research just completed — print once
+        if researcher is not None and not _research_printed and researcher.is_done():
+            _research_printed = True
+            summary = researcher.get_summary()
+            if summary:
+                console.print(f"[bold cyan]  Research complete:[/bold cyan] {summary}")
+                console.print()
+
         # Drain and display any anomaly alerts
         if ANTHROPIC_API_KEY:
             alerts = ai_monitor.drain_enriched()
@@ -1645,7 +1656,7 @@ def main() -> None:
     # -----------------------------------------------------------------------
     # NO-CAR MODE: real adapter selected but no connection or no vehicle
     # -----------------------------------------------------------------------
-    if mode == ConnectionMode.REAL and (not connected or not vehicle_display):
+    if mode == ConnectionMode.REAL and not connected:
         console.print()
         console.print(Panel(
             "[bold yellow]Full diagnostic features require OBD2 connection.[/bold yellow]\n"
@@ -1711,6 +1722,19 @@ def main() -> None:
 
     render_scan_result(scan_result)
 
+    # Self-learning: start background research if vehicle is unknown
+    researcher: Optional[VehicleResearcher] = None
+    _research_printed = False
+    if ANTHROPIC_API_KEY:
+        vehicle_make = conn.vehicle.make if conn.vehicle else "Unknown"
+        if vehicle_make in ("Unknown", "") or vin == "UNKNOWN":
+            researcher = VehicleResearcher(ANTHROPIC_API_KEY, Path(__file__).parent / "knowledge_base")
+            live_snap = scan_result.live_snapshot.snapshot() if scan_result.live_snapshot else {}
+            dtc_codes = [d.code for d in scan_result.dtcs]
+            researcher.start_research(vin, dtc_codes, live_snap)
+            console.print("[dim cyan]  Researching vehicle in background...[/dim cyan]")
+            console.print()
+
     # Start live monitor
     live_monitor = LiveMonitor(conn)
     live_monitor.start()
@@ -1754,6 +1778,7 @@ def main() -> None:
             conn, scan_result, live_monitor, ai_monitor,
             engineer, logger, profiles, knowledge,
             manual_vehicle=manual_info,
+            researcher=researcher,
         )
     finally:
         live_monitor.stop()
@@ -1769,6 +1794,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 
 
 
