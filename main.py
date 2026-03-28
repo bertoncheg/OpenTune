@@ -24,6 +24,8 @@ from rich.rule import Rule
 from rich.live import Live
 from rich.spinner import Spinner
 from rich import box
+import questionary
+from questionary import Style as QStyle
 
 from pathlib import Path
 
@@ -40,6 +42,31 @@ from ai.monitor import AIMonitor
 from core.quips import quip
 
 console = Console()
+
+# ---------------------------------------------------------------------------
+# Arrow-key menu style & choices
+# ---------------------------------------------------------------------------
+
+QSTYLE = QStyle([
+    ('pointer', 'fg:cyan bold'),
+    ('selected', 'fg:white bold'),
+    ('highlighted', 'fg:white'),
+])
+
+MENU_CHOICES = [
+    questionary.Choice('  DTC Scan',           '1'),
+    questionary.Choice('  Live Process Scan',  '2'),
+    questionary.Choice('  DTC History',        '3'),
+    questionary.Choice('  Freeze Frame',       '4'),
+    questionary.Choice('  Readiness Monitors', '5'),
+    questionary.Choice('  Component Test',     '6'),
+    questionary.Choice('  Procedure History',  '7'),
+    questionary.Choice('  Vehicle Profiles',   '8'),
+    questionary.Choice('  Export Report',      '9'),
+    questionary.Choice('  Knowledge Base',     'K'),
+    questionary.Choice('  Chat with AI',       '0'),
+    questionary.Choice('  Quit',               'Q'),
+]
 
 # ---------------------------------------------------------------------------
 # ASCII Art & Branding
@@ -1074,24 +1101,9 @@ def run_main_menu(
     logger: SessionLogger,
     profiles: VehicleProfileManager,
     knowledge: KnowledgeEngine,
+    manual_vehicle: dict = {},
 ) -> None:
     scanner = ECUScanner(conn)
-
-    MENU = (
-        "\n"
-        "   [bold white][1][/bold white]  DTC Scan\n"
-        "   [bold white][2][/bold white]  Live Process Scan\n"
-        "   [bold white][3][/bold white]  DTC History\n"
-        "   [bold white][4][/bold white]  Freeze Frame\n"
-        "   [bold white][5][/bold white]  Readiness Monitors\n"
-        "   [bold white][6][/bold white]  Component Test\n"
-        "   [bold white][7][/bold white]  Procedure History\n"
-        "   [bold white][8][/bold white]  Vehicle Profiles\n"
-        "   [bold white][9][/bold white]  Export Report\n"
-        "   [bold cyan][K][/bold cyan]  Knowledge Base — browse catalogued solutions\n"
-        "   [bold cyan][0][/bold cyan]  Chat — describe problem to AI\n"
-        "   [bold red][Q][/bold red]  Quit\n"
-    )
 
     while True:
         # Drain and display any anomaly alerts
@@ -1103,17 +1115,17 @@ def run_main_menu(
             display_alerts(alerts)
 
         console.print()
-        console.print(Panel(MENU, title="[bold cyan]OPENTUNE MENU[/bold cyan]",
-                            border_style="cyan", padding=(0, 2)))
-        console.print()
 
         try:
-            choice = Prompt.ask("[bold cyan]Select[/bold cyan]", default="").strip().upper()
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Goodbye.[/dim]")
-            break
+            choice = questionary.select(
+                "OPENTUNE MENU",
+                choices=MENU_CHOICES,
+                style=QSTYLE,
+            ).ask()
+        except KeyboardInterrupt:
+            choice = None
 
-        if choice == "Q":
+        if choice is None or choice == "Q":
             console.print("[dim]Goodbye.[/dim]")
             break
 
@@ -1152,10 +1164,7 @@ def run_main_menu(
             feature_knowledge_base(knowledge)
 
         elif choice == "0":
-            _run_chat_session(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge)
-
-        else:
-            console.print("[dim]  Invalid option.[/dim]")
+            _run_chat_session(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge, manual_vehicle=manual_vehicle)
 
 
 def _run_chat_session(
@@ -1166,9 +1175,10 @@ def _run_chat_session(
     engineer: ProcedureEngineer,
     logger: SessionLogger,
     knowledge: KnowledgeEngine,
+    manual_vehicle: dict = {},
 ) -> None:
     """Single chat interaction from the menu."""
-    run_chat_loop(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge=knowledge)
+    run_chat_loop(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge=knowledge, manual_vehicle=manual_vehicle)
 
 
 # ---------------------------------------------------------------------------
@@ -1183,6 +1193,7 @@ def run_chat_loop(
     engineer: ProcedureEngineer,
     logger: SessionLogger,
     knowledge: Optional[KnowledgeEngine] = None,
+    manual_vehicle: dict = {},
 ) -> None:
     console.print()
     console.print(Rule("[bold cyan]DIAGNOSTIC CHAT[/bold cyan]"))
@@ -1269,7 +1280,7 @@ def run_chat_loop(
             "dtcs": dtcs,
             "live_data": live_data,
             "ecu_map": scan_result.ecu_map,
-            "manual_vehicle": manual_info,  # year/make/model/vin entered by mechanic
+            "manual_vehicle": manual_vehicle,
         }
 
         # Phase 1: Understand the problem
@@ -1430,6 +1441,85 @@ def prompt_manual_vehicle(existing_vehicle=None) -> dict:
         console.print()
     return result
 
+# ---------------------------------------------------------------------------
+# No-car chat loop (AI-only, no OBD connection)
+# ---------------------------------------------------------------------------
+
+def un_no_car_chat(engineer: ProcedureEngineer, logger: SessionLogger, knowledge: KnowledgeEngine) -> None:
+    """Chat loop for no-car mode — AI only, no live data or DTCs."""
+    console.print()
+    console.print(
+        "[bold cyan]OpenTune:[/bold cyan] What is your vehicle — year, make, model, and trim? "
+        "Describe what you're dealing with and let's figure it out."
+    )
+    console.print()
+
+    context: dict = {
+        "vehicle_display": "Unknown",
+        "vin": "UNKNOWN",
+        "dtcs": [],
+        "live_data": None,
+        "ecu_map": {},
+        "manual_vehicle": {},
+        "no_car_mode": True,
+    }
+
+    while True:
+        try:
+            user_input = Prompt.ask("\n[bold cyan]mechanic[/bold cyan]")
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Session ended.[/dim]")
+            break
+
+        if not user_input.strip():
+            continue
+
+        cmd = user_input.strip().lower()
+        if cmd in ("quit", "exit", "q"):
+            console.print("[dim]Goodbye.[/dim]")
+            break
+
+        # Two-phase AI flow
+        console.print()
+        console.print("[dim cyan]Before I run anything — let me check what you've told me.[/dim cyan]")
+        console.print()
+
+        with console.status("[cyan]Reading what you've told me...[/cyan]", spinner="dots"):
+            understanding = engineer.understand_problem(user_input, context)
+
+        if understanding.data_highlights:
+            for highlight in understanding.data_highlights:
+                console.print(f"  [cyan]→[/cyan] {highlight}")
+            console.print()
+
+        clarification = ""
+        if understanding.needs_clarification and understanding.clarifying_question:
+            console.print(f"  [white]{understanding.clarifying_question}[/white]")
+            console.print()
+            try:
+                clarification = Prompt.ask("[bold cyan]mechanic[/bold cyan]")
+            except (KeyboardInterrupt, EOFError):
+                console.print("\n[dim]Session ended.[/dim]")
+                break
+            console.print()
+
+        if clarification:
+            console.print("[dim cyan]Got it. Engineering solution...[/dim cyan]")
+        else:
+            console.print("[dim cyan]Engineering solution...[/dim cyan]")
+        console.print()
+
+        with console.status("[cyan]Designing procedure...[/cyan]", spinner="arc"):
+            proc = engineer.engineer_solution(understanding, context, clarification=clarification)
+        quip('ai_engineer')
+
+        # Show plan only — no execution (no OBD connection)
+        render_plan_summary(proc)
+        console.print("[dim]Connect an ELM327 adapter and relaunch to execute this procedure with live data.[/dim]")
+        quip('chat')
+        console.print()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="opentune",
@@ -1521,34 +1611,60 @@ def main() -> None:
     with console.status("[cyan]Establishing connection...[/cyan]", spinner="dots"):
         connected = conn.connect()
 
-    if not connected:
-        console.print(Panel(
-            f"[bold red]Connection failed[/bold red]\n\n"
-            f"[white]Could not connect to {'ELM327 adapter' if mode == ConnectionMode.REAL else 'simulator'}.[/white]\n"
-            f"[dim]Port: {port}[/dim]",
-            border_style="red",
-        ))
-        sys.exit(1)
-
-    vehicle = conn.vehicle
+    vehicle = conn.vehicle if connected else None
     vehicle_display = vehicle.display_name() if vehicle else None
-    vin = vehicle.vin if vehicle else None
 
-    # Manual vehicle entry:
-    # - Always offered in SIM mode (no real vehicle to detect)
-    # - Offered in REAL mode if vehicle was not auto-detected
-    manual_info = {}
-    if mode.value == "sim" or not vehicle_display:
+    # -----------------------------------------------------------------------
+    # NO-CAR MODE: real adapter selected but no connection or no vehicle
+    # -----------------------------------------------------------------------
+    if mode == ConnectionMode.REAL and (not connected or not vehicle_display):
+        console.print()
+        console.print(Panel(
+            "[bold yellow]Full diagnostic features require OBD2 connection.[/bold yellow]\n"
+            "[white]Running in AI Chat mode.[/white]\n\n"
+            "[dim]Connect an ELM327 adapter and relaunch for full ECU scan, live data, "
+            "component tests, and procedure execution.[/dim]",
+            title="[yellow]NO CONNECTION[/yellow]",
+            border_style="yellow",
+        ))
+        console.print()
+
+        logger = SessionLogger()
+        base_path = Path(__file__).parent
+        knowledge = KnowledgeEngine(base_path)
+        knowledge.seed_initial_knowledge()
+        engineer = ProcedureEngineer(knowledge_engine=knowledge)
+
+        un_no_car_chat(engineer, logger, knowledge)
+
+        if connected:
+            conn.disconnect()
+        console.print()
+        console.print(Rule("[dim]OpenTune session ended[/dim]"))
+        console.print()
+        return
+
+    # -----------------------------------------------------------------------
+    # CONNECTED MODE: sim always here; real with vehicle detected
+    # -----------------------------------------------------------------------
+
+    # Manual vehicle entry: only if vehicle wasn't auto-detected
+    manual_info: dict = {}
+    if not vehicle_display:
         manual_info = prompt_manual_vehicle(existing_vehicle=vehicle_display)
 
     # Merge manual info into vehicle display / vin
     if manual_info:
-        parts = [manual_info.get("year",""), manual_info.get("make",""), manual_info.get("model","")]
+        parts = [manual_info.get("year", ""), manual_info.get("make", ""), manual_info.get("model", "")]
         manual_display = " ".join(p for p in parts if p)
         if manual_display:
             vehicle_display = manual_display
         if manual_info.get("vin"):
             vin = manual_info["vin"]
+        else:
+            vin = vehicle.vin if vehicle else "UNKNOWN"
+    else:
+        vin = vehicle.vin if vehicle else "UNKNOWN"
 
     vehicle_display = vehicle_display or "Unknown"
     vin = vin or "UNKNOWN"
@@ -1609,6 +1725,7 @@ def main() -> None:
         run_main_menu(
             conn, scan_result, live_monitor, ai_monitor,
             engineer, logger, profiles, knowledge,
+            manual_vehicle=manual_info,
         )
     finally:
         live_monitor.stop()
