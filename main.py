@@ -1269,6 +1269,7 @@ def run_chat_loop(
             "dtcs": dtcs,
             "live_data": live_data,
             "ecu_map": scan_result.ecu_map,
+            "manual_vehicle": manual_info,  # year/make/model/vin entered by mechanic
         }
 
         # Phase 1: Understand the problem
@@ -1390,6 +1391,45 @@ def run_chat_loop(
 # Entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Manual Vehicle Entry
+# ---------------------------------------------------------------------------
+
+def prompt_manual_vehicle(existing_vehicle=None) -> dict:
+    """
+    Prompt mechanic to manually enter vehicle info.
+    Returns dict with year, make, model, vin (all optional).
+    """
+    console.print()
+    console.print(Rule("[bold cyan]VEHICLE IDENTIFICATION[/bold cyan]"))
+    console.print()
+    if existing_vehicle:
+        console.print(f"  [dim]Detected: [white]{existing_vehicle}[/white] — press ENTER to keep, or type to override[/dim]")
+    else:
+        console.print("  [dim]No vehicle detected. Enter details so the AI can reason accurately.[/dim]")
+        console.print("  [dim]Press ENTER to skip any field.[/dim]")
+    console.print()
+    try:
+        year  = Prompt.ask("  [bold cyan]Year [/bold cyan] ", default="").strip()
+        make  = Prompt.ask("  [bold cyan]Make [/bold cyan] ", default="").strip()
+        model = Prompt.ask("  [bold cyan]Model[/bold cyan] ", default="").strip()
+        vin   = Prompt.ask("  [bold cyan]VIN  [/bold cyan] ", default="").strip()
+    except (KeyboardInterrupt, EOFError):
+        return {}
+    result = {}
+    if year:  result["year"]  = year
+    if make:  result["make"]  = make
+    if model: result["model"] = model
+    if vin:   result["vin"]   = vin
+    if result:
+        parts = [year, make, model]
+        display = " ".join(p for p in parts if p) or "Unknown"
+        console.print()
+        console.print(f"  [green]Vehicle set:[/green] [bold white]{display}[/bold white]" +
+                      (f"  [dim cyan]VIN: {vin}[/dim cyan]" if vin else ""))
+        console.print()
+    return result
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="opentune",
@@ -1491,8 +1531,27 @@ def main() -> None:
         sys.exit(1)
 
     vehicle = conn.vehicle
-    vehicle_display = vehicle.display_name() if vehicle else "Unknown"
-    vin = vehicle.vin if vehicle else "UNKNOWN"
+    vehicle_display = vehicle.display_name() if vehicle else None
+    vin = vehicle.vin if vehicle else None
+
+    # Manual vehicle entry:
+    # - Always offered in SIM mode (no real vehicle to detect)
+    # - Offered in REAL mode if vehicle was not auto-detected
+    manual_info = {}
+    if mode.value == "sim" or not vehicle_display:
+        manual_info = prompt_manual_vehicle(existing_vehicle=vehicle_display)
+
+    # Merge manual info into vehicle display / vin
+    if manual_info:
+        parts = [manual_info.get("year",""), manual_info.get("make",""), manual_info.get("model","")]
+        manual_display = " ".join(p for p in parts if p)
+        if manual_display:
+            vehicle_display = manual_display
+        if manual_info.get("vin"):
+            vin = manual_info["vin"]
+
+    vehicle_display = vehicle_display or "Unknown"
+    vin = vin or "UNKNOWN"
 
     # Refresh launch screen with vehicle info
     render_launch_screen(mode, vehicle_display, vin)
@@ -1565,6 +1624,10 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+
 
 
 

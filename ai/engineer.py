@@ -1,4 +1,4 @@
-"""
+﻿"""
 OpenTune — The open-source, AI-native vehicle diagnostic terminal.
 
 Built for independent mechanics who are locked out of the dealer monopoly.
@@ -657,3 +657,5 @@ class ProcedureEngineer:
             estimated_time="10-30 min",
             engineered=False,
         )
+
+
