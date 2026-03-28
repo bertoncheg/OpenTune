@@ -47,6 +47,9 @@ console = Console()
 # Arrow-key menu style & choices
 # ---------------------------------------------------------------------------
 
+# Detect interactive terminal — questionary needs a real console
+INTERACTIVE_TTY = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
+
 QSTYLE = QStyle([
     ('pointer', 'fg:cyan bold'),
     ('selected', 'fg:white bold'),
@@ -67,6 +70,22 @@ MENU_CHOICES = [
     questionary.Choice('  Chat with AI',       '0'),
     questionary.Choice('  Quit',               'Q'),
 ]
+
+MENU_TEXT = (
+    "\n"
+    "   [bold white][1][/bold white]  DTC Scan\n"
+    "   [bold white][2][/bold white]  Live Process Scan\n"
+    "   [bold white][3][/bold white]  DTC History\n"
+    "   [bold white][4][/bold white]  Freeze Frame\n"
+    "   [bold white][5][/bold white]  Readiness Monitors\n"
+    "   [bold white][6][/bold white]  Component Test\n"
+    "   [bold white][7][/bold white]  Procedure History\n"
+    "   [bold white][8][/bold white]  Vehicle Profiles\n"
+    "   [bold white][9][/bold white]  Export Report\n"
+    "   [bold cyan][K][/bold cyan]  Knowledge Base\n"
+    "   [bold cyan][0][/bold cyan]  Chat with AI\n"
+    "   [bold red][Q][/bold red]  Quit\n"
+)
 
 # ---------------------------------------------------------------------------
 # ASCII Art & Branding
@@ -1116,15 +1135,24 @@ def run_main_menu(
 
         console.print()
 
-        try:
-            choice = questionary.select(
-                "OPENTUNE MENU",
-                choices=MENU_CHOICES,
-                style=QSTYLE,
-            ).ask()
-        except KeyboardInterrupt:
-            choice = None
-
+        if INTERACTIVE_TTY:
+            try:
+                choice = questionary.select(
+                    "OPENTUNE MENU",
+                    choices=MENU_CHOICES,
+                    style=QSTYLE,
+                ).ask()
+                if choice is None: choice = 'Q'
+            except Exception:
+                choice = 'Q'
+        else:
+            console.print(Panel(MENU_TEXT, title='[bold cyan]OPENTUNE MENU[/bold cyan]',
+                                border_style='cyan', padding=(0, 2)))
+            console.print()
+            try:
+                choice = Prompt.ask('[bold cyan]Select[/bold cyan]', default='').strip().upper()
+            except (KeyboardInterrupt, EOFError):
+                choice = 'Q'
         if choice is None or choice == "Q":
             console.print("[dim]Goodbye.[/dim]")
             break
@@ -1741,6 +1769,10 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+
 
 
 
