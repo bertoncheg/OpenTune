@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from typing import Optional, Generator
 
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from ai.intelligence_router import call as ai_call
+from ai.key_resolver import resolve_provider as _resolve_provider
 from core.connection import DTC, LiveData
 
 
@@ -331,15 +333,9 @@ class ProcedureEngineer:
 
     def __init__(self, knowledge_engine=None) -> None:
         self._client = None
-        self._api_available = bool(ANTHROPIC_API_KEY)
-        self._knowledge = knowledge_engine  # optional KnowledgeEngine instance
-        if self._api_available:
-            try:
-                import anthropic
-                self._client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            except ImportError:
-                self._api_available = False
-
+        self._provider_cfg = _resolve_provider()
+        self._api_available = True  # always true — falls back to Ollama if no key
+        self._knowledge = knowledge_engine
     @property
     def api_available(self) -> bool:
         return self._api_available
@@ -369,7 +365,7 @@ class ProcedureEngineer:
                 system=UNDERSTAND_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
-            raw = response.content[0].text.strip()
+            raw = response_text.strip()
             return self._parse_understanding(raw, user_input, context)
         except Exception:
             return self._fallback_understanding(user_input, context)
@@ -657,5 +653,7 @@ class ProcedureEngineer:
             estimated_time="10-30 min",
             engineered=False,
         )
+
+
 
 

@@ -30,6 +30,10 @@ from questionary import Style as QStyle
 from pathlib import Path
 
 from config import OPENTUNE_VERSION, ANTHROPIC_API_KEY, CLAUDE_MODEL, SESSION_LOG_DIR
+from ai.key_resolver import resolve_provider
+from ai.ollama_setup import check_and_report as ollama_status_line
+
+ACTIVE_PROVIDER = resolve_provider()
 from core.connection import OBDConnection, ConnectionMode, DTC, LiveData
 from core.vehicle_researcher import VehicleResearcher
 from core.scanner import ECUScanner, LiveMonitor, ScanResult
@@ -1794,6 +1798,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
