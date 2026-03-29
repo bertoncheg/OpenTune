@@ -1,4 +1,4 @@
-"""
+﻿"""
 ECU Scanner & Live Data Monitor
 
 - Full ECU scan on connect
@@ -235,16 +235,24 @@ class ECUScanner:
     def _probe_ecus(self) -> dict[str, str]:
         """Attempt to contact each known ECU and report status."""
         result: dict[str, str] = {}
-        for ecu_short, ecu_full in ECU_MAP.items():
+        import random
+
+        for ecu_short in ECU_MAP:
             if self.conn.mode.value == "sim":
-                import random
                 result[ecu_short] = "OK" if random.random() > 0.3 else "NO RESPONSE"
             else:
-                try:
-                    resp = self.conn.send_uds(bytes([0x10, 0x01]))
-                    result[ecu_short] = "OK" if resp else "NO RESPONSE"
-                except Exception:
-                    result[ecu_short] = "ERROR"
+                # For real connections, only ECM can be probed via standard OBD2.
+                # Other modules need make-specific UDS addresses - mark as UNKNOWN
+                # to avoid flooding the bus with bad requests.
+                if ecu_short == "ECM":
+                    try:
+                        # Standard OBD2 Mode 01 PID 00 — supported PIDs query
+                        resp = self.conn.query_pid("rpm")
+                        result[ecu_short] = "OK" if resp is not None else "NO RESPONSE"
+                    except Exception:
+                        result[ecu_short] = "NO RESPONSE"
+                else:
+                    result[ecu_short] = "UNKNOWN"
         return result
 
 
@@ -351,3 +359,4 @@ class LiveMonitor:
                 self.alert_queue.put(alert)
                 # Suppress same PID for 60 seconds to avoid spam
                 self._suppression_until[suppress_key] = now + 60.0
+

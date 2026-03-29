@@ -6,8 +6,30 @@
     "model": "GX460",
     "year": 2021,
     "engine": "4.6L V8 1UR-FE",
-    "last_seen": "2026-03-28T09:23:12.258773+00:00",
-    "session_count": 14,
+    "last_seen": "2026-03-29T20:23:19.906221+00:00",
+    "session_count": 16,
+    "notes": ""
+  },
+  "82235333336343334": {
+    "vin": "82235333336343334",
+    "nickname": "0 Unknown Unknown",
+    "make": "Unknown",
+    "model": "Unknown",
+    "year": 0,
+    "engine": "Unknown",
+    "last_seen": "2026-03-28T23:34:36.357891+00:00",
+    "session_count": 2,
+    "notes": ""
+  },
+  "UNKNOWN": {
+    "vin": "UNKNOWN",
+    "nickname": "0 Unknown Unknown",
+    "make": "Unknown",
+    "model": "Unknown",
+    "year": 0,
+    "engine": "Unknown",
+    "last_seen": "2026-03-28T23:26:36.270672+00:00",
+    "session_count": 1,
     "notes": ""
   }
 }
