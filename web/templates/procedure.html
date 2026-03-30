@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ procedure.title }} — OpenTune KB{% endblock %}
+{% block content %}
+<div class="container">
+  <div style="margin-bottom:1rem;">
+    <a href="/browse" class="btn btn-outline btn-sm">← Back to KB</a>
+  </div>
+
+  <div class="proc-detail">
+    <div class="proc-detail-header">
+      <h1>{{ procedure.title }}</h1>
+      <div class="proc-detail-tags">
+        {% if procedure.system %}<span class="tag tag-system">{{ procedure.system }}</span>{% endif %}
+        {% if procedure.make %}<span class="tag tag-make">{{ procedure.make }}</span>{% endif %}
+        {% if procedure.model %}<span class="tag tag-make">{{ procedure.model }}</span>{% endif %}
+        {% if (procedure.year_min or procedure.year_max) %}
+        <span class="tag" style="background:var(--surface2); color:var(--text-dim); border:1px solid var(--border);">
+          {{ procedure.year_min or '?' }}{% if procedure.year_max and procedure.year_max != procedure.year_min %}–{{ procedure.year_max }}{% endif %}
+        </span>
+        {% endif %}
+        {% for dtc in (procedure.dtc_codes or []) %}
+        <span class="tag tag-dtc">{{ dtc }}</span>
+        {% endfor %}
+      </div>
+      <div class="proc-meta-row">
+        <span>✓ {{ procedure.verified_count or 0 }} community verifications</span>
+        {% if procedure.contributor %}<span>👤 {{ procedure.contributor }}</span>{% endif %}
+        {% if procedure.confidence %}<span>Confidence: {{ "%.0f"|format(procedure.confidence * 100) }}%</span>{% endif %}
+      </div>
+    </div>
+
+    {% if procedure.outcome_summary %}
+    <div class="proc-section">
+      <div class="proc-section-title">Summary</div>
+      <p style="color:var(--text-dim); font-size:0.9rem; line-height:1.7;">{{ procedure.outcome_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if procedure.symptoms %}
+    <div class="proc-section">
+      <div class="proc-section-title">Symptoms</div>
+      <div class="symptom-list">
+        {% for s in procedure.symptoms %}
+        <span class="symptom-item">{{ s }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if procedure.steps %}
+    <div class="proc-section">
+      <div class="proc-section-title">Procedure</div>
+      <ul class="steps-list">
+        {% for step in procedure.steps %}
+        <li class="step-item">
+          <div class="step-num">{{ loop.index }}</div>
+          <div class="step-content">
+            {% if step.action is defined %}
+            <div class="step-action">{{ step.action }}</div>
+            {% elif step.description is defined %}
+            <div class="step-action">{{ step.description }}</div>
+            {% else %}
+            <div class="step-action">{{ step }}</div>
+            {% endif %}
+            {% if step.detail is defined and step.detail %}
+            <div class="step-detail">{{ step.detail }}</div>
+            {% endif %}
+            {% if step.tool is defined and step.tool %}
+            <div class="step-tool">🔧 {{ step.tool }}</div>
+            {% endif %}
+            {% if step.expected is defined and step.expected %}
+            <div class="step-detail" style="color:var(--green);margin-top:0.25rem;">→ {{ step.expected }}</div>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if procedure.vehicles_confirmed %}
+    <div class="proc-section">
+      <div class="proc-section-title">Confirmed on</div>
+      <div class="symptom-list">
+        {% for v in procedure.vehicles_confirmed %}
+        <span class="symptom-item">{{ v }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="verify-box">
+      <h3>✓ Confirm this worked for you</h3>
+      <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:0.75rem;">Verified by community members. Tell us what vehicle you drove.</p>
+      {% if verify_success %}
+      <div class="alert alert-success">Thanks — your verification has been recorded!</div>
+      {% endif %}
+      <form method="post" action="/procedure/{{ procedure.id }}/verify" class="verify-form">
+        <input class="search-input" type="text" name="vehicle" placeholder="e.g. 2018 Toyota Camry 2.5L" required style="flex:1;min-width:200px;">
+        <button type="submit" class="btn btn-primary">Verify ✓</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

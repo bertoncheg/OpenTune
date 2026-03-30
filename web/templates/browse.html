@@ -1,0 +1,72 @@
+﻿{% extends "base.html" %}
+{% block title %}Knowledge Base — OpenTune{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>// knowledge base</h1>
+    <p>Community-sourced repair procedures, DTC solutions, and diagnostic guides.</p>
+  </div>
+
+  <form method="get" action="/browse">
+    <div class="search-bar">
+      <input class="search-input" type="text" name="q" placeholder="Search procedures, symptoms, DTC codes…" value="{{ query or '' }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+    <div class="filters">
+      <span class="filter-label">Filter:</span>
+      <select name="make" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Makes</option>
+        {% for make in makes %}
+        <option value="{{ make }}" {% if selected_make == make %}selected{% endif %}>{{ make }}</option>
+        {% endfor %}
+      </select>
+      <select name="system" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Systems</option>
+        {% for sys in systems %}
+        <option value="{{ sys }}" {% if selected_system == sys %}selected{% endif %}>{{ sys }}</option>
+        {% endfor %}
+      </select>
+      {% if query or selected_make or selected_system %}
+      <a href="/browse" class="btn btn-outline btn-sm">Clear filters</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <div class="result-count">Showing <span>{{ procedures | length }}</span> procedures</div>
+
+  {% if procedures %}
+  <div class="cards-grid">
+    {% for proc in procedures %}
+    <a href="/procedure/{{ proc.id }}" class="proc-card">
+      <div class="proc-card-title">{{ proc.title }}</div>
+      <div class="proc-card-meta">
+        {% if proc.system %}<span class="tag tag-system">{{ proc.system }}</span>{% endif %}
+        {% if proc.make %}<span class="tag tag-make">{{ proc.make }}</span>{% endif %}
+        {% for dtc in (proc.dtc_codes or [])[:3] %}
+        <span class="tag tag-dtc">{{ dtc }}</span>
+        {% endfor %}
+      </div>
+      {% if proc.outcome_summary %}
+      <div class="proc-card-summary">{{ proc.outcome_summary }}</div>
+      {% endif %}
+      <div class="proc-card-footer">
+        <span>{{ proc.verified_count or 0 }} verified</span>
+        {% if (proc.verified_count or 0) > 0 %}
+        <span class="verified-badge">✓ verified</span>
+        {% else %}
+        <span style="color:var(--text-muted);font-size:0.8rem;">unverified</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <p>No procedures found{% if query %} for "{{ query }}"{% endif %}.</p>
+    <br>
+    <a href="/submit" class="btn btn-primary" style="margin-top:0.5rem;">Be the first to submit one →</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

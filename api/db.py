@@ -118,3 +118,51 @@ def save_embedding(proc_id: str, embedding_bytes: bytes) -> None:
             (embedding_bytes, proc_id),
         )
         conn.commit()
+
+# ---------------------------------------------------------------------------
+# Services directory
+# ---------------------------------------------------------------------------
+
+def init_services_table() -> None:
+    with get_connection() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS services (
+                id           TEXT PRIMARY KEY,
+                name         TEXT NOT NULL,
+                service_type TEXT DEFAULT 'shop',
+                city         TEXT NOT NULL,
+                state        TEXT,
+                country      TEXT DEFAULT 'US',
+                specialties  TEXT,
+                description  TEXT,
+                website      TEXT,
+                phone        TEXT,
+                email        TEXT,
+                verified     INTEGER DEFAULT 0,
+                created_at   TEXT
+            )
+        """)
+        conn.commit()
+
+
+def get_all_services(service_type: str = None, specialty: str = None) -> list[dict]:
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM services ORDER BY verified DESC, created_at DESC").fetchall()
+    results = [dict(r) for r in rows]
+    if service_type:
+        results = [s for s in results if s.get("service_type") == service_type]
+    if specialty:
+        results = [s for s in results if specialty.lower() in (s.get("specialties") or "").lower()]
+    return results
+
+
+def upsert_service(data: dict) -> None:
+    fields = ["id","name","service_type","city","state","country","specialties","description","website","phone","email","verified","created_at"]
+    placeholders = ", ".join(f":{f}" for f in fields)
+    cols = ", ".join(fields)
+    update_set = ", ".join(f"{f}=excluded.{f}" for f in fields if f != "id")
+    sql = f"INSERT INTO services ({cols}) VALUES ({placeholders}) ON CONFLICT(id) DO UPDATE SET {update_set}"
+    row = {f: data.get(f) for f in fields}
+    with get_connection() as conn:
+        conn.execute(sql, row)
+        conn.commit()

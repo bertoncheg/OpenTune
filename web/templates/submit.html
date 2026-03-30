@@ -1,0 +1,87 @@
+﻿{% extends "base.html" %}
+{% block title %}Submit Procedure — OpenTune KB{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>// submit a procedure</h1>
+    <p>Share what worked. Help the next mechanic skip the guesswork.</p>
+  </div>
+
+  {% if success %}
+  <div class="alert alert-success">✓ Procedure submitted! It's live in the knowledge base.</div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/submit">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Title <span class="required">*</span></label>
+        <input class="form-input" type="text" name="title" placeholder="e.g. P0420 Catalyst Efficiency Below Threshold — Toyota Camry" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vehicle System <span class="required">*</span></label>
+          <select class="form-select" name="system" required>
+            <option value="">— Select system —</option>
+            <option>Engine</option>
+            <option>Transmission</option>
+            <option>Brakes</option>
+            <option>Suspension</option>
+            <option>Electrical</option>
+            <option>HVAC</option>
+            <option>Exhaust / Emissions</option>
+            <option>Fuel System</option>
+            <option>Steering</option>
+            <option>Body / Lighting</option>
+            <option>TPMS</option>
+            <option>ABS / Traction</option>
+            <option>Hybrid / EV</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vehicle Make</label>
+          <input class="form-input" type="text" name="make" placeholder="e.g. Toyota, Ford, Universal">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">DTC Codes</label>
+        <input class="form-input" type="text" name="dtc_codes" placeholder="e.g. P0420, P0421 (comma-separated)">
+        <div class="form-hint">Leave blank if not DTC-related</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Symptoms</label>
+        <input class="form-input" type="text" name="symptoms" placeholder="e.g. CEL on, rough idle, hard start (comma-separated)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Procedure Steps <span class="required">*</span></label>
+        <textarea class="form-textarea" name="steps_text" rows="8" placeholder="Write each step on a new line:
+1. Connect OBD2 scanner and confirm P0420
+2. Inspect O2 sensor waveforms...
+3. ..." required></textarea>
+        <div class="form-hint">One step per line. Number them or not — we'll handle formatting.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Outcome Summary</label>
+        <textarea class="form-textarea" name="outcome_summary" rows="3" placeholder="Brief description of what this procedure fixes and when it applies."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Your Name / Handle</label>
+        <input class="form-input" type="text" name="contributor" placeholder="e.g. mike_the_wrench (optional)">
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary" style="font-size:0.95rem;padding:0.6rem 1.5rem;">Submit to Knowledge Base →</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

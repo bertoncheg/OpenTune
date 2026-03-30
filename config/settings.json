@@ -1,0 +1,9 @@
+{
+  "first_run_complete": false,
+  "api_key": null,
+  "api_key_provider": "anthropic",
+  "ollama_enabled": true,
+  "ollama_model": "llama3.2:3b",
+  "preferred_port": null,
+  "theme": "dark"
+}

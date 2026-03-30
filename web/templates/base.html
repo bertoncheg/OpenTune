@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}OpenTune KB{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="/">⚙ OPENTUNE</a>
+  <div class="nav-links">
+    <a href="/" class="{% if active == 'home' %}active{% endif %}">Dashboard</a>
+    <a href="/browse" class="{% if active == 'browse' %}active{% endif %}">Knowledge Base</a>
+    <a href="/services" class="{% if active == 'services' %}active{% endif %}">Services</a>
+    <a href="/submit" class="{% if active == 'submit' %}active{% endif %}">+ Submit</a>
+  </div>
+  <div class="nav-badge">KB v0.1 &nbsp;·&nbsp; <span id="proc-count">…</span> procedures</div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer>
+  <strong><a href="/">OpenTune</a></strong> — open source vehicle diagnostic terminal &nbsp;·&nbsp;
+  <a href="/browse">Knowledge Base</a> &nbsp;·&nbsp;
+  <a href="/services">Services Directory</a> &nbsp;·&nbsp;
+  <a href="https://github.com/opentune/opentune" target="_blank">GitHub</a>
+  <br><br>
+  MIT License · Free forever · Community-owned
+</footer>
+
+<script>
+fetch('/api/stats').then(r=>r.json()).then(d=>{
+  const el = document.getElementById('proc-count');
+  if(el) el.textContent = d.total_procedures;
+}).catch(()=>{});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

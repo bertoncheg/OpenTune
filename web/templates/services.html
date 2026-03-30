@@ -1,0 +1,90 @@
+﻿{% extends "base.html" %}
+{% block title %}Services Directory — OpenTune{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>// services directory</h1>
+    <p>Independent shops and mobile mechanics using OpenTune. Real diagnostics, fair prices.</p>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <form method="get" action="/services" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+      <input class="search-input" type="text" name="q" placeholder="Search shops, cities, specialties…" value="{{ query or '' }}" style="min-width:260px;">
+      <select name="specialty" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Specialties</option>
+        {% for s in specialties %}
+        <option value="{{ s }}" {% if selected_specialty == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <select name="service_type" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Types</option>
+        <option value="shop" {% if selected_type == 'shop' %}selected{% endif %}>Shop</option>
+        <option value="mobile" {% if selected_type == 'mobile' %}selected{% endif %}>Mobile Mechanic</option>
+        <option value="dealership" {% if selected_type == 'dealership' %}selected{% endif %}>Dealership</option>
+        <option value="specialty" {% if selected_type == 'specialty' %}selected{% endif %}>Specialty</option>
+      </select>
+      <button type="submit" class="btn btn-outline btn-sm">Search</button>
+      {% if query or selected_specialty or selected_type %}
+      <a href="/services" class="btn btn-outline btn-sm">Clear</a>
+      {% endif %}
+    </form>
+    <a href="/services/register" class="btn btn-primary">+ List Your Shop</a>
+  </div>
+
+  <div class="result-count">Showing <span>{{ services | length }}</span> services</div>
+
+  {% if services %}
+  <div class="cards-grid">
+    {% for svc in services %}
+    <div class="service-card">
+      <div class="service-card-header">
+        <div>
+          <div class="service-name">{{ svc.name }}</div>
+          <div class="service-type">{{ svc.service_type | title }}</div>
+        </div>
+        {% if svc.verified %}
+        <div class="verified-shield">✓ Verified</div>
+        {% endif %}
+      </div>
+
+      <div class="service-location">📍 {{ svc.city }}{% if svc.state %}, {{ svc.state }}{% endif %}{% if svc.country and svc.country != 'US' %} · {{ svc.country }}{% endif %}</div>
+
+      {% if svc.description %}
+      <div style="font-size:0.85rem; color:var(--text-dim); line-height:1.5;">{{ svc.description }}</div>
+      {% endif %}
+
+      {% if svc.specialties %}
+      <div class="service-specialties">
+        {% for spec in svc.specialties.split(',') %}
+        <span class="tag tag-make">{{ spec.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="service-footer">
+        <div style="display:flex; gap:1rem; align-items:center;">
+          {% if svc.website %}
+          <a href="{{ svc.website }}" target="_blank" class="service-contact">🌐 Website</a>
+          {% endif %}
+          {% if svc.phone %}
+          <a href="tel:{{ svc.phone }}" class="service-contact">📞 {{ svc.phone }}</a>
+          {% endif %}
+          {% if svc.email %}
+          <a href="mailto:{{ svc.email }}" class="service-contact">✉ Email</a>
+          {% endif %}
+        </div>
+        <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font);">uses OpenTune</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🔧</div>
+    <p>No services listed yet{% if query %} matching "{{ query }}"{% endif %}.</p>
+    <br>
+    <a href="/services/register" class="btn btn-primary" style="margin-top:0.5rem;">Be the first to list your shop →</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

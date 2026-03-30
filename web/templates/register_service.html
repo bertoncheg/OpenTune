@@ -1,0 +1,89 @@
+﻿{% extends "base.html" %}
+{% block title %}List Your Shop — OpenTune Services{% endblock %}
+{% block content %}
+<div class="container">
+  <div style="margin-bottom:1rem;">
+    <a href="/services" class="btn btn-outline btn-sm">← Back to Services</a>
+  </div>
+  <div class="page-header">
+    <h1>// list your shop</h1>
+    <p>Let customers know you run open diagnostics. No upsells. No mystery charges.</p>
+  </div>
+
+  {% if success %}
+  <div class="alert alert-success">✓ Your shop has been listed! It's live in the Services Directory.</div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/services/register">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Shop / Business Name <span class="required">*</span></label>
+        <input class="form-input" type="text" name="name" placeholder="e.g. Martinez Auto Diagnostics" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Type <span class="required">*</span></label>
+          <select class="form-select" name="service_type" required>
+            <option value="">— Select type —</option>
+            <option value="shop">Independent Shop</option>
+            <option value="mobile">Mobile Mechanic</option>
+            <option value="specialty">Specialty Shop</option>
+            <option value="dealership">Independent Dealership</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Specialties</label>
+          <input class="form-input" type="text" name="specialties" placeholder="e.g. Toyota, Honda, European (comma-separated)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">City <span class="required">*</span></label>
+          <input class="form-input" type="text" name="city" placeholder="e.g. Phoenix" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">State / Province</label>
+          <input class="form-input" type="text" name="state" placeholder="e.g. AZ">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Country</label>
+          <input class="form-input" type="text" name="country" placeholder="US" value="US">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" type="tel" name="phone" placeholder="e.g. (602) 555-0100">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Website</label>
+        <input class="form-input" type="url" name="website" placeholder="https://yourshop.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Contact Email</label>
+        <input class="form-input" type="email" name="email" placeholder="info@yourshop.com">
+        <div class="form-hint">Not shown publicly — for directory verification only.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Short Description</label>
+        <textarea class="form-textarea" name="description" rows="3" placeholder="What makes your shop different? What do you specialize in?"></textarea>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary" style="font-size:0.95rem;padding:0.6rem 1.5rem;">List My Shop →</button>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;">Free forever. No spam. No BS. Just visibility.</p>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
