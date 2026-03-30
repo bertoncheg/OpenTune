@@ -6,11 +6,18 @@ Entry point — terminal UI, connection flow, chat loop, session logging.
 """
 from __future__ import annotations
 
+import os
+import sys
+os.environ['PYTHONUTF8'] = '1'
+if hasattr(sys.stdout, 'reconfigure') and sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure') and sys.stderr.encoding != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
+
 import colorama
 colorama.init()
 
 import argparse
-import sys
 import time
 from typing import Optional, TYPE_CHECKING
 
