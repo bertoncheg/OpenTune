@@ -1,5 +1,5 @@
-"""
-OBD Detector — ELM327 adapter detection and hot-plug polling.
+﻿"""
+OBD Detector â€” ELM327 adapter detection and hot-plug polling.
 
 Scans COM ports (Windows) and /dev/tty* (macOS/Linux) for ELM327 adapters.
 Background thread polls every 10 seconds and fires a callback when state changes.
@@ -37,7 +37,7 @@ def _candidate_ports() -> list[str]:
         # Prioritise ports that look like ELM327 by VID
         elm_ports = [
             p.device for p in all_ports
-            if (p.vid in _ELM327_VIDS) if p.vid else False
+            if (p.vid in _ELM327_VIDS if p.vid else False)
         ]
         other_ports = [
             p.device for p in all_ports
@@ -46,7 +46,7 @@ def _candidate_ports() -> list[str]:
         return elm_ports + other_ports
 
     except ImportError:
-        # pyserial not installed — fall back to OS-specific guesses
+        # pyserial not installed â€” fall back to OS-specific guesses
         if system == "Windows":
             return [f"COM{i}" for i in range(1, 17)]
         else:
@@ -188,3 +188,4 @@ class AdapterPoller:
                 if not self._running:
                     return
                 time.sleep(0.5)
+

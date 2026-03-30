@@ -1,5 +1,5 @@
 {
-  "first_run_complete": false,
+  "first_run_complete": true,
   "api_key": null,
   "api_key_provider": "anthropic",
   "ollama_enabled": true,
