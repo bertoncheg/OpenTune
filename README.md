@@ -12,43 +12,46 @@ Dealer diagnostic tools cost $80,000. Independent mechanics are locked out.
 
 But that is not the real problem.
 
-The real problem is that every mechanic in the world is solving the same faults in isolation — on forums, in notes, in their head — and none of it connects. A mechanic in Houston figures out a rare KDSS fault on a 2007 GX470. A mechanic in São Paulo is staring at the exact same fault tomorrow. They will never meet. The knowledge dies with the session.
+The real problem is fragmentation. Every mechanic in the world is solving the same faults in isolation — on forums, in notes, in their head — and none of it connects. A mechanic in Houston cracks a rare KDSS fault on a 2007 GX470 after three hours of trial and error. A mechanic in São Paulo faces the exact same fault tomorrow. They will never meet. The knowledge evaporates with the session.
 
-There is another force at work too. Every time a manufacturer locks a protocol, encrypts a calibration file, or paywalls a reset procedure — they are not protecting their product. They are handing us a roadmap. Every locked system we encounter during this journey gets documented, gets understood, and gets added to the community knowledge base. The more aggressively they lock things down, the faster the community moves to unlock them. History is consistent on this: DRM did not stop piracy, it accelerated reverse engineering. Locked bootloaders did not stop custom ROMs, they created XDA. Every wall they build tells us exactly where the value is.
+Multiply that by every make, every model, every edge case, every failure mode — across millions of mechanics, across decades. An incomprehensible amount of hard-won diagnostic knowledge, generated every single day, disappearing every single day.
 
-Meanwhile, the software world solved this twenty years ago. Linux did not beat Unix because one company out-engineered another. It won because a million engineers contributed to one shared foundation that nobody owned. npm has over two million packages — built by strangers for strangers, stacked into something no single company could have funded. Stack Overflow turned individual answers into a permanent global knowledge layer. The pattern is always the same: **open contribution compounds faster than any closed team can move.**
+The software world solved this problem twenty years ago and never looked back. Linux did not beat Unix because one company out-engineered another — it won because a million engineers contributed to one shared foundation that nobody owned. npm crossed two million packages built by strangers for strangers, stacked into something no single company could have funded in ten lifetimes. Stack Overflow turned isolated answers into a permanent, searchable, compounding global knowledge layer. Git turned individual work into collective infrastructure. The pattern never changes: **open contribution compounds faster than any closed team can move. Always.**
 
-The automotive repair world has never had that. Until now.
+The automotive repair world has never had this. The knowledge has always been siloed — locked inside proprietary tools, buried in forum threads, living in the heads of mechanics who retire and take it with them.
 
-**OpenTune is not just a diagnostic tool. It is the foundation for a unified, ever-feeding vehicle diagnostic engine** — one that gets smarter every time any mechanic anywhere uses it. Every fault cleared, every procedure engineered, every outcome logged feeds back into a shared knowledge base that belongs to the community, not to Snap-on, not to Autel, not to any dealer network.
+**OpenTune is the fix.** Not just a diagnostic tool — the foundation for a unified, ever-feeding vehicle diagnostic engine that gets smarter every time any mechanic anywhere uses it. Every fault cleared, every procedure engineered, every outcome logged feeds back into a shared knowledge base owned by the community, not by Snap-on, not by Autel, not by any dealer network.
 
-The math is simple: if 1,000 mechanics contribute one diagnostic outcome each, we have 1,000 solved problems. If 100,000 mechanics contribute, we have the most comprehensive free diagnostic database ever built — covering makes, models, edge cases, and failure modes that no $15,000 proprietary tool even knows exist.
+The math compounds fast. One thousand mechanics contributing one outcome each gives the community one thousand solved problems. One hundred thousand mechanics gives it the most comprehensive free diagnostic database ever assembled — covering makes, models, edge cases, and failure modes that no $15,000 proprietary scanner even knows exist. The database never stops growing. It never gets taken away.
 
-**This window is open right now. The earlier you contribute, the more the community inherits from your experience.** The mechanic who logs ten sessions in month one shapes what the tool knows in year three.
+**This window is open right now.** The earlier you contribute, the more the community inherits from your experience. The mechanic who logs ten sessions in month one shapes what the tool knows in year three. Early contributors are not just users — they are the authors of what this becomes.
 
-And this is just the beginning. The same engine that diagnoses faults will soon power vehicle tuning — mapping fuel trims, analyzing sensor baselines, recommending calibration changes. Instead of spending hours searching forums for someone who maybe tuned the same engine five years ago, you open OpenTune. The community already figured it out. It is waiting for you.
+And diagnostics is only the beginning. The same engine will soon power tuning — mapping fuel trims, reading sensor baselines, engineering calibration changes from real-world data. Instead of spending hours searching a forum thread from 2019 hoping someone tuned your exact engine combination, you open OpenTune. The community already solved it. It is waiting for you.
 
-**Open diagnostics time. Nothing accelerates faster than community effort.**
+One more thing. Every time a manufacturer locks a protocol, encrypts a calibration file, or paywalls a reset procedure — they are not protecting their product. They are handing us a roadmap. Every locked system we encounter gets documented, understood, and added to the knowledge base. History does not lie: DRM did not stop piracy, it accelerated reverse engineering. Locked bootloaders did not kill custom ROMs — they created XDA Developers. Walled gardens do not stop determined communities, they focus them. **Every wall they build tells us exactly where the value is.**
+
+**Open diagnostics time. Nothing accelerates faster than community.**
 
 ---
 
 ## What It Does
 
-Connect an ELM327 adapter. OpenTune reads every ECU, surfaces every fault, and if a solution exists it runs it. If one does not exist — it engineers one from first principles using Claude.
+Plug in an ELM327 adapter. OpenTune reads every ECU, surfaces every fault, and executes the solution — or engineers one from scratch when none exists, using Claude as the reasoning engine.
 
-Every outcome gets logged to the community knowledge base that nobody owns and nobody can take away.
+Every session outcome is logged to the community knowledge base. Permanently. Freely.
 
-- Scans all ECUs on connect — reads every DTC with plain-English descriptions
-- Monitors live vehicle data in real time — flags anomalies as they happen
-- Chat in plain English about any vehicle problem
-- Runs known procedures. Engineers unknown ones.
-- Writes every outcome to the community diagnostic database
+- **Full ECU scan** — every DTC across every system, plain-English descriptions, severity context
+- **Live data monitoring** — real-time anomaly detection running in the background while you work
+- **Natural language chat** — describe any problem in plain English, get a reasoned diagnostic response
+- **Procedure execution** — runs known procedures from the community knowledge base
+- **Procedure engineering** — when no procedure exists, builds one from first principles on the spot
+- **Automatic knowledge contribution** — every resolved session feeds back into the shared database
 
 ---
 
-## Conversation Flow
+## How It Thinks
 
-OpenTune never opens with a blunt Y/N prompt. It reads the vehicle first, then asks:
+OpenTune never opens with a blunt prompt. It reads the vehicle first, then asks:
 
 ```
 mechanic: I need my GX suspension calibrated
@@ -71,17 +74,17 @@ OpenTune: Got it. Engineering solution...
           Ready to start?
 ```
 
-The AI always: reads data first, asks one clarifying question if needed, summarizes findings + plan, waits for confirmation. Never just "Run it? Y/N".
+Read first. One clarifying question if needed. Summarize findings and plan. Wait for confirmation. Never "Run it? Y/N."
 
 ---
 
 ## The Knowledge Base
 
-Every diagnostic session that resolves a fault gets written to a shared, open knowledge base.
+Every diagnostic session that resolves a fault is written to the community knowledge base — searchable, browsable, free to submit to, free forever.
 
-Search it. Browse it. Submit to it. It belongs to the community.
+This is the moat. Not the software. The software can be forked, cloned, rewritten. The knowledge base — built from millions of real diagnostic sessions, verified by mechanics who were actually there — cannot be replicated by any company with a budget and a deadline. It grows because mechanics use it. It gets more accurate because mechanics correct it. It covers obscure edge cases because someone, somewhere, already hit that fault and logged the fix.
 
-Over time it becomes the largest free diagnostic procedure database on earth — built by mechanics, for mechanics, unkillable because it is owned by no one.
+Linux took a decade to become indispensable infrastructure. Stack Overflow took years to become the default. The OpenTune knowledge base compounds the same way — and every session you run today is a contribution to what it becomes.
 
 ---
 
@@ -113,19 +116,19 @@ opentune.bat           # run
 .\opentune.ps1         # run via PowerShell
 ```
 
-Find your COM port: **Device Manager > Ports (COM & LPT)**
+Find your COM port: **Device Manager → Ports (COM & LPT)**
 
 ---
 
 ## Knowledge API
 
-Run the local knowledge API to browse, search, and submit procedures:
+The local knowledge API lets you browse, search, and submit procedures directly:
 
 ```bash
 uvicorn api.main:app --reload --port 8765
 ```
 
-Endpoints: `/health` `/search` `/browse` `/submit` `/verify` `/stats`
+`/health` `/search` `/browse` `/submit` `/verify` `/stats`
 
 ---
 
@@ -133,23 +136,23 @@ Endpoints: `/health` `/search` `/browse` `/submit` `/verify` `/stats`
 
 ```
 opentune/
-  main.py              # Terminal UI, connection flow, chat loop
+  main.py               # Terminal UI, connection flow, chat loop
   core/
-    connection.py      # OBD2 connection — ELM327
-    scanner.py         # Full ECU scan, live monitor, anomaly detection
-    session_logger.py  # JSONL session logging
-    knowledge_engine.py# Procedure lookup and execution
-    live_scan.py       # Real-time data monitor
-    quips.py           # Because diagnostics should have personality
+    connection.py        # OBD2 connection — ELM327
+    scanner.py           # Full ECU scan, live monitor, anomaly detection
+    session_logger.py    # JSONL session logging
+    knowledge_engine.py  # Procedure lookup and execution
+    live_scan.py         # Real-time data monitor
+    quips.py             # Because diagnostics should have personality
   ai/
-    engineer.py        # Generative core — builds procedures on the fly
-    monitor.py         # Live data AI analysis, anomaly enrichment
+    engineer.py          # Generative core — builds procedures on the fly
+    monitor.py           # Live data AI analysis, anomaly enrichment
   api/
-    main.py            # FastAPI knowledge base server
-    db.py              # SQLite / Postgres-ready schema
-    embeddings.py      # Semantic search (sentence-transformers, local, free)
-    seed.py            # Seed procedures loader
-  knowledge/           # Seeded diagnostic procedures (KDSS, EPB, TPMS, and more)
+    main.py              # FastAPI knowledge base server
+    db.py                # SQLite / Postgres-ready schema
+    embeddings.py        # Semantic search (sentence-transformers, local, free)
+    seed.py              # Seed procedures loader
+  knowledge/             # Seeded procedures — KDSS, EPB, TPMS, SAS, Throttle, and more
 ```
 
 ---
@@ -158,11 +161,11 @@ opentune/
 
 | Tier | Price | What you get |
 |------|-------|--------------|
-| Free | $0 | Bring your own API key. Full diagnostic terminal. Community KB always free. |
-| Pro | $29/mo | Hosted AI, priority KB access, session history |
-| Shop | $99/mo | Multi-bay, team accounts, shop reporting |
+| Free | $0 | Bring your own API key. Full terminal. Community KB always free. |
+| Pro | $29/mo | Hosted AI, priority KB access, full session history |
+| Shop | $99/mo | Multi-bay, team accounts, shop-level reporting |
 
-The knowledge database is always free. Price trajectory: down forever.
+The knowledge database is always free. No exceptions. Price trajectory: down forever.
 
 ---
 
@@ -170,7 +173,7 @@ The knowledge database is always free. Price trajectory: down forever.
 
 - Python 3.11+
 - ELM327 OBD2 adapter (USB or Bluetooth)
-- Anthropic API key (or Pro/Shop subscription for hosted AI)
+- Anthropic API key — or a Pro/Shop subscription for hosted AI
 
 ---
 
@@ -182,3 +185,4 @@ MIT — open source, open diagnostics.
 
 *Built for the mechanic who is better than the tool they can afford.*
 
+*The tool is catching up.*
