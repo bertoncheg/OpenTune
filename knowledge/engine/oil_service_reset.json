@@ -1,0 +1,49 @@
+{
+  "service_type": "oil_service_reset",
+  "category": "engine",
+  "title": "Engine Oil Service / Maintenance Interval Reset",
+  "description": "Reset oil life or maintenance interval counters after oil and filter replacement.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford/Lincoln","GM","BMW/MINI","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"RAV4","year":2020,"engine":"2.5L A25A-FKS"},
+    {"make":"Ford","model":"F-150","year":2018,"engine":"5.0L Coyote"},
+    {"make":"BMW","model":"X3","year":2019,"engine":"2.0L B46"},
+    {"make":"Volkswagen","model":"Jetta","year":2017,"engine":"1.4L TSI"}
+  ],
+  "common_symptoms": ["oil change light on","maintenance due indicator","oil life at 0%"],
+  "physical_solution": "Reset the oil life or service interval counter after completing the oil and filter change.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$22 ReadDataByIdentifier","$2E WriteDataByIdentifier","$31 RoutineControl"],
+    "elm327_feasibility": "Partial — many vehicles allow cluster-button reset without scanner. Scan-tool based resets may need enhanced UDS functions.",
+    "server_free": true,
+    "preconditions": [
+      "Oil and filter service physically completed",
+      "Correct oil specification used",
+      "Ignition ON engine OFF (or per OEM path)",
+      "Battery voltage stable"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Confirm oil and filter replacement complete. Record mileage and oil spec."},
+      {"step":2,"type":"send_uds","description":"Enter instrument cluster or BCM extended session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Write oil life reset or execute reset routine: $2E [OIL_LIFE_DID] or $31 01 [RESET_ROUTINE_ID]"},
+      {"step":4,"type":"verify","description":"Cycle ignition. Confirm maintenance indicator shows 100% or reset state."},
+      {"step":5,"type":"verify","description":"Check for secondary intervals (inspection/tire rotation) that may need separate reset."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Cluster menu/button reset common. Scan path available on newer platforms.",
+      "Honda/Acura": "Maintenance Minder reset via MID. Hold SELECT button until confirmation.",
+      "Nissan/Infiniti": "Multiple reminder channels (oil/filter/tire). Reset each applicable item.",
+      "Ford/Lincoln": "Oil life monitor via steering wheel menu. Scan reset after IPC/PCM service.",
+      "GM": "Driver information center reset. Ensure percentage returns to 100%.",
+      "BMW/MINI": "CBS tracks oil, brakes, microfilter separately. Reset only the correct item.",
+      "VW/Audi": "Fixed/flexible interval coding affects reset values. Verify market configuration.",
+      "Stellantis": "Cluster reset available on most models. SGW doesn't typically block this procedure.",
+      "Hyundai/Kia": "Cluster-based reset on most models. GDS path for module replacement scenarios."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

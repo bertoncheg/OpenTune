@@ -1,0 +1,49 @@
+{
+  "service_type": "injector_coding",
+  "category": "engine",
+  "title": "Fuel Injector Coding / Calibration Value Programming",
+  "description": "Program per-injector compensation codes into ECU after injector replacement on diesel and selected direct-injection gasoline systems.",
+  "oem_coverage": ["Ford","GM","BMW","VW/Audi","Toyota","Nissan","Hyundai/Kia","Stellantis"],
+  "vehicles_seen": [
+    {"make":"Ford","model":"F-250","year":2017,"engine":"6.7L Power Stroke"},
+    {"make":"GM","model":"Duramax","year":2018,"engine":"6.6L LML"},
+    {"make":"BMW","model":"535d","year":2015,"engine":"3.0L N57"},
+    {"make":"Volkswagen","model":"Golf TDI","year":2014,"engine":"2.0L CJAA"}
+  ],
+  "common_symptoms": ["rough idle after injector replacement","P0263-P0278 injector balance codes","fuel trim issues","smoke after injector service"],
+  "physical_solution": "Write per-injector IMA/correction codes to ECU so it compensates for individual injector flow variance. Required after any injector replacement.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$27 SecurityAccess","$2E WriteDataByIdentifier","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — $2E write accessible on some OEMs. Security access ($27) required on most. OEM DID map needed per platform.",
+    "server_free": true,
+    "preconditions": [
+      "New injector codes physically available (printed on injector body or packaging)",
+      "Injector installation complete",
+      "Engine not started after injector swap until codes written",
+      "No active injection-system DTCs"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Record IMA/correction code from each new injector before installation. Codes are 6-16 characters printed on injector."},
+      {"step":2,"type":"send_uds","description":"Enter extended diagnostic session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Security access if required: $27 [LEVEL] then respond to seed with correct key"},
+      {"step":4,"type":"send_uds","description":"Write injector code to cylinder DID: $2E [CYL_DID] [CODE_BYTES]. Repeat for each replaced injector."},
+      {"step":5,"type":"verify","description":"Read back codes via $22 [CYL_DID] to confirm correct values written."},
+      {"step":6,"type":"instruct_mechanic","description":"Start engine. Monitor fuel trims and idle quality. Clear DTCs and confirm no return."}
+    ],
+    "oem_notes": {
+      "Ford": "Power Stroke diesels: ICP/injector codes entered via IDS. DID map varies by ECM generation.",
+      "GM": "Duramax: GDS2 injector balance rate display. Coding path via SPS on some platforms.",
+      "BMW": "IMA codes (6-digit) written to DME via ISTA. DID per cylinder well documented.",
+      "VW/Audi": "VCDS adaptation channels per cylinder. ODIS guided function on common-rail TDI.",
+      "Toyota": "Diesel market (HiLux/Land Cruiser): injector compensation via Techstream/Denso.",
+      "Nissan": "Common-rail diesel: CONSULT III+ injector code entry.",
+      "Hyundai/Kia": "CRDi diesel: GDS injector quantity adjustment path.",
+      "Stellantis": "VM Motori/Cummins diesels in RAM/Jeep. SGW may block on 2018+ — attempt pre-2018 first."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

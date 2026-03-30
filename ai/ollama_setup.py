@@ -1,65 +1,106 @@
-﻿"""
-OpenTune Ollama Setup
-Checks for local Ollama installation and available models.
-Used when no cloud API key is present — free local inference.
+"""
+OpenTune Ollama Setup Manager
+Handles local Ollama detection, model pulling, and availability checks.
 """
 from __future__ import annotations
-import subprocess
-import urllib.request
-import json
-from typing import Optional
 
+from rich.console import Console
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-PREFERRED_MODELS = ["mistral", "llama3", "llama3.1", "phi3", "gemma2"]
+console = Console()
+
+_BASE_URL = "http://localhost:11434"
 
 
 def is_ollama_running() -> bool:
-    """Check if Ollama server is reachable."""
+    """GET http://localhost:11434 with 2s timeout. Return True if status 200."""
     try:
-        with urllib.request.urlopen(f"{OLLAMA_BASE_URL}/api/tags", timeout=2) as resp:
-            return resp.status == 200
+        import requests
+        resp = requests.get(_BASE_URL, timeout=2)
+        return resp.status_code == 200
     except Exception:
         return False
 
 
-def list_models() -> list[str]:
-    """Return list of locally available Ollama models."""
+def list_local_models() -> list[str]:
+    """GET /api/tags and return list of model name strings."""
     try:
-        with urllib.request.urlopen(f"{OLLAMA_BASE_URL}/api/tags", timeout=2) as resp:
-            data = json.loads(resp.read())
-            return [m["name"].split(":")[0] for m in data.get("models", [])]
+        import requests
+        resp = requests.get(f"{_BASE_URL}/api/tags", timeout=5)
+        if resp.status_code != 200:
+            return []
+        data = resp.json()
+        return [m["name"] for m in data.get("models", [])]
     except Exception:
         return []
 
 
-def best_available_model() -> Optional[str]:
-    """Return the best available model from preferred list, or first available."""
-    available = list_models()
-    for preferred in PREFERRED_MODELS:
-        if preferred in available:
-            return preferred
-    return available[0] if available else None
+def pull_model(model_name: str) -> bool:
+    """
+    POST /api/pull with streaming response.
+    Prints Rich progress while streaming. Returns True on success.
+    """
+    try:
+        import requests
+        import json
+
+        console.print(f"[cyan]Pulling Ollama model: [bold]{model_name}[/bold]...[/cyan]")
+        resp = requests.post(
+            f"{_BASE_URL}/api/pull",
+            json={"name": model_name},
+            stream=True,
+            timeout=300,
+        )
+        if resp.status_code != 200:
+            console.print(f"[red]Pull request failed: HTTP {resp.status_code}[/red]")
+            return False
+
+        last_status = ""
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+                status = event.get("status", "")
+                if status != last_status:
+                    console.print(f"  [dim]{status}[/dim]")
+                    last_status = status
+                if event.get("error"):
+                    console.print(f"[red]Pull error: {event['error']}[/red]")
+                    return False
+            except Exception:
+                pass
+
+        console.print(f"[green]Model [bold]{model_name}[/bold] ready.[/green]")
+        return True
+    except Exception as exc:
+        console.print(f"[red]Failed to pull model: {exc}[/red]")
+        return False
 
 
-def ollama_status() -> dict:
-    """Return full status dict for display."""
-    running = is_ollama_running()
-    models = list_models() if running else []
-    best = best_available_model() if running else None
-    return {
-        "running": running,
-        "models": models,
-        "best_model": best,
-        "url": OLLAMA_BASE_URL,
-    }
+def auto_setup(preferred_model: str = "llama3.2:3b") -> str | None:
+    """
+    Check if Ollama is running and the preferred model is available.
+    Pull the model if needed. Returns model_name on success, None if Ollama not running.
+    """
+    try:
+        if not is_ollama_running():
+            return None
 
+        local_models = list_local_models()
+        # Check for exact match or name-prefix match (handles tag variants)
+        base_name = preferred_model.split(":")[0]
+        already_pulled = any(
+            m == preferred_model or m.startswith(base_name + ":")
+            for m in local_models
+        )
 
-def check_and_report() -> str:
-    """One-line status string for startup display."""
-    status = ollama_status()
-    if not status["running"]:
-        return "Ollama not detected — install from ollama.com for free local AI"
-    if not status["models"]:
-        return "Ollama running but no models installed — run: ollama pull mistral"
-    return f"Running FREE on local AI  ({status['best_model']})"
+        if already_pulled:
+            return preferred_model
+
+        console.print(
+            f"[yellow]Model [bold]{preferred_model}[/bold] not found locally — pulling...[/yellow]"
+        )
+        success = pull_model(preferred_model)
+        return preferred_model if success else None
+    except Exception:
+        return None

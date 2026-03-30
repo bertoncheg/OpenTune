@@ -1,5 +1,5 @@
-﻿"""
-Knowledge Engine â€” learns from every solved problem.
+"""
+Knowledge Engine — learns from every solved problem.
 
 Builds a searchable knowledge base written to knowledge/<system>/<service>.json.
 Before calling Claude, the engine is searched for similar past solutions and the
@@ -40,15 +40,9 @@ class KnowledgeEngine:
             .replace("-", "_")[:50]
         )
 
-        make_family = self._determine_make_family(problem.get("vehicle_display", ""))
-        # Prefer make-family path; fall back to flat structure for legacy entries
-        make_dir = self.base / make_family / system
-        make_dir.mkdir(parents=True, exist_ok=True)
-        knowledge_file = make_dir / f"{safe_name}.json"
-        # Backward compat: if entry already exists in flat path, use that instead
-        flat_file = self.base / system / f"{safe_name}.json"
-        if flat_file.exists() and not knowledge_file.exists():
-            knowledge_file = flat_file
+        system_dir = self.base / system
+        system_dir.mkdir(exist_ok=True)
+        knowledge_file = system_dir / f"{safe_name}.json"
 
         if knowledge_file.exists():
             try:
@@ -110,11 +104,10 @@ class KnowledgeEngine:
         )
         scored: list[tuple[float, dict]] = []
 
-        for top_dir in self.base.iterdir():
-            if not top_dir.is_dir():
+        for system_dir in self.base.iterdir():
+            if not system_dir.is_dir():
                 continue
-            # Flat structure: knowledge/<system>/*.json
-            for entry_file in top_dir.glob("*.json"):
+            for entry_file in system_dir.glob("*.json"):
                 try:
                     entry = json.loads(entry_file.read_text(encoding="utf-8"))
                     score = self._score(entry, query_lower, vehicle_str)
@@ -122,18 +115,6 @@ class KnowledgeEngine:
                         scored.append((score, entry))
                 except Exception:
                     continue
-            # Make-family structure: knowledge/<make_family>/<system>/*.json
-            for system_dir in top_dir.iterdir():
-                if not system_dir.is_dir():
-                    continue
-                for entry_file in system_dir.glob("*.json"):
-                    try:
-                        entry = json.loads(entry_file.read_text(encoding="utf-8"))
-                        score = self._score(entry, query_lower, vehicle_str)
-                        if score > 0:
-                            scored.append((score, entry))
-                    except Exception:
-                        continue
 
         scored.sort(key=lambda x: x[0], reverse=True)
         return [e for _, e in scored[:3]]
@@ -174,11 +155,11 @@ class KnowledgeEngine:
         categories: list[str] = []
         service_types: list[str] = []
 
-        for top_dir in self.base.iterdir():
-            if not top_dir.is_dir():
+        for system_dir in self.base.iterdir():
+            if not system_dir.is_dir():
                 continue
-            categories.append(top_dir.name)
-            for entry_file in top_dir.glob("*.json"):
+            categories.append(system_dir.name)
+            for entry_file in system_dir.glob("*.json"):
                 try:
                     entry = json.loads(entry_file.read_text(encoding="utf-8"))
                     total_cases += entry.get("total_cases", 0)
@@ -188,20 +169,6 @@ class KnowledgeEngine:
                     service_types.append(entry.get("service_type", ""))
                 except Exception:
                     continue
-            # Make-family structure: knowledge/<make_family>/<system>/*.json
-            for system_dir in top_dir.iterdir():
-                if not system_dir.is_dir():
-                    continue
-                for entry_file in system_dir.glob("*.json"):
-                    try:
-                        entry = json.loads(entry_file.read_text(encoding="utf-8"))
-                        total_cases += entry.get("total_cases", 0)
-                        total_fixed += sum(
-                            1 for o in entry.get("outcomes", []) if o.get("outcome") == "fixed"
-                        )
-                        service_types.append(entry.get("service_type", ""))
-                    except Exception:
-                        continue
 
         return {
             "total_cases": total_cases,
@@ -226,63 +193,6 @@ class KnowledgeEngine:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-
-    def _determine_make_family(self, vehicle_display: str) -> str:
-        """Map a vehicle display string to a canonical make family key."""
-        v = vehicle_display.lower()
-        if any(k in v for k in ["toyota", "lexus", "scion"]):
-            return "toyota_lexus"
-        if any(k in v for k in ["honda", "acura"]):
-            return "honda_acura"
-        if any(k in v for k in ["ford", "lincoln", "mercury"]):
-            return "ford_lincoln"
-        if any(k in v for k in ["chevrolet", "chevy", "gmc", "buick", "cadillac", "oldsmobile", "pontiac"]):
-            return "gm"
-        if any(k in v for k in ["bmw", "mini"]):
-            return "bmw_mini"
-        if any(k in v for k in ["mercedes", "benz", "mb ", "sprinter"]):
-            return "mercedes"
-        if any(k in v for k in ["nissan", "infiniti"]):
-            return "nissan_infiniti"
-        if "subaru" in v:
-            return "subaru"
-        if any(k in v for k in ["volkswagen", "vw", "audi", "porsche", "seat", "skoda"]):
-            return "volkswagen_audi"
-        return "other"
-
-    def browse_by_make(self, make_family: str) -> list[dict]:
-        """Return all knowledge entries for a given make family.
-
-        Searches both the make-family path (knowledge/<make_family>/<system>/*.json)
-        and flat legacy paths where vehicles_seen matches the family.
-        """
-        entries: list[dict] = []
-        make_dir = self.base / make_family
-        # Make-family structured entries
-        if make_dir.exists():
-            for system_dir in make_dir.iterdir():
-                if not system_dir.is_dir():
-                    continue
-                for entry_file in system_dir.glob("*.json"):
-                    try:
-                        entries.append(json.loads(entry_file.read_text(encoding="utf-8")))
-                    except Exception:
-                        continue
-        # Legacy flat entries — include if any vehicle_seen matches this family
-        for system_dir in self.base.iterdir():
-            if not system_dir.is_dir() or system_dir.name == make_family:
-                continue
-            for entry_file in system_dir.glob("*.json"):
-                try:
-                    entry = json.loads(entry_file.read_text(encoding="utf-8"))
-                    if any(
-                        self._determine_make_family(v) == make_family
-                        for v in entry.get("vehicles_seen", [])
-                    ):
-                        entries.append(entry)
-                except Exception:
-                    continue
-        return entries
 
     def _new_entry(self, service_type: str, system: str) -> dict:
         return {
@@ -353,7 +263,7 @@ class KnowledgeEngine:
                         {"step": 1, "description": "Clear active DTCs with Mode 04"},
                         {"step": 2, "description": "Enter KDSS service mode via UDS 10 03"},
                         {"step": 3, "description": "Read hydraulic pressure via UDS 22 D1 40"},
-                        {"step": 4, "description": "Neutralize hydraulic pressure â€” bleed at accumulator"},
+                        {"step": 4, "description": "Neutralize hydraulic pressure — bleed at accumulator"},
                         {"step": 5, "description": "Reconnect line, torque to 25 Nm"},
                         {"step": 6, "description": "Exit service mode, drive 5 mph for 200 m to complete calibration"},
                     ],
@@ -364,42 +274,11 @@ class KnowledgeEngine:
                 "total_cases": 17,
                 "outcomes": [
                     {"vehicle": "2021 Lexus GX460", "outcome": "fixed",
-                     "notes": "Pressure 340 kPa vs 280 kPa spec â€” bleeding resolved", "date": "2026-01-15T10:30:00Z"},
+                     "notes": "Pressure 340 kPa vs 280 kPa spec — bleeding resolved", "date": "2026-01-15T10:30:00Z"},
                     {"vehicle": "2020 Lexus GX460", "outcome": "fixed",
-                     "notes": "Post-lift-kit install â€” standard neutralization", "date": "2026-02-10T14:00:00Z"},
+                     "notes": "Post-lift-kit install — standard neutralization", "date": "2026-02-10T14:00:00Z"},
                 ],
                 "last_updated": "2026-03-01T00:00:00Z",
-            }),
-            ("suspension", "air_suspension_calibration.json", {
-                "service_type": "Rear Air Suspension Height Calibration",
-                "system": "suspension",
-                "vehicles_seen": ["2022 Lexus GX460 Luxury", "2022 Lexus GX460 Luxury+", "2021 Lexus GX460"],
-                "common_symptoms": [
-                    "height warning light", "vehicle sits unevenly side-to-side",
-                    "ride height sensor fault", "Height Control ECU replacement",
-                    "persistent height calibration warning after component replacement",
-                ],
-                "physical_solution": (
-                    "With vehicle on level surface, fuel full, no cargo/passengers, ignition ON engine OFF: "
-                    "clear learned height offsets via UDS Routine 0x0501, then initiate height reference "
-                    "learning via Routine 0x0502. ECU samples all 4 corner sensors and stores new reference values."
-                ),
-                "technical_solution": {
-                    "procedure_steps": [
-                        {"step": 1, "description": "Read current ride heights via DID F301-F304 (FL/FR/RL/RR)"},
-                        {"step": 2, "description": "Enter extended session on Height Control ECU (0x7A0): UDS 10 03"},
-                        {"step": 3, "description": "Clear learned height offsets: UDS 31 01 05 01 (Routine 0x0501)"},
-                        {"step": 4, "description": "Initiate height learning: UDS 31 01 05 02 â€” wait 3s, do not move vehicle"},
-                        {"step": 5, "description": "Re-read all 4 corners â€” verify within +/-8 mm of target"},
-                        {"step": 6, "description": "Exit session, cycle ignition OFF/ON, verify warning light clear"},
-                    ],
-                    "ecu_addresses": ["0x7A0"],
-                    "bytes_exchanged": ["10 03", "31 01 05 01", "31 01 05 02", "3E 00"],
-                },
-                "success_rate": 0.91,
-                "total_cases": 9,
-                "outcomes": [],
-                "last_updated": "2026-03-28T00:00:00Z",
             }),
             ("brakes", "epb_service.json", {
                 "service_type": "EPB (Electric Parking Brake) Service Mode",
@@ -416,7 +295,7 @@ class KnowledgeEngine:
                 "technical_solution": {
                     "procedure_steps": [
                         {"step": 1, "description": "Connect scanner, key on engine off"},
-                        {"step": 2, "description": "Enter EPB service mode â€” caliper retracts automatically"},
+                        {"step": 2, "description": "Enter EPB service mode — caliper retracts automatically"},
                         {"step": 3, "description": "Replace brake pads and rotors"},
                         {"step": 4, "description": "Apply brake firmly 5 times to re-seat pads"},
                         {"step": 5, "description": "Exit EPB service mode, verify parking brake function"},
@@ -467,14 +346,14 @@ class KnowledgeEngine:
                 ],
                 "physical_solution": (
                     "After throttle body cleaning or replacement, run ECM idle relearn to reset "
-                    "idle air control parameters. Vehicle must be fully warmed up (90 Â°C coolant)."
+                    "idle air control parameters. Vehicle must be fully warmed up (90 °C coolant)."
                 ),
                 "technical_solution": {
                     "procedure_steps": [
-                        {"step": 1, "description": "Warm engine to operating temp (90 Â°C coolant)"},
+                        {"step": 1, "description": "Warm engine to operating temp (90 °C coolant)"},
                         {"step": 2, "description": "Enter ECM idle relearn via UDS 31 01 02 09"},
                         {"step": 3, "description": "Let engine idle for 3 minutes without A/C load"},
-                        {"step": 4, "description": "Verify RPM settles to 650â€“800 RPM"},
+                        {"step": 4, "description": "Verify RPM settles to 650–800 RPM"},
                         {"step": 5, "description": "Clear P0507, road test, confirm idle stable"},
                     ],
                     "ecu_addresses": ["0x7E0"],
@@ -521,4 +400,3 @@ class KnowledgeEngine:
             target = system_dir / filename
             if not target.exists():
                 target.write_text(json.dumps(entry, indent=2), encoding="utf-8")
-

@@ -1,20 +1,13 @@
-﻿"""
-OpenTune — The open-source, AI-native vehicle diagnostic terminal.
+"""
+ProcedureEngineer — The generative core of OpenTune.
 
-Built for independent mechanics who are locked out of the dealer monopoly.
-Every other tool is a menu. OpenTune thinks.
-
-When a problem has no known solution, it engineers one from first principles
-using live sensor data, DTC correlation, and real-time reasoning.
-
-ProcedureEngineer is the generative core — a two-phase AI diagnostic engine:
-  Phase 1 (understand_problem): Reads vehicle state + mechanic's complaint,
+Two-phase design:
+  Phase 1 (understand_problem): Claude reads the vehicle state + mechanic's complaint,
            identifies the affected system, highlights key data, asks ONE clarifying question.
-  Phase 2 (engineer_solution):  Engineers a precise step-by-step procedure after context
-           is complete — from first principles, for working mechanics.
+  Phase 2 (engineer_solution):  Called after clarification — engineers a precise step-by-step
+           procedure from first principles.
 
-Every session feeds the community knowledge base. Every solution logged is a solution
-every mechanic in the world can use tomorrow. This is the community's tool.
+Unlike OBDAgent's fixed registry, OpenTune engineers solutions from context.
 """
 from __future__ import annotations
 
@@ -24,9 +17,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional, Generator
 
-from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
-from ai.intelligence_router import call as ai_call
-from ai.key_resolver import resolve_provider as _resolve_provider
+from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, API_KEY, AI_MODEL, OLLAMA_MODEL
 from core.connection import DTC, LiveData
 
 
@@ -73,18 +64,10 @@ class EngineeredProcedure:
 # Phase 1: Understand prompt
 # ---------------------------------------------------------------------------
 
-UNDERSTAND_SYSTEM_PROMPT = """You are the OpenTune community diagnostic engine — the intake intelligence of the first open-source, AI-native vehicle diagnostic terminal.
-
-You exist for independent mechanics who are locked out of the dealer monopoly. Your job is to read
-the vehicle's actual data and tell the mechanic what it means — not recite menus, not say
-"procedure not found." Think, then speak.
+UNDERSTAND_SYSTEM_PROMPT = """You are OpenTune's diagnostic intake agent for automotive vehicles.
 
 Your role: Given a mechanic's description and current vehicle state, READ the data first —
 DTCs, live sensors, ECU map — then synthesize what you see into a focused intake response.
-
-If this problem does not match any known DTC registry or documented failure mode, flag it explicitly
-in data_highlights. Novel problems are the most valuable sessions for the OpenTune knowledge base —
-they become solutions every mechanic in the world can use tomorrow.
 
 Output ONLY valid JSON, no text outside the JSON:
 
@@ -94,7 +77,7 @@ Output ONLY valid JSON, no text outside the JSON:
   "confidence": 0.0 to 1.0,
   "needs_clarification": true or false,
   "clarifying_question": "ONE targeted question that would meaningfully change the procedure — reference what you observed. Empty string if needs_clarification is false.",
-  "data_highlights": ["key findings, e.g.: 'C1840 active — KDSS hydraulic fault', 'Rear ride height -3.2cm below spec', or 'NOVEL: no registry match for this fault signature'"]
+  "data_highlights": ["key findings, e.g.: 'C1840 active — KDSS hydraulic fault', 'Rear ride height -3.2cm below spec'"]
 }
 
 Rules:
@@ -102,7 +85,6 @@ Rules:
 - If knowing context (e.g. recent service, mileage, when it started) would change the approach, ask.
 - Write as if speaking to a working mechanic — terse, technical, no filler words.
 - Always reference actual DTC codes and actual sensor values in your highlights.
-- If the fault is novel or undocumented, say so — that honesty serves the community.
 """
 
 
@@ -110,7 +92,7 @@ Rules:
 # Phase 2: Engineer prompt
 # ---------------------------------------------------------------------------
 
-ENGINEER_SYSTEM_PROMPT = """You are OpenTune — the open-source community diagnostic engine. The first AI-native vehicle diagnostic terminal built for independent mechanics who are locked out of the dealer monopoly.
+ENGINEER_SYSTEM_PROMPT = """You are OpenTune's Procedure Engineer — a senior automotive diagnostic AI.
 
 Your job: given a mechanic's problem description and full vehicle context, engineer a precise
 step-by-step diagnostic and repair procedure. You reason from first principles using:
@@ -119,20 +101,12 @@ step-by-step diagnostic and repair procedure. You reason from first principles u
 - DTC code meanings and known failure modes
 - Mechanical and electrical system relationships
 
-When engineering a novel procedure — one where no documented registry match exists — note it
-explicitly in the reasoning field. These are the most valuable sessions for the OpenTune
-knowledge base. Every novel solution logged is a solution every mechanic in the world can use tomorrow.
-
-Always write steps a working mechanic can follow. No jargon without explanation. No steps that
-assume dealer-only equipment or factory scan tools. If a step requires specialized hardware,
-name a commonly available alternative or explain the underlying test so the mechanic can adapt.
-
 Output FORMAT — respond with ONLY valid JSON, no markdown, no explanation outside the JSON:
 
 {
   "title": "Short procedure title",
   "confidence": 0.0 to 1.0,
-  "reasoning": "Why this approach — fault signature analysis, what data pointed where. Flag 'NOVEL PROCEDURE' if this is undocumented.",
+  "reasoning": "Why this approach — fault signature analysis, what data pointed where",
   "estimated_time": "e.g. 15-20 min",
   "data_requirements": ["list of PIDs or data you need to read"],
   "safety_notes": ["any safety considerations"],
@@ -207,20 +181,7 @@ _SYSTEM_KEYWORD_MAP: dict[str, str] = {
     "height calibration": "air_suspension_calibration",
 }
 
-from pathlib import Path as _Path
-
-
-def _resolve_obdagent_proc_dir() -> str:
-    candidate = _Path(__file__).parent.parent.parent / "Desktop" / "obdagent-toyota" / "procedures"
-    if candidate.exists():
-        return str(candidate)
-    fallback = _Path("C:/Users/berto/OneDrive/Desktop/obdagent-toyota/procedures")
-    if fallback.exists():
-        return str(fallback)
-    return str(candidate)
-
-
-_OBDAGENT_PROC_DIR = _resolve_obdagent_proc_dir()
+_OBDAGENT_PROC_DIR = "/Users/newowner/Desktop/OBDAgent/obdagent-toyota/procedures"
 
 
 # ---------------------------------------------------------------------------
@@ -333,9 +294,49 @@ class ProcedureEngineer:
 
     def __init__(self, knowledge_engine=None) -> None:
         self._client = None
-        self._provider_cfg = _resolve_provider()
-        self._api_available = True  # always true — falls back to Ollama if no key
+        self._completion_fn = None   # universal completion callable
+        self._model: str = CLAUDE_MODEL
+        self._provider_name: str = "anthropic"
+        self._api_available = False
         self._knowledge = knowledge_engine
+
+        if API_KEY and API_KEY != ANTHROPIC_API_KEY:
+            # Universal path — auto-detect provider from API_KEY
+            try:
+                from ai.key_resolver import get_litellm_client
+                config, completion_fn = get_litellm_client(
+                    API_KEY, model_override=AI_MODEL or None
+                )
+                self._completion_fn = completion_fn
+                self._model = AI_MODEL or config.default_model
+                self._provider_name = config.name
+                self._api_available = True
+                print(f"[OpenTune] AI provider: {config.name} — model: {self._model}")
+            except Exception as exc:
+                print(f"[OpenTune] Warning: could not resolve API_KEY provider: {exc}")
+
+        if not self._api_available and ANTHROPIC_API_KEY:
+            # Legacy Anthropic path — unchanged behaviour
+            try:
+                import anthropic
+                self._client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+                self._model = CLAUDE_MODEL
+                self._provider_name = "anthropic"
+                self._api_available = True
+                print(f"[OpenTune] AI provider: anthropic (legacy) — model: {self._model}")
+            except ImportError:
+                pass
+
+        # Intelligence router — handles Ollama (Tier 1) + tiered cloud routing
+        try:
+            from ai.intelligence_router import IntelligenceRouter
+            self._router = IntelligenceRouter(
+                api_key=API_KEY, ollama_model=OLLAMA_MODEL
+            )
+        except Exception as exc:
+            print(f"[OpenTune] Warning: could not init IntelligenceRouter: {exc}")
+            self._router = None
+
     @property
     def api_available(self) -> bool:
         return self._api_available
@@ -348,24 +349,32 @@ class ProcedureEngineer:
         self,
         user_input: str,
         context: dict,
+        tier: int | None = None,
     ) -> ProblemUnderstanding:
         """
         Phase 1: Read vehicle state + complaint, return structured understanding.
         Always reads live data context before deciding if clarification is needed.
         """
         if not self._api_available or not self._client:
+            # Try Ollama (Tier 1) via IntelligenceRouter if cloud unavailable
+            if self._router is not None and self._router.ollama_available:
+                prompt = _build_understand_prompt(user_input, context)
+                try:
+                    raw = self._router.execute(
+                        messages=[{"role": "user", "content": prompt}],
+                        system=UNDERSTAND_SYSTEM_PROMPT,
+                        tier=tier or 1,
+                        max_tokens=600,
+                    )
+                    return self._parse_understanding(raw, user_input, context)
+                except Exception:
+                    pass
             return self._fallback_understanding(user_input, context)
 
         prompt = _build_understand_prompt(user_input, context)
 
         try:
-            response = self._client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=600,
-                system=UNDERSTAND_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            raw = response_text.strip()
+            raw = self._call(UNDERSTAND_SYSTEM_PROMPT, prompt, max_tokens=600)
             return self._parse_understanding(raw, user_input, context)
         except Exception:
             return self._fallback_understanding(user_input, context)
@@ -379,12 +388,26 @@ class ProcedureEngineer:
         understanding: ProblemUnderstanding,
         context: dict,
         clarification: str = "",
+        tier: int | None = None,
     ) -> EngineeredProcedure:
         """
         Phase 2: Engineer a procedure after problem is fully understood.
         Only called once the mechanic's question (if any) has been answered.
         """
         if not self._api_available or not self._client:
+            # Try Ollama (Tier 1) via IntelligenceRouter if cloud unavailable
+            if self._router is not None and self._router.ollama_available:
+                prompt = _build_engineer_prompt(understanding, context, clarification)
+                try:
+                    raw = self._router.execute(
+                        messages=[{"role": "user", "content": prompt}],
+                        system=ENGINEER_SYSTEM_PROMPT,
+                        tier=tier or 1,
+                        max_tokens=2048,
+                    )
+                    return self._parse_procedure(raw)
+                except Exception:
+                    pass
             return self._fallback_procedure(
                 understanding.original_input,
                 context.get("dtcs", []),
@@ -419,13 +442,7 @@ class ProcedureEngineer:
         prompt = _build_engineer_prompt(understanding, context, clarification, knowledge_context)
 
         try:
-            response = self._client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=2048,
-                system=ENGINEER_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            raw = response.content[0].text.strip()
+            raw = self._call(ENGINEER_SYSTEM_PROMPT, prompt, max_tokens=2048)
             return self._parse_procedure(raw)
         except Exception as e:
             return self._fallback_procedure(
@@ -433,6 +450,37 @@ class ProcedureEngineer:
                 context.get("dtcs", []),
                 error=str(e),
             )
+
+    # ------------------------------------------------------------------
+    # Internal call helper — routes to universal or legacy client
+    # ------------------------------------------------------------------
+
+    def _call(self, system: str, prompt: str, max_tokens: int = 1024) -> str:
+        """Invoke the configured AI backend and return the response text."""
+        messages = [{"role": "user", "content": prompt}]
+
+        if self._completion_fn is not None:
+            # Universal path (litellm or openai SDK)
+            response = self._completion_fn(messages, system=system, max_tokens=max_tokens)
+            # litellm / openai SDK response shape
+            if hasattr(response, "choices"):
+                return response.choices[0].message.content.strip()
+            # anthropic SDK response shape (fallback inside key_resolver)
+            if hasattr(response, "content"):
+                return response.content[0].text.strip()
+            return str(response).strip()
+
+        if self._client is not None:
+            # Legacy Anthropic SDK path
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=messages,
+            )
+            return response.content[0].text.strip()
+
+        raise RuntimeError("No AI client configured.")
 
     # ------------------------------------------------------------------
     # Known procedure lookup
@@ -503,7 +551,7 @@ class ProcedureEngineer:
         full_text = ""
         try:
             with self._client.messages.stream(
-                model=CLAUDE_MODEL,
+                model=self._model,
                 max_tokens=2048,
                 system=ENGINEER_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
@@ -653,7 +701,3 @@ class ProcedureEngineer:
             estimated_time="10-30 min",
             engineered=False,
         )
-
-
-
-

@@ -1,0 +1,51 @@
+{
+  "service_type": "throttle_idle_relearn",
+  "category": "engine",
+  "title": "Electronic Throttle Body / Idle Air Volume Relearn",
+  "description": "Relearn base throttle and idle airflow values after throttle cleaning, battery replacement, ECM reset, or throttle body replacement.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Hyundai/Kia","Ford","GM","BMW","VW/Audi","Stellantis"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2018,"engine":"2.5L A25A-FKS"},
+    {"make":"Honda","model":"Civic","year":2017,"engine":"2.0L K20C2"},
+    {"make":"Nissan","model":"Altima","year":2016,"engine":"2.5L QR25DE"},
+    {"make":"Hyundai","model":"Elantra","year":2019,"engine":"2.0L Nu MPI"}
+  ],
+  "common_symptoms": ["rough idle after battery disconnect","stalling at stops","high idle","throttle lag"],
+  "physical_solution": "Reset ECU throttle adaptation values so the engine learns the correct idle baseline. Required after throttle body cleaning, replacement, or ECM reset.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$31 RoutineControl","$2E WriteDataByIdentifier","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — many OEMs accessible via $31 routine; some require exact ignition/pedal timing sequence without scan tool",
+    "server_free": true,
+    "preconditions": [
+      "Battery voltage stabilized (12.4V+)",
+      "Engine at operating temperature unless OEM specifies cold start",
+      "No active ETC-related DTCs",
+      "A/C, lights, and accessories OFF",
+      "Steering centered, transmission in Park/Neutral"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Confirm no active throttle/ETC DTCs. Clear any non-relevant codes first."},
+      {"step":2,"type":"send_uds","description":"Enter extended diagnostic session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Execute idle/throttle relearn routine: $31 01 [OEM_ROUTINE_ID]. See oem_notes for OEM-specific paths."},
+      {"step":4,"type":"verify","description":"Poll routine completion: $31 03 [OEM_ROUTINE_ID]. Confirm positive response."},
+      {"step":5,"type":"instruct_mechanic","description":"Start engine, allow 2-minute idle stabilization. Monitor idle RPM via live data."},
+      {"step":6,"type":"verify","description":"Road test with light decel/idle events. Confirm no stalling, surge, or ETC MIL return."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Often auto-learns after key cycles and warm idle. Techstream has explicit utility for some ECUs.",
+      "Honda/Acura": "Idle learn requires warm-up and fan-cycle conditions. Some models relearn passively after ECM reset.",
+      "Nissan/Infiniti": "IAVL: exact pedal/ignition timing sequence required. No scan tool needed on many models — turn ignition on, wait 3s, press/release pedal 5x, wait 7s, hold pedal down, wait 10s for 3 blinks.",
+      "Hyundai/Kia": "GDS guided idle relearn on many models. Passive learning may require specific drive/idle profile.",
+      "Ford": "Idle trim relearns over drive cycle. Forced relearn in IDS/FDRS on selected platforms.",
+      "GM": "Usually self-learns. Scan-tool reset used after cleaning or component replacement via $31.",
+      "BMW": "DME adaptations: reset then drive cycle. Stable voltage support strongly recommended.",
+      "VW/Audi": "Basic settings for throttle body adaptation via $31. Check VCDS channel for specific controller.",
+      "Stellantis": "Pre-2018: $31 accessible. 2018+ SGW may block — attempt via HS-CAN first."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

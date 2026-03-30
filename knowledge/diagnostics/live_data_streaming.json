@@ -1,0 +1,46 @@
+{
+  "service_type": "live_data_streaming",
+  "category": "diagnostics",
+  "title": "Live Data / Enhanced PID Streaming",
+  "description": "Read real-time sensor and system data from vehicle ECUs for diagnostic analysis. Foundation for AI-assisted anomaly detection and procedure guidance.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2021,"engine":"2.5L A25A"},
+    {"make":"BMW","model":"X3","year":2020,"engine":"2.0L B46"},
+    {"make":"Ford","model":"Mustang","year":2019,"engine":"5.0L Coyote"},
+    {"make":"GM","model":"Tahoe","year":2018,"engine":"5.3L L83"}
+  ],
+  "common_symptoms": ["any diagnostic session","intermittent fault","performance complaint","sensor verification"],
+  "physical_solution": "Stream real-time data to identify sensor values, actuator states, and system relationships. Use as context for AI procedure generation.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier","$01 OBD Mode 01 (standard PIDs)","$02 OBD Mode 02 (freeze frame)"],
+    "elm327_feasibility": "Yes — standard OBD Mode 01 PIDs universal. Enhanced OEM PIDs via $22 accessible on most OEMs with correct DID mapping.",
+    "server_free": true,
+    "preconditions": [
+      "Ignition ON (engine running for live data)",
+      "OBD2 adapter connected"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"Request standard PIDs via Mode 01: $01 [PID]. Core: RPM (0C), coolant temp (05), throttle (11), MAP (0B), MAF (10), O2 sensors (14-1B)."},
+      {"step":2,"type":"send_uds","description":"Enhanced PIDs via $22 [DID]: OEM-specific data like fuel trim details, transmission temp, boost pressure, EGT."},
+      {"step":3,"type":"verify","description":"Monitor anomaly thresholds: coolant >110°C, RPM unstable, MAP/MAF mismatch, fuel trim >±10%."},
+      {"step":4,"type":"instruct_mechanic","description":"Describe observed symptom to AI. Live data snapshot is attached to ProcedureEngineer context for solution generation."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Mode 01 fully compliant. Techstream-level enhanced PIDs accessible via $22 with Toyota DID map.",
+      "Honda/Acura": "Standard PIDs open. Honda enhanced DIDs partially documented in aftermarket community.",
+      "Nissan/Infiniti": "Standard PIDs open. CONSULT-level enhanced data via $22 with Nissan DID map.",
+      "Ford": "Standard PIDs open. MS-CAN enhanced PIDs need pins 3/11 adapter for body data.",
+      "GM": "Standard PIDs open. SW-CAN enhanced data needs pin 1 adapter. GM-specific Mode 22 well documented.",
+      "BMW": "Standard PIDs open. BMW enhanced data (DME/DDE PIDs) via $22 well documented by aftermarket community.",
+      "VW/Audi": "Standard PIDs open. VCDS/ODIS enhanced measuring blocks map to $22 DIDs.",
+      "Stellantis": "Standard PIDs open. CAN-IHS body data needs pins 3/11. Pre-2018 enhanced data accessible.",
+      "Hyundai/Kia": "Standard PIDs open. GDS Mobile enhanced PIDs map to $22. Generally accessible."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

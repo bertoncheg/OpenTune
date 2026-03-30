@@ -1,0 +1,51 @@
+{
+  "service_type": "transmission_adapt_reset",
+  "category": "transmission",
+  "title": "Automatic/DCT Transmission Adaptation Reset",
+  "description": "Clear learned shift adaptation values so transmission relearns optimal shift points. Required after fluid service, valve body replacement, or transmission rebuild.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"328i","year":2016,"engine":"2.0L N20","transmission":"8HP ZF"},
+    {"make":"Hyundai","model":"Sonata","year":2019,"engine":"2.0T","transmission":"8DCT"},
+    {"make":"Honda","model":"Accord","year":2018,"engine":"2.0T","transmission":"10AT"},
+    {"make":"GM","model":"Silverado","year":2017,"engine":"5.3L","transmission":"6L80"}
+  ],
+  "common_symptoms": ["harsh shifts after fluid change","delayed engagement after rebuild","slipping on first drive after service","shift flare"],
+  "physical_solution": "Reset transmission adaptive learning tables so the TCM relearns clutch pressures and shift timing on the next drive cycle.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$27 SecurityAccess","$31 RoutineControl","$2E WriteDataByIdentifier","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — $31 routine accessible on many OEMs for older platforms. Drive-cycle relearn required after reset. Security may block on newer models.",
+    "server_free": true,
+    "preconditions": [
+      "Transmission fluid service completed",
+      "Transmission at operating temperature",
+      "No active TCM DTCs",
+      "Vehicle on level ground",
+      "Parking brake applied"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Ensure fluid service is complete. Confirm no TCM fault codes active."},
+      {"step":2,"type":"send_uds","description":"Enter TCM extended session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Security access if required: $27 [LEVEL]"},
+      {"step":4,"type":"send_uds","description":"Execute adaptation reset routine: $31 01 [ADAPT_RESET_ROUTINE_ID]"},
+      {"step":5,"type":"verify","description":"Confirm routine positive response. Read adaptation values via $22 to verify cleared."},
+      {"step":6,"type":"instruct_mechanic","description":"Perform adaptation drive cycle: light acceleration from stop, all gear changes, highway cruise. TCM relearns during this cycle."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "ECT reset via Techstream or battery disconnect method. Drive cycle with gentle acceleration.",
+      "Honda/Acura": "AT adaptation resets on some models via battery disconnect. Scan path available on newer platforms.",
+      "Nissan/Infiniti": "CVT self-learning reset via CONSULT. Drive cycle includes specific speed/throttle patterns.",
+      "Ford": "Adaptive strategy reset available in IDS. Drive cycle required post-reset.",
+      "GM": "Transmission fast learn procedure (not standard drive cycle). Specific RPM/TPS patterns at idle.",
+      "BMW": "ZF 8HP adaptation reset via ISTA. Stable voltage required. Drive cycle mandatory.",
+      "VW/Audi": "DSG basic settings and clutch adaptation via ODIS. Can be blocked on 2019+ SFD models.",
+      "Stellantis": "Pre-2018: accessible. 2018+ SGW may block TCM routine access.",
+      "Hyundai/Kia": "AT/DCT adaptation reset via GDS. High demand on turbocharged models."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

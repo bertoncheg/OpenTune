@@ -1,0 +1,48 @@
+{
+  "service_type": "battery_bms_reset",
+  "category": "electrical",
+  "title": "Battery / BMS Registration and Reset",
+  "description": "Register new battery specifications with the Battery Management System (BMS) and reset charge strategy after battery replacement.",
+  "oem_coverage": ["BMW/MINI","Ford","GM","VW/Audi","Stellantis","Hyundai/Kia","Honda/Acura","Nissan/Infiniti"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"X5","year":2018,"engine":"3.0L B58"},
+    {"make":"Ford","model":"F-150","year":2019,"engine":"3.5L EcoBoost"},
+    {"make":"VW","model":"Tiguan","year":2019,"engine":"2.0L TSI"},
+    {"make":"GM","model":"Equinox","year":2018,"engine":"1.5L"}
+  ],
+  "common_symptoms": ["battery not charging correctly after replacement","overcharging new battery","alternator running at full output","electrical gremlins post battery swap"],
+  "physical_solution": "Inform the BMS of the new battery type, capacity, and age so the charging system recalibrates. Without this step the ECU may use incorrect charge profiles.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$2E WriteDataByIdentifier","$31 RoutineControl","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — $2E write accessible on many platforms. OEM-specific DID for battery capacity/type required. BMW most documented.",
+    "server_free": true,
+    "preconditions": [
+      "New battery physically installed",
+      "Battery type and Ah rating known",
+      "Ignition ON",
+      "All loads OFF"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Record new battery: type (AGM/EFB/flooded), cold cranking amps, and Ah rating from label."},
+      {"step":2,"type":"send_uds","description":"Enter BMS/IBS/power management ECU extended session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Write battery registration data: $2E [BATTERY_REG_DID] [TYPE_BYTE] [AH_BYTE]. Or execute registration routine: $31 01 [REG_ROUTINE_ID]"},
+      {"step":4,"type":"verify","description":"Read back registration via $22 [BATTERY_DID] to confirm values accepted."},
+      {"step":5,"type":"instruct_mechanic","description":"Start vehicle. Let idle for 10 minutes. Confirm voltage and charging current normalize."}
+    ],
+    "oem_notes": {
+      "BMW/MINI": "IBS (Intelligent Battery Sensor) registration critical. Every battery swap requires this. AGM vs flooded distinction matters. ISTA codes the registration — ELM327 with correct DID works on E/F-series.",
+      "Ford": "BMS reset common on EcoBoost platforms. IDS/FDRS registration path. DID varies by platform.",
+      "GM": "Battery sensor reset on Buick/Cadillac/Chevy with EFB/AGM. GDS2 path or adaptation write.",
+      "VW/Audi": "Battery adaptation in BCM/energy management. VCDS adaptation channel path well documented.",
+      "Stellantis": "Body module battery adaptation. SGW may block on 2018+. Pre-2018 straightforward.",
+      "Hyundai/Kia": "BMS reset via GDS on newer models with ISG/mild hybrid. Standard battery swap usually doesn't need reset on older models.",
+      "Honda/Acura": "IMA on hybrid systems requires registration. Standard ICE models: less critical but available.",
+      "Nissan/Infiniti": "Battery adaptation on ECO/Stop-Start equipped models. CONSULT III+ path."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

@@ -1,0 +1,83 @@
+{
+  "service_type": "EPB (Electric Parking Brake) Service Mode",
+  "system": "brakes",
+  "oem_coverage": ["Honda", "Nissan", "Ford", "GM", "BMW", "VAG", "Stellantis", "Hyundai", "Kia", "Toyota"],
+  "vehicles_seen": [
+    "2019 Toyota Camry",
+    "2020 Honda CR-V",
+    "2021 Subaru Outback",
+    "2022 Ford F-150",
+    "2021 BMW 3 Series",
+    "2020 VW Passat",
+    "2019 Jeep Grand Cherokee",
+    "2021 Hyundai Santa Fe",
+    "2020 GM Silverado"
+  ],
+  "common_symptoms": [
+    "C1xxx EPB fault",
+    "parking brake warning light",
+    "unable to retract caliper for pad change",
+    "rear brake drag after pad replacement"
+  ],
+  "physical_solution": "Activate EPB service mode to retract rear caliper pistons before pad/rotor replacement. Must release brake fully before piston retract.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl", "$2F InputOutputControl", "$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — accessible on most OEMs; Stellantis 2018+ SGW may block; BMW ZGW may restrict on G-series",
+    "server_free": true,
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "instruct_mechanic",
+        "description": "Connect OBD2 adapter. Key ON, engine OFF. Ensure vehicle is on level surface."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Enter extended diagnostic session: $10 03"
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Start EPB service routine: $31 01 [OEM_ROUTINE_ID]. Routine IDs vary by OEM — see oem_notes."
+      },
+      {
+        "step": 4,
+        "type": "verify",
+        "description": "Poll routine result: $31 03 [OEM_ROUTINE_ID]. Confirm positive response."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Replace brake pads and rotors."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Exit service mode / reinitialize EPB: $31 01 [OEM_ROUTINE_ID_CLOSE]"
+      },
+      {
+        "step": 7,
+        "type": "instruct_mechanic",
+        "description": "Apply brake firmly 5 times to re-seat pads. Verify parking brake function."
+      }
+    ],
+    "ecu_addresses": ["0x760", "0x165", "0x200"],
+    "oem_notes": {
+      "Toyota": "Routine IDs documented. Broadly accessible via ELM327.",
+      "Honda": "$31 routine via F-CAN (pins 6/14). DID varies by model year.",
+      "Nissan": "$31 or $2F depending on platform. CONSULT session sequence may be needed.",
+      "Ford": "$31 on HS-CAN (pins 6/14). Older models more accessible; session/security on 2019+.",
+      "GM": "$31 or $2F. HS-CAN only — SW-CAN body bus not needed for EPB on most platforms.",
+      "BMW": "$31 via ZGW. F-series accessible; G-series (2018+) ZGW may restrict.",
+      "VAG": "$31 via J533. Well-documented in VCDS community. SFD on 2019+ may block.",
+      "Stellantis_pre2018": "$31 accessible without SGW. Straightforward.",
+      "Stellantis_2018plus": "SGW blocks — surface to mechanic that dealer tool may be required.",
+      "Hyundai_Kia": "$31/$2F. Pre-2019 accessible; 2019+ gateway may restrict."
+    }
+  },
+  "success_rate": 0.91,
+  "total_cases": 34,
+  "outcomes": [],
+  "last_updated": "2026-03-28T00:00:00Z",
+  "source_runs": ["RUN_20", "RUN_21", "RUN_22", "RUN_23", "RUN_24"]
+}

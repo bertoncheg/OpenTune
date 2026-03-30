@@ -1,4 +1,4 @@
-﻿"""
+"""
 OpenTune v0.1.0
 Open Diagnostics. Infinite Solutions.
 
@@ -6,18 +6,11 @@ Entry point — terminal UI, connection flow, chat loop, session logging.
 """
 from __future__ import annotations
 
-import os
-import sys
-os.environ['PYTHONUTF8'] = '1'
-if hasattr(sys.stdout, 'reconfigure') and sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-if hasattr(sys.stderr, 'reconfigure') and sys.stderr.encoding != 'utf-8':
-    sys.stderr.reconfigure(encoding='utf-8')
-
 import colorama
 colorama.init()
 
 import argparse
+import sys
 import time
 from typing import Optional, TYPE_CHECKING
 
@@ -31,18 +24,11 @@ from rich.rule import Rule
 from rich.live import Live
 from rich.spinner import Spinner
 from rich import box
-import questionary
-from questionary import Style as QStyle
 
 from pathlib import Path
 
 from config import OPENTUNE_VERSION, ANTHROPIC_API_KEY, CLAUDE_MODEL, SESSION_LOG_DIR
-from ai.key_resolver import resolve_provider
-from ai.ollama_setup import check_and_report as ollama_status_line
-
-ACTIVE_PROVIDER = resolve_provider()
 from core.connection import OBDConnection, ConnectionMode, DTC, LiveData
-from core.vehicle_researcher import VehicleResearcher
 from core.scanner import ECUScanner, LiveMonitor, ScanResult
 from core.session_logger import SessionLogger
 from core.component_test import ComponentTester, COMPONENT_TESTS
@@ -51,53 +37,9 @@ from core.knowledge_engine import KnowledgeEngine
 from core.live_scan import LiveProcessScanner
 from ai.engineer import ProcedureEngineer, EngineeredProcedure, ProcedureStep, ProblemUnderstanding
 from ai.monitor import AIMonitor
-from core.quips import quip
+from ai.intelligence_router import IntelligenceRouter
 
 console = Console()
-
-# ---------------------------------------------------------------------------
-# Arrow-key menu style & choices
-# ---------------------------------------------------------------------------
-
-# Detect interactive terminal — questionary needs a real console
-INTERACTIVE_TTY = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
-
-QSTYLE = QStyle([
-    ('pointer', 'fg:cyan bold'),
-    ('selected', 'fg:white bold'),
-    ('highlighted', 'fg:white'),
-])
-
-MENU_CHOICES = [
-    questionary.Choice('  DTC Scan',           '1'),
-    questionary.Choice('  Live Process Scan',  '2'),
-    questionary.Choice('  DTC History',        '3'),
-    questionary.Choice('  Freeze Frame',       '4'),
-    questionary.Choice('  Readiness Monitors', '5'),
-    questionary.Choice('  Component Test',     '6'),
-    questionary.Choice('  Procedure History',  '7'),
-    questionary.Choice('  Vehicle Profiles',   '8'),
-    questionary.Choice('  Export Report',      '9'),
-    questionary.Choice('  Knowledge Base',     'K'),
-    questionary.Choice('  Chat with AI',       '0'),
-    questionary.Choice('  Quit',               'Q'),
-]
-
-MENU_TEXT = (
-    "\n"
-    "   [bold white][1][/bold white]  DTC Scan\n"
-    "   [bold white][2][/bold white]  Live Process Scan\n"
-    "   [bold white][3][/bold white]  DTC History\n"
-    "   [bold white][4][/bold white]  Freeze Frame\n"
-    "   [bold white][5][/bold white]  Readiness Monitors\n"
-    "   [bold white][6][/bold white]  Component Test\n"
-    "   [bold white][7][/bold white]  Procedure History\n"
-    "   [bold white][8][/bold white]  Vehicle Profiles\n"
-    "   [bold white][9][/bold white]  Export Report\n"
-    "   [bold cyan][K][/bold cyan]  Knowledge Base\n"
-    "   [bold cyan][0][/bold cyan]  Chat with AI\n"
-    "   [bold red][Q][/bold red]  Quit\n"
-)
 
 # ---------------------------------------------------------------------------
 # ASCII Art & Branding
@@ -112,6 +54,25 @@ OPENTUNE_ASCII = r"""
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝"""
 
 TAGLINE = "Open Diagnostics. Infinite Solutions."
+
+
+def first_run_setup(router: IntelligenceRouter) -> None:
+    """Show intelligence tier status on startup."""
+    table = Table(show_header=False, box=None, padding=(0, 1))
+
+    if router.ollama_available:
+        table.add_row("✅", "Tier 1 · Local (free)", f"[dim]{router._ollama_model}[/dim]")
+    else:
+        table.add_row("⚪", "Tier 1 · Local (free)", "[dim]Ollama not running — install at ollama.ai[/dim]")
+
+    if router.cloud_available:
+        table.add_row("✅", "Tier 2 · Cloud Efficient", "[dim]~$0.002/session[/dim]")
+        table.add_row("✅", "Tier 3 · Cloud Power", "[dim]~$0.08/session[/dim]")
+    else:
+        table.add_row("❌", "Tier 2 · Cloud Efficient", "[dim]Add API_KEY to .env to unlock[/dim]")
+        table.add_row("❌", "Tier 3 · Cloud Power", "[dim]Add API_KEY to .env to unlock[/dim]")
+
+    console.print(Panel(table, title="[bold cyan]Intelligence Tiers[/bold cyan]", border_style="cyan"))
 
 
 def render_launch_screen(mode: ConnectionMode, vehicle_display: str = "—", vin: str = "—") -> None:
@@ -244,7 +205,7 @@ def render_scan_result(result: ScanResult) -> None:
     ecu_table.add_column("STATUS", width=14)
 
     for ecu, status in result.ecu_map.items():
-        style = "green" if status == "OK" else ("dim" if status == "UNKNOWN" else "dim red")
+        style = "green" if status == "OK" else "dim red"
         ecu_table.add_row(ecu, Text(status, style=style))
 
     console.print(
@@ -255,7 +216,6 @@ def render_scan_result(result: ScanResult) -> None:
     render_live_data_panel(result.live_snapshot)
 
     console.print(f"[dim]Scan completed in {result.duration_s:.2f}s  •  VIN: {result.vin}[/dim]")
-    quip('dtc_scan')
     console.print()
 
 
@@ -954,7 +914,6 @@ def feature_export_report(
     ))
     console.print()
     console.print(f"  [bold green]Report saved:[/bold green] [cyan]{report_path}[/cyan]")
-    quip('export')
     console.print()
     try:
         Prompt.ask("[dim]Press ENTER to return[/dim]", default="")
@@ -1132,21 +1091,35 @@ def run_main_menu(
     logger: SessionLogger,
     profiles: VehicleProfileManager,
     knowledge: KnowledgeEngine,
-    manual_vehicle: dict = {},
-    researcher: Optional[VehicleResearcher] = None,
 ) -> None:
     scanner = ECUScanner(conn)
-    _research_printed = False
+
+    import importlib.util as _ilu
+    _settings_ui_available = _ilu.find_spec("ui.settings") is not None
+
+    _settings_entry = (
+        "   [bold cyan][S][/bold cyan]  Settings\n"
+        if _settings_ui_available else ""
+    )
+
+    MENU = (
+        "\n"
+        "   [bold white][1][/bold white]  DTC Scan\n"
+        "   [bold white][2][/bold white]  Live Process Scan\n"
+        "   [bold white][3][/bold white]  DTC History\n"
+        "   [bold white][4][/bold white]  Freeze Frame\n"
+        "   [bold white][5][/bold white]  Readiness Monitors\n"
+        "   [bold white][6][/bold white]  Component Test\n"
+        "   [bold white][7][/bold white]  Procedure History\n"
+        "   [bold white][8][/bold white]  Vehicle Profiles\n"
+        "   [bold white][9][/bold white]  Export Report\n"
+        "   [bold cyan][K][/bold cyan]  Knowledge Base — browse catalogued solutions\n"
+        "   [bold cyan][0][/bold cyan]  Chat — describe problem to AI\n"
+        + _settings_entry +
+        "   [bold red][Q][/bold red]  Quit\n"
+    )
 
     while True:
-        # Check if background research just completed — print once
-        if researcher is not None and not _research_printed and researcher.is_done():
-            _research_printed = True
-            summary = researcher.get_summary()
-            if summary:
-                console.print(f"[bold cyan]  Research complete:[/bold cyan] {summary}")
-                console.print()
-
         # Drain and display any anomaly alerts
         if ANTHROPIC_API_KEY:
             alerts = ai_monitor.drain_enriched()
@@ -1156,26 +1129,17 @@ def run_main_menu(
             display_alerts(alerts)
 
         console.print()
+        console.print(Panel(MENU, title="[bold cyan]OPENTUNE MENU[/bold cyan]",
+                            border_style="cyan", padding=(0, 2)))
+        console.print()
 
-        if INTERACTIVE_TTY:
-            try:
-                choice = questionary.select(
-                    "OPENTUNE MENU",
-                    choices=MENU_CHOICES,
-                    style=QSTYLE,
-                ).ask()
-                if choice is None: choice = 'Q'
-            except Exception:
-                choice = 'Q'
-        else:
-            console.print(Panel(MENU_TEXT, title='[bold cyan]OPENTUNE MENU[/bold cyan]',
-                                border_style='cyan', padding=(0, 2)))
-            console.print()
-            try:
-                choice = Prompt.ask('[bold cyan]Select[/bold cyan]', default='').strip().upper()
-            except (KeyboardInterrupt, EOFError):
-                choice = 'Q'
-        if choice is None or choice == "Q":
+        try:
+            choice = Prompt.ask("[bold cyan]Select[/bold cyan]", default="").strip().upper()
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Goodbye.[/dim]")
+            break
+
+        if choice == "Q":
             console.print("[dim]Goodbye.[/dim]")
             break
 
@@ -1214,7 +1178,14 @@ def run_main_menu(
             feature_knowledge_base(knowledge)
 
         elif choice == "0":
-            _run_chat_session(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge, manual_vehicle=manual_vehicle)
+            _run_chat_session(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge)
+
+        elif choice == "S" and _settings_ui_available:
+            from ui.settings import run_settings
+            run_settings()
+
+        else:
+            console.print("[dim]  Invalid option.[/dim]")
 
 
 def _run_chat_session(
@@ -1225,10 +1196,9 @@ def _run_chat_session(
     engineer: ProcedureEngineer,
     logger: SessionLogger,
     knowledge: KnowledgeEngine,
-    manual_vehicle: dict = {},
 ) -> None:
     """Single chat interaction from the menu."""
-    run_chat_loop(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge=knowledge, manual_vehicle=manual_vehicle)
+    run_chat_loop(conn, scan_result, live_monitor, ai_monitor, engineer, logger, knowledge=knowledge)
 
 
 # ---------------------------------------------------------------------------
@@ -1243,7 +1213,6 @@ def run_chat_loop(
     engineer: ProcedureEngineer,
     logger: SessionLogger,
     knowledge: Optional[KnowledgeEngine] = None,
-    manual_vehicle: dict = {},
 ) -> None:
     console.print()
     console.print(Rule("[bold cyan]DIAGNOSTIC CHAT[/bold cyan]"))
@@ -1330,7 +1299,6 @@ def run_chat_loop(
             "dtcs": dtcs,
             "live_data": live_data,
             "ecu_map": scan_result.ecu_map,
-            "manual_vehicle": manual_vehicle,
         }
 
         # Phase 1: Understand the problem
@@ -1370,7 +1338,6 @@ def run_chat_loop(
 
         with console.status("[cyan]Designing procedure...[/cyan]", spinner="arc"):
             proc = engineer.engineer_solution(understanding, context, clarification=clarification)
-        quip('ai_engineer')
 
         # Show brief plan summary + safety notes
         render_plan_summary(proc)
@@ -1443,7 +1410,6 @@ def run_chat_loop(
 
         result_style = {"fixed": "bold green", "not_fixed": "bold red", "unknown": "bold yellow"}.get(outcome, "white")
         console.print(f"\n[{result_style}]  Outcome logged: {outcome.upper()}[/{result_style}]")
-        quip('knowledge_write')
         console.print(f"[dim]  Session log: {logger.log_file_path()}[/dim]")
         console.print()
 
@@ -1451,124 +1417,6 @@ def run_chat_loop(
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Manual Vehicle Entry
-# ---------------------------------------------------------------------------
-
-def prompt_manual_vehicle(existing_vehicle=None) -> dict:
-    """
-    Prompt mechanic to manually enter vehicle info.
-    Returns dict with year, make, model, vin (all optional).
-    """
-    console.print()
-    console.print(Rule("[bold cyan]VEHICLE IDENTIFICATION[/bold cyan]"))
-    console.print()
-    if existing_vehicle:
-        console.print(f"  [dim]Detected: [white]{existing_vehicle}[/white] — press ENTER to keep, or type to override[/dim]")
-    else:
-        console.print("  [dim]No vehicle detected. Enter details so the AI can reason accurately.[/dim]")
-        console.print("  [dim]Press ENTER to skip any field.[/dim]")
-    console.print()
-    try:
-        year  = Prompt.ask("  [bold cyan]Year [/bold cyan] ", default="").strip()
-        make  = Prompt.ask("  [bold cyan]Make [/bold cyan] ", default="").strip()
-        model = Prompt.ask("  [bold cyan]Model[/bold cyan] ", default="").strip()
-        vin   = Prompt.ask("  [bold cyan]VIN  [/bold cyan] ", default="").strip()
-    except (KeyboardInterrupt, EOFError):
-        return {}
-    result = {}
-    if year:  result["year"]  = year
-    if make:  result["make"]  = make
-    if model: result["model"] = model
-    if vin:   result["vin"]   = vin
-    if result:
-        parts = [year, make, model]
-        display = " ".join(p for p in parts if p) or "Unknown"
-        console.print()
-        console.print(f"  [green]Vehicle set:[/green] [bold white]{display}[/bold white]" +
-                      (f"  [dim cyan]VIN: {vin}[/dim cyan]" if vin else ""))
-        console.print()
-    return result
-
-# ---------------------------------------------------------------------------
-# No-car chat loop (AI-only, no OBD connection)
-# ---------------------------------------------------------------------------
-
-def un_no_car_chat(engineer: ProcedureEngineer, logger: SessionLogger, knowledge: KnowledgeEngine) -> None:
-    """Chat loop for no-car mode — AI only, no live data or DTCs."""
-    console.print()
-    console.print(
-        "[bold cyan]OpenTune:[/bold cyan] What is your vehicle — year, make, model, and trim? "
-        "Describe what you're dealing with and let's figure it out."
-    )
-    console.print()
-
-    context: dict = {
-        "vehicle_display": "Unknown",
-        "vin": "UNKNOWN",
-        "dtcs": [],
-        "live_data": None,
-        "ecu_map": {},
-        "manual_vehicle": {},
-        "no_car_mode": True,
-    }
-
-    while True:
-        try:
-            user_input = Prompt.ask("\n[bold cyan]mechanic[/bold cyan]")
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Session ended.[/dim]")
-            break
-
-        if not user_input.strip():
-            continue
-
-        cmd = user_input.strip().lower()
-        if cmd in ("quit", "exit", "q"):
-            console.print("[dim]Goodbye.[/dim]")
-            break
-
-        # Two-phase AI flow
-        console.print()
-        console.print("[dim cyan]Before I run anything — let me check what you've told me.[/dim cyan]")
-        console.print()
-
-        with console.status("[cyan]Reading what you've told me...[/cyan]", spinner="dots"):
-            understanding = engineer.understand_problem(user_input, context)
-
-        if understanding.data_highlights:
-            for highlight in understanding.data_highlights:
-                console.print(f"  [cyan]→[/cyan] {highlight}")
-            console.print()
-
-        clarification = ""
-        if understanding.needs_clarification and understanding.clarifying_question:
-            console.print(f"  [white]{understanding.clarifying_question}[/white]")
-            console.print()
-            try:
-                clarification = Prompt.ask("[bold cyan]mechanic[/bold cyan]")
-            except (KeyboardInterrupt, EOFError):
-                console.print("\n[dim]Session ended.[/dim]")
-                break
-            console.print()
-
-        if clarification:
-            console.print("[dim cyan]Got it. Engineering solution...[/dim cyan]")
-        else:
-            console.print("[dim cyan]Engineering solution...[/dim cyan]")
-        console.print()
-
-        with console.status("[cyan]Designing procedure...[/cyan]", spinner="arc"):
-            proc = engineer.engineer_solution(understanding, context, clarification=clarification)
-        quip('ai_engineer')
-
-        # Show plan only — no execution (no OBD connection)
-        render_plan_summary(proc)
-        console.print("[dim]Connect an ELM327 adapter and relaunch to execute this procedure with live data.[/dim]")
-        quip('chat')
-        console.print()
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -1579,7 +1427,63 @@ def parse_args() -> argparse.Namespace:
     mode_group.add_argument("--sim", action="store_true", default=False, help="Simulation mode")
     mode_group.add_argument("--real", action="store_true", help="Real ELM327 adapter")
     parser.add_argument("--port", default=None, help="Serial port for ELM327 (e.g. /dev/ttyUSB0)")
+    parser.add_argument("--skip-wizard", action="store_true", default=False,
+                        help="Skip the first-run welcome wizard (dev/testing)")
     return parser.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Boot sequence helpers
+# ---------------------------------------------------------------------------
+
+_BOOT_TAGLINE = (
+    "OpenTune learns from every repair. "
+    "An open database, built by mechanics, for mechanics."
+)
+
+
+def _print_boot_header() -> None:
+    """Display the app logo + spec tagline at startup."""
+    art_lines = OPENTUNE_ASCII.split("\n")
+    colors = ["bold cyan", "bold cyan", "cyan", "cyan", "blue", "bold blue", "bold blue"]
+    art_text = Text()
+    for i, line in enumerate(art_lines):
+        color = colors[min(i, len(colors) - 1)]
+        art_text.append(line + "\n", style=color)
+
+    console.clear()
+    console.print()
+    console.print(art_text, justify="center")
+    console.print()
+    console.print(Text(_BOOT_TAGLINE, style="dim white"), justify="center")
+    console.print()
+    console.print(Rule(style="dim cyan"))
+    console.print()
+
+
+def _show_no_adapter_message() -> None:
+    """Show the 'no adapter' panel and wait for the user to continue."""
+    from rich.text import Text as _Text
+    console.print(Panel(
+        _Text.assemble(
+            _Text("⚠️  No OBD adapter detected.\n\n", style="bold yellow"),
+            _Text(
+                "You can still use OpenTune's AI assistant for:\n"
+                "  • Fault code lookups\n"
+                "  • Repair procedure guidance\n"
+                "  • Technical questions\n\n"
+                "Plug in your adapter anytime — it'll connect automatically.",
+                style="white",
+            ),
+        ),
+        border_style="yellow",
+        title="[yellow]NO ADAPTER[/yellow]",
+    ))
+    console.print()
+    try:
+        Prompt.ask("[dim][ Continue to Chat → ][/dim]", default="")
+    except (KeyboardInterrupt, EOFError):
+        pass
 
 
 def select_mode_interactive() -> tuple[ConnectionMode, Optional[str]]:
@@ -1627,27 +1531,63 @@ def main() -> None:
 
     from config import DEFAULT_PORT
 
-    # If no mode flag passed, show interactive mode selection screen first
-    if not args.sim and not args.real:
-        # Show ASCII art before mode selection
-        console.clear()
-        art_lines = OPENTUNE_ASCII.split("\n")
-        colors = ["bold cyan", "bold cyan", "cyan", "cyan", "blue", "bold blue", "bold blue"]
-        art_text = Text()
-        for i, line in enumerate(art_lines):
-            color = colors[min(i, len(colors) - 1)]
-            art_text.append(line + "\n", style=color)
-        console.print()
-        console.print(art_text, justify="center")
-        console.print()
-        console.print(Text(TAGLINE, style="bold white"), justify="center")
-        console.print(Rule(style="dim cyan"))
+    # ── Welcome wizard (first run only) ──────────────────────────────────
+    if not args.skip_wizard:
+        from config.settings_manager import is_first_run
+        if is_first_run():
+            from ui.welcome import run_wizard
+            run_wizard()
 
-        mode, selected_port = select_mode_interactive()
-        port = selected_port or args.port or DEFAULT_PORT
-    else:
-        mode = ConnectionMode.REAL if args.real else ConnectionMode.SIM
+    # ── Boot header: logo + tagline ───────────────────────────────────────
+    _print_boot_header()
+
+    # ── OBD adapter detection ─────────────────────────────────────────────
+    from obd.detector import detect_adapter, AdapterPoller
+
+    if args.sim:
+        # Simulation mode: skip real scan, proceed directly
+        detected_port = detect_adapter(sim=True, show_progress=False)  # returns "SIM"
+        mode = ConnectionMode.SIM
         port = args.port or DEFAULT_PORT
+    elif args.real:
+        # Force real mode: use specified port or auto-detect
+        if args.port:
+            detected_port = args.port
+        else:
+            detected_port = detect_adapter(sim=False, show_progress=True)
+        if detected_port:
+            console.print(
+                f"[bold green]✅ OBD Adapter connected — {detected_port} — Ready to scan[/bold green]"
+            )
+            console.print()
+        mode = ConnectionMode.REAL
+        port = detected_port or DEFAULT_PORT
+    else:
+        # Auto-detect: if adapter found → live OBD interface; else → chat interface
+        detected_port = detect_adapter(sim=False, show_progress=True)
+        if detected_port:
+            console.print(
+                f"[bold green]✅ OBD Adapter connected — {detected_port} — Ready to scan[/bold green]"
+            )
+            console.print()
+            mode = ConnectionMode.REAL
+            port = detected_port
+        else:
+            _show_no_adapter_message()
+            mode = ConnectionMode.SIM
+            port = args.port or DEFAULT_PORT
+
+    # ── Background hot-plug poller ────────────────────────────────────────
+    def _on_adapter_connect(hotplug_port: str) -> None:
+        console.print()
+        console.print(Panel(
+            f"[bold green]🔌 OBD adapter detected! Press S to switch to Live Scan[/bold green]\n"
+            f"[dim]Port: {hotplug_port}[/dim]",
+            border_style="green",
+        ))
+
+    poller = AdapterPoller(on_connect=_on_adapter_connect, sim=args.sim)
+    poller.start()
 
     # Show launch screen (no vehicle info yet)
     render_launch_screen(mode)
@@ -1661,63 +1601,18 @@ def main() -> None:
     with console.status("[cyan]Establishing connection...[/cyan]", spinner="dots"):
         connected = conn.connect()
 
-    vehicle = conn.vehicle if connected else None
-    vehicle_display = vehicle.display_name() if vehicle else None
-
-    # -----------------------------------------------------------------------
-    # NO-CAR MODE: real adapter selected but no connection or no vehicle
-    # -----------------------------------------------------------------------
-    if mode == ConnectionMode.REAL and not connected:
-        console.print()
+    if not connected:
         console.print(Panel(
-            "[bold yellow]Full diagnostic features require OBD2 connection.[/bold yellow]\n"
-            "[white]Running in AI Chat mode.[/white]\n\n"
-            "[dim]Connect an ELM327 adapter and relaunch for full ECU scan, live data, "
-            "component tests, and procedure execution.[/dim]",
-            title="[yellow]NO CONNECTION[/yellow]",
-            border_style="yellow",
+            f"[bold red]Connection failed[/bold red]\n\n"
+            f"[white]Could not connect to {'ELM327 adapter' if mode == ConnectionMode.REAL else 'simulator'}.[/white]\n"
+            f"[dim]Port: {port}[/dim]",
+            border_style="red",
         ))
-        console.print()
+        sys.exit(1)
 
-        logger = SessionLogger()
-        base_path = Path(__file__).parent
-        knowledge = KnowledgeEngine(base_path)
-        knowledge.seed_initial_knowledge()
-        engineer = ProcedureEngineer(knowledge_engine=knowledge)
-
-        un_no_car_chat(engineer, logger, knowledge)
-
-        if connected:
-            conn.disconnect()
-        console.print()
-        console.print(Rule("[dim]OpenTune session ended[/dim]"))
-        console.print()
-        return
-
-    # -----------------------------------------------------------------------
-    # CONNECTED MODE: sim always here; real with vehicle detected
-    # -----------------------------------------------------------------------
-
-    # Manual vehicle entry: only if vehicle wasn't auto-detected
-    manual_info: dict = {}
-    if not vehicle_display:
-        manual_info = prompt_manual_vehicle(existing_vehicle=vehicle_display)
-
-    # Merge manual info into vehicle display / vin
-    if manual_info:
-        parts = [manual_info.get("year", ""), manual_info.get("make", ""), manual_info.get("model", "")]
-        manual_display = " ".join(p for p in parts if p)
-        if manual_display:
-            vehicle_display = manual_display
-        if manual_info.get("vin"):
-            vin = manual_info["vin"]
-        else:
-            vin = vehicle.vin if vehicle else "UNKNOWN"
-    else:
-        vin = vehicle.vin if vehicle else "UNKNOWN"
-
-    vehicle_display = vehicle_display or "Unknown"
-    vin = vin or "UNKNOWN"
+    vehicle = conn.vehicle
+    vehicle_display = vehicle.display_name() if vehicle else "Unknown"
+    vin = vehicle.vin if vehicle else "UNKNOWN"
 
     # Refresh launch screen with vehicle info
     render_launch_screen(mode, vehicle_display, vin)
@@ -1732,19 +1627,6 @@ def main() -> None:
         scan_result = scanner.full_scan()
 
     render_scan_result(scan_result)
-
-    # Self-learning: start background research if vehicle is unknown
-    researcher: Optional[VehicleResearcher] = None
-    _research_printed = False
-    if ANTHROPIC_API_KEY:
-        vehicle_make = conn.vehicle.make if conn.vehicle else "Unknown"
-        if vehicle_make in ("Unknown", "") or vin == "UNKNOWN":
-            researcher = VehicleResearcher(ANTHROPIC_API_KEY, Path(__file__).parent / "knowledge_base")
-            live_snap = scan_result.live_snapshot.snapshot() if scan_result.live_snapshot else {}
-            dtc_codes = [d.code for d in scan_result.dtcs]
-            researcher.start_research(vin, dtc_codes, live_snap)
-            console.print("[dim cyan]  Researching vehicle in background...[/dim cyan]")
-            console.print()
 
     # Start live monitor
     live_monitor = LiveMonitor(conn)
@@ -1764,6 +1646,15 @@ def main() -> None:
 
     # Init engineer with knowledge engine
     engineer = ProcedureEngineer(knowledge_engine=knowledge)
+
+    # Show intelligence tier status
+    try:
+        from config import OLLAMA_MODEL
+        _router = IntelligenceRouter(api_key=__import__("config").API_KEY, ollama_model=OLLAMA_MODEL)
+        first_run_setup(_router)
+        console.print()
+    except Exception:
+        pass
 
     if not ANTHROPIC_API_KEY:
         console.print(Panel(
@@ -1788,10 +1679,9 @@ def main() -> None:
         run_main_menu(
             conn, scan_result, live_monitor, ai_monitor,
             engineer, logger, profiles, knowledge,
-            manual_vehicle=manual_info,
-            researcher=researcher,
         )
     finally:
+        poller.stop()
         live_monitor.stop()
         if ANTHROPIC_API_KEY:
             ai_monitor.stop()
@@ -1805,19 +1695,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

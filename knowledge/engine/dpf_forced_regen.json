@@ -1,0 +1,52 @@
+{
+  "service_type": "dpf_forced_regen",
+  "category": "engine",
+  "title": "Diesel Particulate Filter Forced Regeneration",
+  "description": "Initiate stationary or service regeneration of diesel particulate filter when soot load exceeds passive regeneration threshold.",
+  "oem_coverage": ["Ford","GM","VW/Audi","BMW","Toyota","Nissan","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Ford","model":"F-250 Super Duty","year":2019,"engine":"6.7L Power Stroke"},
+    {"make":"GM","model":"Silverado 2500HD","year":2018,"engine":"6.6L Duramax L5P"},
+    {"make":"Volkswagen","model":"Passat","year":2015,"engine":"2.0L TDI"},
+    {"make":"BMW","model":"328d","year":2016,"engine":"2.0L N47 diesel"}
+  ],
+  "common_symptoms": ["DPF full warning","excessive black smoke","reduced power","P2002 P2003 P244A P244B"],
+  "physical_solution": "Force a stationary regeneration cycle to burn accumulated soot. Required when passive regen fails due to short trips, city driving, or inhibit conditions.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$27 SecurityAccess","$31 RoutineControl","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — reading soot/load PIDs accessible; initiating forced regen typically requires $31 routine + safety interlocks. Standard ELM327 may not handle timing reliably.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle in open ventilated area, exhaust outlet clear",
+      "Fuel level above OEM minimum (typically 25%+)",
+      "Engine oil and coolant at safe operating range",
+      "No active DPF/EGT/boost critical DTCs",
+      "Parking brake applied, transmission in Park/Neutral",
+      "Battery support connected for long regen cycle"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Park in open area. Apply parking brake. Connect battery support charger."},
+      {"step":2,"type":"send_uds","description":"Read DPF soot load and EGT values via $22. Verify soot load > threshold requiring forced regen."},
+      {"step":3,"type":"send_uds","description":"Enter extended session $10 03. Security access $27 if required by OEM."},
+      {"step":4,"type":"send_uds","description":"Start forced regen routine: $31 01 [DPF_REGEN_ROUTINE_ID]"},
+      {"step":5,"type":"verify","description":"Monitor via $22: EGT sensors, RPM, injection status, soot mass reduction. Cycle typically 20-45 min."},
+      {"step":6,"type":"instruct_mechanic","description":"Allow engine idle cool-down after regen complete. Do not shut off immediately."},
+      {"step":7,"type":"verify","description":"Recheck soot load. Confirm DPF differential pressure returned to baseline."}
+    ],
+    "oem_notes": {
+      "Ford": "IDS/FDRS service bay regen. Monitor EGT closely. Follow brake/hood/door interlock prompts.",
+      "GM": "Duramax enforces multiple prerequisites. Inhibit flags must be cleared before command acceptance.",
+      "VW/Audi": "ODIS-guided regen linked to measured values and adaptation channels. SFD on 2019+ may block.",
+      "BMW": "ISTA service functions manage DDE regen. Road-based completion may be required if stationary fails.",
+      "Toyota": "Denso diesel ECUs support utility-driven regen on select markets.",
+      "Nissan": "Diesel market variant. Regen routine via CONSULT III+.",
+      "Stellantis": "Pre-2018 accessible via HS-CAN. 2018+ SGW may block routine initiation.",
+      "Hyundai/Kia": "Export/diesel market. GDS Mobile guided regen. 2019+ gateway may restrict."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

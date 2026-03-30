@@ -3,3 +3,6 @@ rich>=13.7.0
 pyserial>=3.5
 python-dotenv>=1.0.0
 colorama>=0.4.6
+litellm>=1.40.0
+requests>=2.31.0
+cryptography>=42.0.0

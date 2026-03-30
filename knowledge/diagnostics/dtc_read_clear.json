@@ -1,0 +1,48 @@
+{
+  "service_type": "dtc_read_clear",
+  "category": "diagnostics",
+  "title": "DTC Read and Clear — All Modules",
+  "description": "Read diagnostic trouble codes from all vehicle ECUs and clear codes after repair confirmation. Foundation capability for all diagnostic workflows.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Tacoma","year":2020,"engine":"3.5L 2GR-FKS"},
+    {"make":"Ford","model":"Explorer","year":2019,"engine":"2.3L EcoBoost"},
+    {"make":"BMW","model":"530i","year":2018,"engine":"2.0L B48"},
+    {"make":"Hyundai","model":"Tucson","year":2020,"engine":"2.0L Nu"}
+  ],
+  "common_symptoms": ["check engine light","ABS light","TPMS warning","any warning indicator"],
+  "physical_solution": "Retrieve all stored DTCs from every ECU. Diagnose root cause. Repair. Clear codes. Verify non-return.",
+  "technical_solution": {
+    "uds_services": ["$10 DiagnosticSessionControl","$19 ReadDTCInformation","$14 ClearDiagnosticInformation","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — powertrain/emissions modules fully accessible. Full multi-module sweep limited by ELM addressing on some OEMs. Gateway routing affects body/chassis modules.",
+    "server_free": true,
+    "preconditions": [
+      "Ignition ON",
+      "OBD2 adapter connected"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"Broadcast DTC read request: $19 02 [STATUS_MASK]. Read all stored/pending DTCs across all modules."},
+      {"step":2,"type":"instruct_mechanic","description":"Record all DTCs with freeze frame data. Do not clear until root cause is identified and repaired."},
+      {"step":3,"type":"instruct_mechanic","description":"Diagnose and repair root cause. Verify repair is complete."},
+      {"step":4,"type":"send_uds","description":"Clear all DTCs: $14 FF FF FF (clear all groups). Or target specific group by DTC group identifier."},
+      {"step":5,"type":"verify","description":"Re-read DTCs: $19 02 FF. Confirm all codes cleared. Complete drive cycle if needed for monitors to run."},
+      {"step":6,"type":"verify","description":"Verify no DTCs return after drive cycle."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Standard UDS $19/$14. Multi-module via functional addressing (0x7DF). Toyota-specific PIDs for enhanced data.",
+      "Honda/Acura": "F-CAN modules respond well. Body modules (B-CAN) may need gateway routing. HDS provides full sweep.",
+      "Nissan/Infiniti": "CONSULT-III+ provides full scan. ELM327 good for powertrain; body modules may need enhanced addressing.",
+      "Ford": "HS-CAN for powertrain. MS-CAN body modules on pins 3/11 — standard ELM may miss these.",
+      "GM": "HS-CAN powertrain accessible. SW-CAN (pin 1) body modules need specialized adapter.",
+      "BMW": "ZGW routes diagnostic requests. $19 works broadly. G-series may limit full sweep without ISTA.",
+      "VW/Audi": "J533 gateway routes all DTC requests. Full sweep requires addressing all module types.",
+      "Stellantis": "CAN-C (powertrain) accessible. CAN-IHS body modules on pins 3/11. SGW limits some 2018+ modules.",
+      "Hyundai/Kia": "Standard UDS $19/$14. Gateway restricts some 2019+ modules for write operations only — reads remain open."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

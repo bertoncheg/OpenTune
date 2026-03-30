@@ -1,143 +1,151 @@
 """
 OpenTune Key Resolver
-Determines which AI provider to use.
-On first run (no provider configured), shows an interactive menu and saves the choice.
-Priority if already configured: AI_PROVIDER env var > API key detection > prompt.
+
+Auto-detects the AI provider from an API key and returns a ready-to-use
+completion callable backed by litellm (preferred) or the openai SDK (fallback).
 """
 from __future__ import annotations
+
 import os
-import dataclasses
-from pathlib import Path
-from typing import Optional
-from ai.providers import AIProvider, ProviderConfig, PROVIDER_DEFAULTS
+from typing import Callable, Any
 
-_ENV_PATH = Path(__file__).parent.parent / ".env"
+from ai.providers import ProviderConfig, detect_provider
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def resolve_provider(api_key: str) -> ProviderConfig:
+    """
+    Inspect *api_key* and return the matching ProviderConfig.
 
-def resolve_provider() -> ProviderConfig:
-    """Return a ProviderConfig.  Prompts user on first run if nothing is set."""
-    # 1. Explicit AI_PROVIDER override in env
-    provider_name = os.getenv("AI_PROVIDER", "").strip().lower()
-    if provider_name:
-        return _cfg_for_named_provider(provider_name)
-
-    # 2. Legacy: detect from existing API keys (no prompt needed for existing installs)
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    openai_key    = os.getenv("OPENAI_API_KEY")
-
-    if anthropic_key:
-        cfg = dataclasses.replace(PROVIDER_DEFAULTS[AIProvider.ANTHROPIC], api_key=anthropic_key)
-        return cfg
-
-    if openai_key:
-        cfg = dataclasses.replace(PROVIDER_DEFAULTS[AIProvider.OPENAI], api_key=openai_key)
-        return cfg
-
-    # 3. Nothing configured — first-run prompt
-    return _prompt_provider_choice()
+    Raises ValueError if the key prefix is not recognised.
+    """
+    return detect_provider(api_key)
 
 
-def get_api_key(provider: AIProvider) -> Optional[str]:
-    mapping = {
-        AIProvider.ANTHROPIC: "ANTHROPIC_API_KEY",
-        AIProvider.OPENAI:    "OPENAI_API_KEY",
-    }
-    env_var = mapping.get(provider)
-    return os.getenv(env_var) if env_var else None
+def get_litellm_client(
+    api_key: str,
+    model_override: str | None = None,
+) -> tuple[ProviderConfig, Callable[..., Any]]:
+    """
+    Resolve the provider for *api_key* and return ``(provider_config, completion_fn)``.
 
+    *completion_fn* has the same signature as ``litellm.completion`` / ``openai.chat.completions.create``:
+        completion_fn(model, messages, *, system=None, max_tokens=1024, stream=False, **kwargs)
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+    Strategy:
+      1. Try to import litellm — preferred because it handles all providers uniformly.
+      2. Fall back to the openai SDK with base_url patching for OpenAI-compatible providers.
+      3. Fall back to the anthropic SDK for Anthropic keys.
+    """
+    config = resolve_provider(api_key)
+    model = model_override or config.default_model
 
-def _cfg_for_named_provider(name: str) -> ProviderConfig:
-    """Build a ProviderConfig from a saved AI_PROVIDER name."""
+    # ------------------------------------------------------------------
+    # Attempt 1: litellm
+    # ------------------------------------------------------------------
     try:
-        provider = AIProvider(name)
-    except ValueError:
-        provider = AIProvider.OLLAMA  # safe fallback
+        import litellm  # type: ignore
 
-    cfg = dataclasses.replace(PROVIDER_DEFAULTS[provider])
+        # Inject the key into the environment variable litellm expects
+        os.environ[config.key_env_var] = api_key
+        if config.base_url:
+            os.environ["OPENROUTER_API_BASE"] = config.base_url  # litellm convention
 
-    if provider == AIProvider.ANTHROPIC:
-        cfg = dataclasses.replace(cfg, api_key=os.getenv("ANTHROPIC_API_KEY"))
-    elif provider == AIProvider.OPENAI:
-        cfg = dataclasses.replace(cfg, api_key=os.getenv("OPENAI_API_KEY"))
+        def _litellm_completion(
+            messages: list[dict],
+            *,
+            system: str | None = None,
+            max_tokens: int = 1024,
+            stream: bool = False,
+            **kwargs: Any,
+        ) -> Any:
+            full_messages = messages
+            if system:
+                full_messages = [{"role": "system", "content": system}] + messages
+            return litellm.completion(
+                model=model,
+                messages=full_messages,
+                max_tokens=max_tokens,
+                stream=stream,
+                **kwargs,
+            )
 
-    return cfg
+        return config, _litellm_completion
 
+    except ImportError:
+        pass
 
-def _prompt_provider_choice() -> ProviderConfig:
-    """Interactive first-run setup. Saves AI_PROVIDER (and API key) to .env."""
-    print()
-    print("=" * 52)
-    print("  OpenTune — First Run: AI Provider Setup")
-    print("=" * 52)
-    print("  Which AI provider do you use?")
-    print()
-    print("  [1] Anthropic (Claude)")
-    print("  [2] OpenAI (GPT-4o / GPT-4)")
-    print("  [3] Ollama  (local, free — must already be running)")
-    print("  [4] Skip / configure manually later")
-    print()
+    # ------------------------------------------------------------------
+    # Attempt 2: anthropic SDK (for Anthropic keys)
+    # ------------------------------------------------------------------
+    if config.name == "anthropic":
+        try:
+            import anthropic  # type: ignore
 
+            client = anthropic.Anthropic(api_key=api_key)
+            # Strip "anthropic/" prefix for native SDK
+            native_model = model.removeprefix("anthropic/")
+
+            def _anthropic_completion(
+                messages: list[dict],
+                *,
+                system: str | None = None,
+                max_tokens: int = 1024,
+                stream: bool = False,
+                **kwargs: Any,
+            ) -> Any:
+                return client.messages.create(
+                    model=native_model,
+                    messages=messages,
+                    system=system or "",
+                    max_tokens=max_tokens,
+                    stream=stream,
+                    **kwargs,
+                )
+
+            return config, _anthropic_completion
+
+        except ImportError:
+            pass
+
+    # ------------------------------------------------------------------
+    # Attempt 3: openai SDK with base_url patching (OpenAI-compatible)
+    # ------------------------------------------------------------------
     try:
-        choice = input("  Enter choice [1-4]: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        choice = "4"
+        import openai  # type: ignore
 
-    menu = {"1": AIProvider.ANTHROPIC, "2": AIProvider.OPENAI, "3": AIProvider.OLLAMA}
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        if config.base_url:
+            client_kwargs["base_url"] = config.base_url
 
-    if choice not in menu:
-        print("\n  Skipping setup. Set AI_PROVIDER in .env when ready.\n")
-        return dataclasses.replace(PROVIDER_DEFAULTS[AIProvider.OLLAMA])
+        client = openai.OpenAI(**client_kwargs)
+        # Strip provider prefix for openai-compatible endpoints
+        native_model = model.split("/", 1)[-1] if "/" in model else model
 
-    provider = menu[choice]
-    cfg = dataclasses.replace(PROVIDER_DEFAULTS[provider])
+        def _openai_completion(
+            messages: list[dict],
+            *,
+            system: str | None = None,
+            max_tokens: int = 1024,
+            stream: bool = False,
+            **kwargs: Any,
+        ) -> Any:
+            full_messages = messages
+            if system:
+                full_messages = [{"role": "system", "content": system}] + messages
+            return client.chat.completions.create(
+                model=native_model,
+                messages=full_messages,
+                max_tokens=max_tokens,
+                stream=stream,
+                **kwargs,
+            )
 
-    # Optionally collect API key for cloud providers
-    if provider in (AIProvider.ANTHROPIC, AIProvider.OPENAI):
-        key_env = "ANTHROPIC_API_KEY" if provider == AIProvider.ANTHROPIC else "OPENAI_API_KEY"
-        existing = os.getenv(key_env, "")
-        if not existing:
-            try:
-                api_key = input(f"  Enter your {key_env} (leave blank to set later): ").strip()
-            except (EOFError, KeyboardInterrupt):
-                api_key = ""
-            if api_key:
-                cfg = dataclasses.replace(cfg, api_key=api_key)
-                _write_env_key(_ENV_PATH, key_env, api_key)
-                os.environ[key_env] = api_key
-        else:
-            cfg = dataclasses.replace(cfg, api_key=existing)
+        return config, _openai_completion
 
-    # Persist the provider choice
-    _write_env_key(_ENV_PATH, "AI_PROVIDER", provider.value)
-    os.environ["AI_PROVIDER"] = provider.value
+    except ImportError:
+        pass
 
-    print(f"\n  Saved: {cfg.display()}")
-    print("  You can change this anytime in .env\n")
-    return cfg
-
-
-def _write_env_key(env_path: Path, key: str, value: str) -> None:
-    """Upsert a key=value line in the .env file."""
-    lines: list[str] = []
-    if env_path.exists():
-        lines = env_path.read_text(encoding="utf-8").splitlines()
-
-    updated = False
-    for i, line in enumerate(lines):
-        if line.startswith(f"{key}=") or line.startswith(f"{key} ="):
-            lines[i] = f"{key}={value}"
-            updated = True
-            break
-
-    if not updated:
-        lines.append(f"{key}={value}")
-
-    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    raise RuntimeError(
+        f"No suitable SDK found for provider '{config.name}'. "
+        "Install litellm (`pip install litellm`) or the provider's own SDK."
+    )

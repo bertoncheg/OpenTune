@@ -10,9 +10,17 @@ load_dotenv(Path(__file__).parent / ".env")
 
 OPENTUNE_VERSION = "0.1.0"
 
-# Claude API
+# Claude API (legacy — kept for backward compatibility)
 ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
+
+# Universal API key — accepts any supported provider key; auto-detects provider.
+# Falls back to ANTHROPIC_API_KEY so existing setups keep working unchanged.
+API_KEY: str | None = os.getenv("API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+
+# Optional overrides — leave empty to auto-detect from the key.
+AI_MODEL: str = os.getenv("AI_MODEL", "")       # e.g. "gpt-4o", "claude-opus-4-6"
+AI_PROVIDER: str = os.getenv("AI_PROVIDER", "") # e.g. "openai", "anthropic"
 
 # Session logging
 SESSION_LOG_DIR: str = os.getenv("SESSION_LOG_DIR", str(Path(__file__).parent / "sessions"))
@@ -22,6 +30,11 @@ _default_port = "COM3" if platform.system() == "Windows" else "/dev/ttyUSB0"
 DEFAULT_PORT: str = os.getenv("OBD_PORT", _default_port)
 DEFAULT_BAUD: int = int(os.getenv("OBD_BAUD", "38400"))
 CONNECTION_TIMEOUT: float = float(os.getenv("OBD_TIMEOUT", "10.0"))
+
+# Ollama / local AI
+OLLAMA_ENABLED: bool = os.getenv("OLLAMA_ENABLED", "true").lower() != "false"
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Live monitor intervals (seconds)
 MONITOR_POLL_INTERVAL: float = 0.5

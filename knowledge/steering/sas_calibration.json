@@ -1,0 +1,52 @@
+{
+  "service_type": "sas_calibration",
+  "category": "steering",
+  "title": "Steering Angle Sensor (SAS) Calibration / Zero Point Reset",
+  "description": "Reset the steering angle sensor zero point after wheel alignment, steering component replacement, or any procedure that disturbs the steering neutral position.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"4Runner","year":2019,"engine":"4.0L 1GR-FE"},
+    {"make":"BMW","model":"X5","year":2018,"engine":"3.0L B58"},
+    {"make":"Ford","model":"F-150","year":2020,"engine":"3.5L EcoBoost"},
+    {"make":"Hyundai","model":"Santa Fe","year":2019,"engine":"2.4L"}
+  ],
+  "common_symptoms": ["DSC/ESC warning after alignment","VSC light on","stability control intervention at wrong times","C1xxx steering angle codes","traction control erratic"],
+  "physical_solution": "Reset SAS zero point so stability control systems know where straight-ahead is. Required after alignment or any steering/suspension work.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$31 RoutineControl","$22 ReadDataByIdentifier","$14 ClearDiagnosticInformation"],
+    "elm327_feasibility": "Partial — $31 routine accessible on most OEMs. Physical preconditions (wheels straight, level surface) critical. Routine IDs vary by OEM.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle on flat level surface",
+      "Steering wheel centered (straight-ahead)",
+      "Wheel alignment completed first",
+      "Ignition ON engine running (on most OEMs)",
+      "No active SAS/ABS/ESP DTCs"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Park on flat level surface. Set steering wheel exactly to straight-ahead position. Do not move wheel during calibration."},
+      {"step":2,"type":"instruct_mechanic","description":"Start engine (required on most OEMs for SAS cal)."},
+      {"step":3,"type":"send_uds","description":"Enter chassis/ABS ECU extended session: $10 03"},
+      {"step":4,"type":"send_uds","description":"Execute SAS zero-point calibration routine: $31 01 [SAS_CAL_ROUTINE_ID]"},
+      {"step":5,"type":"verify","description":"Poll routine completion: $31 03 [SAS_CAL_ROUTINE_ID]. Confirm positive response."},
+      {"step":6,"type":"send_uds","description":"Clear related DTCs: $14 FF FF FF"},
+      {"step":7,"type":"instruct_mechanic","description":"Test drive. Turn left and right through full lock. Confirm DSC/ESC light extinguished and stability control operates correctly."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Zero point calibration via Techstream or $31 routine. Physical preconditions strictly enforced.",
+      "Honda/Acura": "EPS/VSA SAS calibration. Level surface and wheel center critical. HDS guided procedure.",
+      "Nissan/Infiniti": "CONSULT III+ SAS cal. Routine accessible via UDS $31 on many platforms.",
+      "Ford": "SAS cal via IDS. Extended session $10 03 required first. Common after alignment or rack replacement.",
+      "GM": "Service StabiliTrak calibration procedure. Scan tool routine required after alignment.",
+      "BMW": "DSC SAS calibration via ISTA. Level surface and wheel center position verified by ECU.",
+      "VW/Audi": "G85 SAS basic setting via ODIS/VCDS $31. Standard procedure after any steering/chassis work.",
+      "Stellantis": "ESIM/ESP SAS cal. Pre-2018 straightforward. 2018+ SGW may block — attempt HS-CAN first.",
+      "Hyundai/Kia": "ESC SAS calibration via GDS. Common after suspension or alignment work."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}

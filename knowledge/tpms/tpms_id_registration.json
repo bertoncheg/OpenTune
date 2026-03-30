@@ -1,0 +1,48 @@
+{
+  "service_type": "tpms_id_registration",
+  "category": "tpms",
+  "title": "TPMS Sensor ID Registration / Learn",
+  "description": "Register new or relearned tire pressure sensor IDs with the TPMS module after sensor replacement or tire rotation.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","GM","VW/Audi","Stellantis","Hyundai/Kia","Ford"],
+  "vehicles_seen": [
+    {"make":"GM","model":"Silverado","year":2019,"engine":"5.3L"},
+    {"make":"Toyota","model":"Camry","year":2020,"engine":"2.5L"},
+    {"make":"VW","model":"Tiguan","year":2018,"engine":"2.0L TSI"},
+    {"make":"Hyundai","model":"Sonata","year":2019,"engine":"2.0L"}
+  ],
+  "common_symptoms": ["TPMS warning light after tire rotation","TPMS light after sensor replacement","incorrect wheel position shown","sensor not learned"],
+  "physical_solution": "Register new sensor RF IDs into the TPMS ECU so each wheel position is correctly mapped and monitored.",
+  "technical_solution": {
+    "uds_services": ["$10 ExtendedDiagnosticSession","$2E WriteDataByIdentifier","$31 RoutineControl","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — direct sensor learn via relearn mode (driving or magnet activation) most reliable. Scan-tool $2E write of sensor IDs possible on some OEMs with correct DID.",
+    "server_free": true,
+    "preconditions": [
+      "New sensors installed and inflated to correct pressure",
+      "Vehicle stationary for scan-tool learn, or ready to drive for auto-learn",
+      "Ignition ON"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Record new sensor IDs from packaging (6-8 hex digits per sensor)."},
+      {"step":2,"type":"send_uds","description":"Enter TPMS module extended session: $10 03"},
+      {"step":3,"type":"send_uds","description":"Option A (scan write): $2E [TPMS_ID_DID] [SENSOR_ID_BYTES] for each wheel position."},
+      {"step":4,"type":"instruct_mechanic","description":"Option B (relearn mode): activate TPMS relearn mode via $31 01 [RELEARN_ROUTINE]. Use TPMS activation tool at each wheel (LF→RF→RR→LR order)."},
+      {"step":5,"type":"verify","description":"Read back sensor IDs: $22 [TPMS_DID]. Confirm all 4 positions populated."},
+      {"step":6,"type":"instruct_mechanic","description":"Drive above 15 mph for 5-10 minutes. Confirm TPMS warning light extinguishes."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Auto-relearn after driving >25mph for 10 min on most models. Scan tool relearn available on newer platforms.",
+      "Honda/Acura": "Direct and indirect TPMS varies by model/year. Scan tool learn path via HDS.",
+      "Nissan/Infiniti": "CONSULT III+ relearn procedure. Activation tool or driving relearn.",
+      "GM": "Auto-learn: drive >15mph for 10+ min after relearn mode activation. Scan relearn also available.",
+      "VW/Audi": "Direct TPMS (RDK): scan write of sensor IDs via VCDS/ODIS. Indirect: manual threshold set.",
+      "Stellantis": "Activation tool relearn most common. Scan-tool path via CAN-IHS (pins 3/11).",
+      "Hyundai/Kia": "Activation tool relearn or auto-learn driving. GDS scan path on newer models.",
+      "Ford": "Programmed learn mode via steering menu. Activation tool triggers each sensor. Auto-learn after driving."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["RUN_20","RUN_21","RUN_22","RUN_23","RUN_24"],
+  "last_updated": "2026-03-28T00:00:00Z"
+}
