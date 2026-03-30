@@ -1,26 +1,38 @@
-# OpenTune
+﻿# OpenTune
 
-Open-source vehicle diagnostics with generative AI. When the procedure doesn't exist — it engineers one.
+**The first open-source, AI-native vehicle diagnostic terminal.**
 
-```
- ██████╗ ██████╗ ███████╗███╗   ██╗████████╗██╗   ██╗███╗   ██╗███████╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██║   ██║████╗  ██║██╔════╝
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║   ██║   ██║   ██║██╔██╗ ██║█████╗
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██║   ██║██║╚██╗██║██╔══╝
-╚██████╔╝██║     ███████╗██║ ╚████║   ██║   ╚██████╔╝██║ ╚████║███████╗
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝
-                  Open Diagnostics. Infinite Solutions.
-```
+Free forever. Gets smarter forever.
 
-## What it does
+---
 
-- Scans all ECUs on connect — reads every DTC with plain English descriptions
-- Monitors live vehicle data in the background — flags anomalies in real time
-- Chat with it in plain English about any vehicle problem
-- If a solution exists: runs it. If not: builds one from first principles using Claude
-- Logs every session outcome to JSONL — feeding the collective diagnostic dataset
+## The Problem
 
-## Conversation flow
+Dealer diagnostic tools cost $80,000. Independent mechanics are locked out.
+
+The mechanic is skilled. The tool is the bottleneck.
+
+Snap-on: $3,500. Autel: $15,000. Bosch: $2,500+. All of them just run menus.
+
+**OpenTune thinks.**
+
+---
+
+## What It Does
+
+Connect an ELM327 adapter. OpenTune reads every ECU, surfaces every fault, and if a solution exists it runs it. If one does not exist — it engineers one from first principles using Claude.
+
+Every outcome gets logged to a community knowledge base that nobody owns and nobody can take away.
+
+- Scans all ECUs on connect — reads every DTC with plain-English descriptions
+- Monitors live vehicle data in real time — flags anomalies as they happen
+- Chat in plain English about any vehicle problem
+- Runs known procedures. Engineers unknown ones.
+- Writes every outcome to the community diagnostic database
+
+---
+
+## Conversation Flow
 
 OpenTune never opens with a blunt Y/N prompt. It reads the vehicle first, then asks:
 
@@ -28,15 +40,15 @@ OpenTune never opens with a blunt Y/N prompt. It reads the vehicle first, then a
 mechanic: I need my GX suspension calibrated
 
 OpenTune: Before I run anything — let me check what the system sees.
-          → C1840 active — KDSS hydraulic fault, rear pressure below spec
-          → Rear ride height -3.2cm below spec
+          C1840 active — KDSS hydraulic fault, rear pressure below spec
+          Rear ride height -3.2cm below spec
           Is this after recent suspension work, or did the warning come on by itself?
 
 mechanic: after replacing rear shocks
 
 OpenTune: Got it. Engineering solution...
 
-          Plan:  (KDSS Fault Clear + Rear Height Calibration)
+          Plan: KDSS Fault Clear + Rear Height Calibration
           1. Clear KDSS fault (C1840)
           2. Run rear air suspension height calibration
           3. Verify sensor baseline
@@ -45,17 +57,21 @@ OpenTune: Got it. Engineering solution...
           Ready to start?
 ```
 
-The AI always: reads data first → asks one clarifying question if ambiguous → summarizes findings + plan → waits for "ready". Never just "Run it? Y/N".
+The AI always: reads data first, asks one clarifying question if needed, summarizes findings + plan, waits for confirmation. Never just "Run it? Y/N".
 
-## How it differs from OBDAgent
+---
 
-**OBDAgent** runs known procedures from a fixed registry.
+## The Knowledge Base
 
-**OpenTune** engineers unknown ones. When you describe a problem no template covers, OpenTune assembles full vehicle context — live data, DTCs, ECU map — and asks Claude to reason through the fault and build a step-by-step procedure on the spot.
+Every diagnostic session that resolves a fault gets written to a shared, open knowledge base.
 
-Every outcome that gets logged teaches the system what works and what doesn't.
+Search it. Browse it. Submit to it. It belongs to the community.
 
-## Run it
+Over time it becomes the largest free diagnostic procedure database on earth — built by mechanics, for mechanics, unkillable because it is owned by no one.
+
+---
+
+## Run It
 
 ```bash
 # Install dependencies
@@ -63,83 +79,91 @@ pip install -r requirements.txt
 
 # Set up environment
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env — add your ANTHROPIC_API_KEY
 
-# Run in simulation mode (no hardware needed)
-python main.py --sim
+# Connect your ELM327 adapter and run
+python main.py
 
-# Run with real ELM327 adapter
-python main.py --real
-python main.py --real --port /dev/ttyUSB0
+# Windows: specify COM port if needed
+python main.py --port COM4
 ```
+
+**Windows launchers:**
+
+```cmd
+install_windows.bat    # one-time setup
+opentune.bat           # run
+```
+
+```powershell
+.\opentune.ps1         # run via PowerShell
+```
+
+Find your COM port: **Device Manager > Ports (COM & LPT)**
+
+---
+
+## Knowledge API
+
+Run the local knowledge API to browse, search, and submit procedures:
+
+```bash
+uvicorn api.main:app --reload --port 8765
+```
+
+Endpoints: `/health` `/search` `/browse` `/submit` `/verify` `/stats`
+
+---
 
 ## Architecture
 
 ```
 opentune/
   main.py              # Terminal UI, connection flow, chat loop
-  config.py            # Config, thresholds, API settings
   core/
-    connection.py      # OBD2 connection — ELM327 + simulation
+    connection.py      # OBD2 connection — ELM327
     scanner.py         # Full ECU scan, live monitor, anomaly detection
-    session_logger.py  # JSONL session logging (the dataset funnel)
+    session_logger.py  # JSONL session logging
+    knowledge_engine.py# Procedure lookup and execution
+    live_scan.py       # Real-time data monitor
+    quips.py           # Because diagnostics should have personality
   ai/
     engineer.py        # Generative core — builds procedures on the fly
-    monitor.py         # Live data AI analysis, enriched anomaly alerts
+    monitor.py         # Live data AI analysis, anomaly enrichment
+  api/
+    main.py            # FastAPI knowledge base server
+    db.py              # SQLite / Postgres-ready schema
+    embeddings.py      # Semantic search (sentence-transformers, local, free)
+    seed.py            # Seed procedures loader
+  knowledge/           # Seeded diagnostic procedures (KDSS, EPB, TPMS, and more)
 ```
 
-## Session Logs
+---
 
-Every diagnostic session is logged to `sessions/YYYYMMDD.jsonl`:
+## Pricing
 
-```json
-{
-  "timestamp": "2026-03-28T12:00:00Z",
-  "vin": "1HGCM82633A123456",
-  "vehicle": "2019 Honda Accord",
-  "user_input": "engine shaking at idle, check engine light on",
-  "procedure_engineered": true,
-  "procedure_title": "Misfire Diagnosis — P0300",
-  "steps_executed": [...],
-  "outcome": "fixed",
-  "live_data_snapshot": {...},
-  "dtcs": [{"code": "P0300", "description": "...", "ecu": "ECM"}]
-}
-```
+| Tier | Price | What you get |
+|------|-------|--------------|
+| Free | $0 | Bring your own API key. Full diagnostic terminal. Community KB always free. |
+| Pro | $29/mo | Hosted AI, priority KB access, session history |
+| Shop | $99/mo | Multi-bay, team accounts, shop reporting |
 
-This JSONL file is the dataset that can feed OBDAgent's procedure registry and future model fine-tuning.
+The knowledge database is always free. Price trajectory: down forever.
 
-## Windows
-
-```cmd
-pip install -r requirements.txt
-copy .env.example .env
-python main.py --sim
-```
-
-Find your COM port: **Device Manager → Ports (COM & LPT)**
-
-```cmd
-python main.py --real --port COM4
-```
-
-Or use the provided launchers:
-
-```cmd
-install_windows.bat    # one-time setup
-opentune.bat --sim     # run via batch script
-```
-
-```powershell
-.\opentune.ps1 --sim   # run via PowerShell
-```
+---
 
 ## Requirements
 
 - Python 3.11+
-- Anthropic API key (for AI engineering; scan-only mode works without it)
-- ELM327 OBD2 adapter (for real mode; simulation works without hardware)
+- ELM327 OBD2 adapter (USB or Bluetooth)
+- Anthropic API key (or Pro/Shop subscription for hosted AI)
+
+---
 
 ## License
 
 MIT — open source, open diagnostics.
+
+---
+
+*Built for the mechanic who is better than the tool they can afford.*
