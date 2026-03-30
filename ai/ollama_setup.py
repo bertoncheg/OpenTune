@@ -77,6 +77,17 @@ def pull_model(model_name: str) -> bool:
         return False
 
 
+
+class OllamaSetup:
+    """Class wrapper around ollama_setup functions for wizard compatibility."""
+
+    def __init__(self, model: str = "llama3.2:3b"):
+        self.model = model
+
+    def auto_setup(self) -> bool:
+        result = auto_setup(self.model)
+        return result is not None
+
 def auto_setup(preferred_model: str = "llama3.2:3b") -> str | None:
     """
     Check if Ollama is running and the preferred model is available.
