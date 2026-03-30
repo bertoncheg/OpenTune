@@ -1,0 +1,117 @@
+{
+  "service_type": "readiness_monitors",
+  "category": "dtc",
+  "title": "OBD-II Readiness Monitors",
+  "description": "Reference guide for OBD-II readiness monitor completion status, required for emission testing and post-repair verification. Mode $01 PID $01 and $41 report which of the 8 standard monitors have run to completion since the last code clear or battery disconnect.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "Prius XW50", "year": 2018, "engine": "1.8L 2ZR-FXE Hybrid"},
+    {"make": "Honda", "model": "Civic FK8", "year": 2019, "engine": "2.0L K20C Type R"},
+    {"make": "Ford", "model": "Mustang GT S550", "year": 2020, "engine": "5.0L Coyote V8"},
+    {"make": "Volkswagen", "model": "Passat B8", "year": 2018, "engine": "1.8L TSI EA888"},
+    {"make": "Chevrolet", "model": "Cruze 2nd Gen", "year": 2017, "engine": "1.4L LUV Turbo"},
+    {"make": "Nissan", "model": "Rogue T32", "year": 2019, "engine": "2.5L QR25DE"}
+  ],
+  "common_symptoms": [
+    "Failed state emissions OBD-II inspection with one or more monitors showing NOT READY",
+    "Multiple monitors incomplete after DTC clear or battery disconnect",
+    "Customer reports recent code clear or battery replacement before going to emissions test",
+    "Check engine light was turned off but inspection station scanner shows P1000 or incomplete monitors",
+    "Monitor showed complete on pre-scan but reset after engine restart before reaching inspection"
+  ],
+  "physical_solution": "After clearing codes or battery disconnect, vehicle must complete a specific drive cycle sequence to set all required monitors. Minimum drive cycle involves cold start below 86 F (30 C), idle period, steady cruise at various speeds, deceleration, and stop cycle. EVAP monitor is typically the most difficult and may require multiple cold soak overnight periods. Monitor status is readable via scan tool Mode $01 at any time.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 01 OBD Mode 01 PID 01 — Monitor Status Since DTCs Cleared (8 monitors, bit-field)",
+      "$01 41 OBD Mode 01 PID 41 — Monitor Status This Drive Cycle (current trip status)"
+    ],
+    "elm327_feasibility": "Full — Mode $01 PID $01 and PID $41 fully accessible via all ELM327 adapters on all 1996+ OBD-II vehicles. No extended session required. ELM327 AT commands: ATSH 7DF (set header to functional broadcast), then send: 01 01 — response contains 4 data bytes encoding all monitor ready/not-ready bits. Mode $06 (on-board monitor test results) also accessible via ELM for detailed pass/fail thresholds.",
+    "server_free": true,
+    "preconditions": [
+      "No active DTCs stored (active DTCs will keep monitors in not-ready state — must repair faults first)",
+      "Battery fully charged and charging system verified (monitors require stable power)",
+      "Fuel level between 15% and 85% full (EVAP monitor requirement — will not run outside this range)",
+      "Vehicle has completed a cold soak of minimum 6-8 hours at ambient temperature below 86 F (30 C) for EVAP monitor",
+      "No A/C compressor operation during critical monitor windows unless OEM-specified"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Read current monitor status: ELM327 AT SH 7DF, then send 01 01. Response: 4 bytes of monitor status. Byte B bits (continuous monitors): bit 0 = Misfire test available (1=available), bit 1 = Fuel System available, bit 2 = Components available. Bits 4-7 = ready status (0 = READY, 1 = NOT READY) for same monitors. Bytes C and D cover non-continuous monitors: Catalyst (C bit 0), Heated Catalyst (C bit 1), Evap (C bit 2), Secondary Air (C bit 3), A/C Refrigerant (C bit 4), O2 Sensor (C bit 5), O2 Heater (C bit 6), EGR/VVT (C bit 7). Also read PID $41 for this-drive-cycle status."
+      },
+      {
+        "step": 2,
+        "type": "physical",
+        "description": "MISFIRE monitor (continuous): runs continuously whenever engine is running. Sets to READY within 2 complete drive cycles after code clear. Requirements: no actual misfires, no rough idle, engine at operating temperature. Drive cycle: cold start, bring to operating temp, moderate acceleration, steady cruise, deceleration. No special conditions needed — if misfire monitor stays NOT READY after 3 drive cycles, an intermittent misfire is occurring."
+      },
+      {
+        "step": 3,
+        "type": "physical",
+        "description": "FUEL SYSTEM monitor (continuous): sets quickly, typically within 1-2 drive cycles. Requirements: engine must reach closed-loop operation (ECT above 170 F / 77 C), short and long term fuel trims must stabilize within normal range (+/- 10%). Drive: cold start, idle until warm, short highway cruise. If fuel system monitor stays incomplete, check for vacuum leaks or fuel pressure issues preventing fuel trim stabilization."
+      },
+      {
+        "step": 4,
+        "type": "physical",
+        "description": "COMPREHENSIVE COMPONENT monitor (continuous): checks all sensors are within operating range. Sets during normal driving — typically complete within 1 normal drive. Requirements: all sensors active at operating temp. Stays incomplete if any sensor is at or near limit (marginal MAF, coolant temp sensor reading slightly out of range). If stuck incomplete: check for any pending DTCs for sensor circuits."
+      },
+      {
+        "step": 5,
+        "type": "physical",
+        "description": "CATALYST monitor (non-continuous): requires 2 back-to-back qualifying drive cycles. Cycle: cold start (below 86 F) -> idle 2-3 minutes until ECT reaches 160 F -> moderate acceleration to 55 mph (avoid WOT) -> steady 55-60 mph cruise for minimum 5 minutes -> decelerate to 20 mph without braking -> idle 2 minutes. O2 sensors must switch actively before catalyst test runs. Common failure to complete: short trip driving, no highway segment, catalytic converter marginal (may set P0420 when monitor finally runs)."
+      },
+      {
+        "step": 6,
+        "type": "physical",
+        "description": "EVAP monitor (non-continuous — most difficult to complete): requires specific entry conditions that cannot be forced. Requirements: ambient temperature 40-86 F (4-30 C), fuel level 15-85%, engine cold soak minimum 6 hours (8 hours preferred), no evap DTCs pending. After cold start: idle 2-3 minutes, moderate acceleration to 55 mph, cruise at 55-60 mph for 5+ minutes with steady throttle (no cruise control fluctuation), decelerate to stop, idle 5 minutes. EVAP monitor typically runs during the idle/warmup phase or shortly after. May take 2-5 cold-start trips to complete depending on conditions."
+      },
+      {
+        "step": 7,
+        "type": "physical",
+        "description": "O2 SENSOR monitor (non-continuous): requires warm engine, highway cruise, and active sensor switching verification. Drive: after full warm-up (ECT stable at operating temp), accelerate to 55-60 mph, steady cruise 2-3 minutes, then 3-5 moderate deceleration events to near idle without braking. O2 sensors must show normal switching pattern (upstream: rapid switching 0.1-0.9V, downstream: slow stable). Sets within 1-2 trips in good conditions."
+      },
+      {
+        "step": 8,
+        "type": "physical",
+        "description": "O2 SENSOR HEATER monitor (non-continuous): runs very shortly after cold start — within first 5 minutes of operation. ECM applies full battery voltage to O2 sensor heater on cold start and monitors current draw. Sets to READY automatically during cold start warm-up. If stays incomplete: O2 sensor heater circuit fault (check fuse, check heater resistance — typically 5-20 ohms depending on sensor type and OEM spec)."
+      },
+      {
+        "step": 9,
+        "type": "physical",
+        "description": "EGR/VVT monitor (non-continuous, if applicable): varies significantly by OEM. Diesel vehicles: DPF and SCR monitors additional. EGR monitor typically runs during deceleration from highway speed to idle (EGR flow tested during engine braking). VVT (variable valve timing) monitor runs when cam phaser actuates under load. Requires: engine at operating temp, moderate acceleration to 45+ mph, then coast deceleration. Diesel EVAP/DPF monitors may require extended highway driving at varying loads."
+      },
+      {
+        "step": 10,
+        "type": "send_uds",
+        "description": "Verify completion: re-read Mode $01 PID $41 (current drive cycle) and PID $01 (overall since clear). All non-N/A monitor bits should show READY (bit = 0 in not-ready field). For US state emissions testing: continuous monitors (misfire, fuel system, comprehensive component) MUST all be READY. Most states allow 1 incomplete non-continuous monitor on 2001-2007 vehicles and 0 incomplete on 2008+ vehicles. Check your state's specific requirements before proceeding to test."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota EVAP monitor (0.020 inch leak detection) is strict. Entry conditions: IAT below 77 F (25 C) at start, coolant below 86 F (30 C), fuel level 25-75% (tighter than SAE minimum). Toyota drive cycle: key ON, cold start, idle 2 min, accelerate to 55 mph in 5 minutes (no rapid accel), cruise 55 mph for 5 min with A/C off, decelerate to 35 mph, cruise 35 mph 2 min, stop, idle 2 min. EVAP monitor runs during 35 mph cruise phase. Takes 2-3 qualifying cold trips. Prius/hybrid: catalyst monitor may not apply — check which monitors are 'supported' first via PID $01 bits.",
+      "Honda/Acura": "Honda EVAP monitor (two-trip detection, large and small leak). Requires full warm-up before EVAP test runs. Drive cycle: cold start below 86 F, idle until fans cycle once, highway cruise 55-60 mph 10 min, decelerate, idle. O2 monitor on Honda runs during extended idle after warm-up — 5+ minutes idle at operating temp required. VTEC monitor sets automatically when VTEC engages under moderate-to-high load — requires road test with WOT or near-WOT acceleration. Honda Civic Type R: performance monitors require track-style driving to complete.",
+      "Nissan/Infiniti": "Nissan EVAP monitor sensitive to fuel cap seating — ensure fuel cap clicks 3 times before starting drive cycle. Entry condition: IAT 32-104 F (0-40 C), fuel 1/4 to 3/4 tank. Drive cycle: cold start, idle 2-3 min, accelerate to 55 mph, cruise 10 min, decelerate, stop, idle 2 min. Catalyst monitor requires sustained 55 mph cruise for minimum 3 minutes. Infiniti VQ engines: both bank catalysts need monitoring — ensure highway segment is long enough for both banks. CVT-equipped vehicles: transmission does not have standard monitor but gear simulation affects fuel system monitor completion timing.",
+      "Ford": "Ford EVAP monitor requires specific cold-start temperature window: 40-95 F (4-35 C) IAT — narrower than SAE minimum. Fuel level 15-85%. Ford FTP-75 drive cycle (formal): specific speed/time/idle sequence available in FDRS service data. P1000 code (Ford-specific) = OBD-II monitors not complete — normal after code clear, not a fault code, will self-clear after all monitors complete. Ford catalyst monitor: requires 2 consecutive warm-up cycles with highway cruise. EcoBoost: boost monitor (turbo system) is Ford-enhanced, not standard OBD-II monitor — tracked separately.",
+      "GM": "GM catalyst monitor runs at 25-45 mph with gentle acceleration. EVAP monitor requires cold soak below 86 F (30 C), fuel 25-75%, no A/C compressor during monitor window. GM drive cycle: cold start, idle 2.5 min, moderate accel (avoid WOT) to 55 mph, cruise 3 min, decel to 20 mph, light accel to 60 mph, cruise 5 min, coast to stop, idle 3 min. Full readiness: up to 8 trips for all monitors on some GM platforms. GM OnStar vehicles: readiness accessible via remote diagnostic — does not affect monitor completion. AFM/DOD active during highway cruise is normal.",
+      "BMW": "BMW OBD-II monitors run during normal driving without special prescribed sequence. EVAP monitor requires cold start and highway cruise — ambient below 86 F, fuel not full (below 7/8 tank). Catalyst monitor requires extended highway cruise at moderate load (50-70 mph, 10+ minutes) — BMW catalysts are larger volume and need longer evaluation. BMW EVAP strict ambient temp requirement: fails to run if IAT exceeds 86 F at cold start. CBS does not track readiness monitors separately. Usually complete in 3-5 normal driving trips for most monitors.",
+      "VW/Audi": "VW/Audi EVAP monitor uses a leak detection pump (LDP) that runs during cold start warmup phase — distinct from North American EVAP systems. Monitor runs automatically 2-3 minutes after cold start if entry conditions met. Secondary air injection monitor (if equipped, primarily on older non-ULEV engines) requires cold start below 55 F (13 C). DSG vehicles: allow multiple upshift and downshift cycles through all gears for fuel system monitor stabilization. Diesel (TDI) has DPF and SCR monitor in addition to standard OBD-II monitors — DPF regeneration cycle required for DPF monitor completion.",
+      "Stellantis": "Stellantis EVAP monitor: coolant below 86 F, IAT 40-100 F, no EVAP DTCs pending, fuel 15-85%, no purge has occurred in current drive cycle. After cold start idle 2 min, drive 45-65 mph for 10 min, decelerate to 35 mph, idle 4 min. Catalyst monitor requires OSC (oxygen storage capacity) evaluation — ECM measures O2 storage capacity by briefly commanding lean then rich and measuring downstream O2 response time. 3.6L Pentastar: catalyst monitor requires both banks complete — dual exhaust models need extended cruise. Ram diesel: DPF active regeneration must complete before DPF monitor sets.",
+      "Hyundai/Kia": "Hyundai/Kia EVAP monitor: cold soak below 86 F, fuel 25-75%, 30 mph or higher sustained cruise required. Entry condition check: IAT between 32-86 F at cold start. Drive cycle: cold start, idle 1-2 min, gentle acceleration to 40+ mph, steady cruise 5 min, decelerate to stop, idle 2 min. Theta II 2.0T/2.4L: before attempting emissions drive cycle, check for P1326 (KSDS knock detection). If P1326 present, do NOT clear and attempt drive cycle — check for engine knock first and verify recall coverage before any emissions testing. GDI engines: fuel system monitor may require 3+ trips for LTFT to stabilize due to port-injection cleaning cycle interference."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

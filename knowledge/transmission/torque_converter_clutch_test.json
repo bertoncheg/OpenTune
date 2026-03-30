@@ -1,0 +1,51 @@
+{
+  "service_type": "torque_converter_clutch_test",
+  "category": "transmission",
+  "title": "Torque Converter Clutch (TCC) Diagnostic",
+  "description": "Diagnoses torque converter clutch faults (P0740-P0744). Monitors TCC slip via live data and tests TCC apply via actuator control to distinguish solenoid failure from clutch material failure.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"GM","model":"Silverado","year":2016,"engine":"5.3L L83","transmission":"6L80"},
+    {"make":"Ford","model":"F-150","year":2017,"engine":"3.5L EcoBoost","transmission":"6R80"},
+    {"make":"Toyota","model":"Tundra","year":2018,"engine":"5.7L 3UR-FE","transmission":"A750F"},
+    {"make":"Honda","model":"Pilot","year":2017,"engine":"3.5L J35Y6","transmission":"9AT"}
+  ],
+  "common_symptoms": ["P0740 TCC circuit open","P0741 TCC performance","P0742 TCC stuck on","P0743 TCC solenoid electrical","shudder at 40-55mph highway cruise","fuel economy drop","overheating transmission"],
+  "physical_solution": "Monitor TCC slip RPM (engine RPM minus transmission input RPM) in live data. At highway cruise, TCC should be fully locked (slip = 0-30 RPM). Test TCC solenoid resistance. Fluid contamination and clutch material wear require rebuild.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (TCC slip RPM, TCC duty cycle)","$2F InputOutputControl (TCC solenoid command)","$31 RoutineControl","Mode $01 PIDs for RPM"],
+    "elm327_feasibility": "Partial — Engine RPM via Mode $01 PID $0C universally accessible. TCC slip calculation requires transmission input shaft RPM via OEM PID ($22 TCM address). $2F TCC apply command accessible on GM pre-2017. Most TCC diagnosis can be done with engine RPM + VSS + careful load monitoring.",
+    "server_free": true,
+    "preconditions": [
+      "Transmission fluid at correct level and not burned",
+      "Engine at operating temperature",
+      "No active misfire DTCs (would mask TCC diagnosis)",
+      "Record at highway cruise: 45-65mph, light throttle"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"Read engine RPM: Mode $01 PID $0C. Read vehicle speed: Mode $01 PID $0D. Calculate approximate gear ratio. At highway cruise in top gear with TCC locked, engine RPM should be consistent with gear ratio × wheel speed."},
+      {"step":2,"type":"send_uds","description":"Read TCC slip RPM via OEM PID: $22 [TCC_SLIP_DID] to TCM address. Normal locked TCC: 0-30 RPM slip. Shuddering TCC: 50-200 RPM oscillating slip. Failed to lock: slip equals full converter slip (150-400 RPM)."},
+      {"step":3,"type":"send_uds","description":"Read TCC duty cycle: $22 [TCC_DUTY_DID]. TCC solenoid at 100% duty = fully applied (locked). At 0% = unlocked. Oscillating duty during shudder = controlled TCC slip strategy (normal on some OEMs) vs actual shudder."},
+      {"step":4,"type":"instruct_mechanic","description":"TCC SHUDDER vs VIBRATION DIAGNOSIS: Shudder occurs at specific speed (40-55mph), disappears above 60mph, worse when cold. Brake to 35mph (disengages TCC) — shudder stops = TCC issue confirmed. Vibration present at all speeds = driveline issue, not TCC."},
+      {"step":5,"type":"instruct_mechanic","description":"TCC SOLENOID TEST: With transmission pan off, measure TCC solenoid coil resistance. Spec: 10-15 ohms typical. Open circuit or short = solenoid replacement. Electrical tests normal but P0741 = clutch material or valve body issue."},
+      {"step":6,"type":"send_uds","description":"TCC apply test (GM older): $2F [TCC_CONTROL_DID] 03 [APPLY]. Commands TCC fully on. Monitor slip drops to 0 RPM = solenoid and hydraulics functional. No slip change = hydraulic issue or failed clutch."},
+      {"step":7,"type":"verify","description":"After repair: road test at 50-60mph steady cruise. TCC slip should be 0-30 RPM, no shudder, fuel economy returned to normal. P0740-P0744 should not return after 3 drive cycles."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "A750F/A960E transmissions: TCC apply at 35-40mph depending on engine load. Techstream shows TCC slip RPM directly. Common: TCC shudder on A750F with degraded ATF. Toyota Type T-IV or WS fluid — never Dexron.",
+      "Honda/Acura": "9AT/10AT: TCC slip monitoring via HDS. Honda-specific TCC diagnosis: shudder often indicates transmission fluid degradation (DW-1 or Z-1). Fluid change + relearn often resolves shudder without rebuild on Honda.",
+      "Nissan/Infiniti": "RE5R05A/7AT: TCC accessible via CONSULT. Nissan Matic-S or D fluid. VQ35DE: TCC shudder common at 60k+ miles — fluid change often resolves. CONSULT shows TCC duty cycle directly.",
+      "Ford": "6R80: TCC slip via IDS. Ford Mercon LV fluid mandatory (Mercon V/Dexron causes TCC shudder). TCC shudder on 6R80 extremely common — fluid change with Mercon LV often resolves P0741. ELM327: Mode $01 RPM + VSS for indirect diagnosis.",
+      "GM": "6L80/8L90: TCC known issues. GM Dexron HP fluid. 6L80 TCC shudder extremely common on 5.3L trucks — GM TSB recommends fluid change + TC replace on severe cases. GDS2 for TCC slip monitoring. ELM327 $2F on pre-2017.",
+      "BMW": "ZF 8HP: TCC-equivalent is internal clutch — not traditional TCC. BMW uses Lepelletier gear set. No P0740 on ZF 8HP typically. BMW ATF (Esso LT71141 or similar). No traditional TCC diagnostic applies.",
+      "VW/Audi": "DSG 0AM/0GC: dry or wet dual-clutch, NOT torque converter. No TCC. P0740 on DSG: clutch actuator or mechatronics. Tiptronic/Aisin-sourced ATs on older models: standard TCC. VW ATF G-055-025-A2.",
+      "Stellantis": "845RE/68RFE: TCC slip via wiTECH. Mopar ATF+4 fluid. Hemi 5.7L: TCC shudder common with aftermarket torque converters. 68RFE on Ram diesel: TCC issues under tow loads. wiTECH for duty cycle monitoring.",
+      "Hyundai/Kia": "8AT/8DCT: TCC monitoring via GDS2. Hyundai Genuine ATF SP-IV. Common: 8AT TCC shudder on 2015-2019 Sonata/Tucson — fluid change + relearn often resolves. ELM327 Mode $01 for indirect RPM monitoring."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,108 @@
+{
+  "service_type": "abs_brake_bleed",
+  "category": "brakes",
+  "title": "ABS Module Activation Bleed",
+  "description": "After brake line work, trapped air in the ABS hydraulic control unit (HCU) requires a powered bleed cycle to fully purge the system. The ABS solenoid valves must be electrically actuated while the mechanic manually bleeds each corner to ensure no air remains in the HCU body.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "Camry", "year": 2018, "engine": "2.5L 2AR-FE"},
+    {"make": "Ford", "model": "F-150", "year": 2017, "engine": "5.0L Coyote V8"},
+    {"make": "BMW", "model": "3 Series F30", "year": 2015, "engine": "2.0L N20 Turbo"},
+    {"make": "Chevrolet", "model": "Silverado 1500", "year": 2019, "engine": "5.3L L83 V8"},
+    {"make": "Honda", "model": "CR-V", "year": 2016, "engine": "2.4L K24Z7"},
+    {"make": "Volkswagen", "model": "Jetta MK6", "year": 2017, "engine": "1.4L CZTA Turbo"}
+  ],
+  "common_symptoms": [
+    "Spongy brake pedal after brake line, caliper, or master cylinder replacement that does not resolve with conventional corner bleeding",
+    "ABS warning light illuminated after hydraulic system service",
+    "Excessive brake pedal travel — pedal travels more than 2 inches before resistance builds",
+    "Brake pedal slowly sinks to floor under steady hold after fresh bleed",
+    "ABS activates prematurely at low speeds suggesting air bubble in HCU modulator galleries"
+  ],
+  "physical_solution": "Connect scan tool, fill brake fluid reservoir to MAX. Open each bleeder screw in sequence (RR, RL, FR, FL). Activate ABS bleed routine via scan tool which cycles solenoids open and closed. Mechanic manually bleeds each corner while solenoids cycle until clear fluid with no bubbles emerges. Close bleeders, top off reservoir to MAX, road test ABS activation at low speed on gravel or wet surface to confirm firm pedal and no warning lights.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — ABS Bleed Routine (routine ID varies by OEM/module)",
+      "$3E 00 TesterPresent (keepalive during bleed cycle)"
+    ],
+    "elm327_feasibility": "Partial — $31 RoutineControl accessible on older Bosch 8.x/9.x ABS modules without gateway. TRW/ZF on Ford/Stellantis 2018+ blocked by SGW requiring FDRS/wiTECH passthrough. Toyota Advics accessible via ELM on pre-2019 models. BMW F/G-series blocked by ZGW — requires ZGW unlock or ISTA. VW/Audi MQB platform limited without J533 gateway bypass.",
+    "server_free": false,
+    "preconditions": [
+      "Brake fluid reservoir filled to MAX line with correct DOT spec fluid",
+      "All brake lines connected, fittings torqued to spec (10-15 Nm typical for 10mm bubble flare)",
+      "No residual pressure in brake system",
+      "Engine OFF, ignition ON (KOEO)",
+      "Vehicle on level ground with all four wheels accessible",
+      "Scan tool connected and in extended diagnostic session with ABS module"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "physical",
+        "description": "Fill brake fluid reservoir to MAX mark. Inspect all brake lines and fittings for leaks. Loosen all four bleeder screws slightly to confirm they are not seized, then re-tighten finger-tight. Place drain bottles or rags under each caliper."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Enter extended diagnostic session with ABS/HCU module: send 10 03 to ABS ECU address (Toyota Advics: 0x7B0, Honda VSA: 0x18, Bosch 9.x: 0x760, Continental: 0x19). Confirm positive response 50 03. Begin TesterPresent keepalive: send 3E 00 every 2 seconds throughout procedure."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Initiate ABS HCU bleed routine: send 31 01 [OEM routine ID]. OEM routine IDs: Toyota Advics 0x7B0 -> 31 01 C7 00. Honda VSA 0x18 -> 31 01 00 02. Bosch 9.x generic -> 31 01 F0 29. Ford TRW pre-2018 -> 31 01 20 09. Confirm positive response 71 01 [routine ID] indicating routine is running."
+      },
+      {
+        "step": 4,
+        "type": "physical",
+        "description": "While solenoid cycle is active, open RR bleeder screw 1/2 to 3/4 turn. Use pressure bleeder at 10-12 psi or pump brake pedal slowly 8-10 times. Watch fluid stream for bubbles. Continue until bubble-free clear fluid runs for at least 5 uninterrupted seconds. Close RR bleeder fully. Repeat sequence on RL, then FR, then FL."
+      },
+      {
+        "step": 5,
+        "type": "physical",
+        "description": "After all four corners bled, top off reservoir to MAX mark. Check pedal feel — should be firm with no more than 1.5 inches of travel before resistance. If still spongy, repeat step 4 starting from RR. Do not allow reservoir to run dry at any point."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Terminate ABS bleed routine: send 31 02 [routine ID] to stop active routine, or allow auto-timeout. Send 14 FF FF FF FF to clear any ABS DTCs that were set during solenoid cycling (e.g. C0051 solenoid fault during test)."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "Optionally soft-reset ABS module: send 11 01 (ECUReset hardReset). Confirm response 51 01. Wait 5 seconds, reconnect to module, verify no active DTCs with 19 02 FF. Confirm no C-codes present."
+      },
+      {
+        "step": 8,
+        "type": "physical",
+        "description": "Road test: accelerate to 15-20 mph on safe surface and apply brakes firmly to trigger one ABS activation event (gravel road or wet pavement preferred). Confirm firm brake pedal, ABS pulsation felt at pedal, no ABS or brake warning lights. Recheck fluid level after road test and top off if needed."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Advics ABS module at CAN address 0x7B0. ABS bleed routine ID: $C700 (send 31 01 C7 00). Pre-2019 Camry, Corolla, RAV4 fully accessible via ELM327. 2019+ Toyota have TIS gateway requiring Techstream passthrough — ELM blocked for $31. Lexus IS-F and GS-F use Bosch DSC rather than Advics — use Bosch routine ID 31 01 F0 29 instead. Always use Toyota-genuine or ATE DOT 3/4 fluid.",
+      "Honda/Acura": "VSA modulator unit at CAN address 0x18. Bleed routine: 31 01 00 02. Fully accessible via ELM327 on pre-2018 Civic, CR-V, Accord. 2018+ Accord and 2019+ Odyssey may require Honda HDS for extended session. Acura MDX/RDX 2019+ requires HIM (Honda Interface Module) for gateway routing. VSA must not be in fault state before initiating routine or 31 returns NRC 0x22 (conditionsNotCorrect).",
+      "Nissan/Infiniti": "Bosch 9.x ABS module at 0x760. Routine ID: 31 01 F0 29 on most 2010-2018 Altima, Rogue, Murano platforms. ELM327 fully accessible on these years. Infiniti QX80/QX60 2020+: CONSULT-III+ passthrough recommended. GT-R uses Bosch DSC with proprietary routine — consult Nissan GT-R service manual section BRC for exact routine ID and sequence.",
+      "Ford": "TRW/ZF ABS module at 0x760. Pre-2018 F-150, Mustang, Explorer: 31 01 20 09 via ELM327 — fully accessible. 2018+ all Ford platforms have SGW (Smart Gateway) blocking non-powertrain modules. Requires FDRS cloud subscription with valid VIN token or Autel/Launch J2534 PassThru adapter with SGW authentication certificate. Pre-2018 F-Super Duty with Bosch: routine ID 31 01 F0 29.",
+      "GM": "Bosch ABS at CAN address 0x28 on most platforms (Silverado, Colorado, Equinox, Malibu). Routine ID: 31 01 F0 BF for Bosch unit. Delphi ABS on older pre-2010 trucks: 31 01 AE 01. ELM327 accessible on most Gen IV and Gen V truck/SUV platforms without gateway restriction. Corvette C7/C8 uses Bosch DSC with MagneRide — requires GDS2 for enhanced bleed routine with corner-specific verification.",
+      "BMW": "Continental MK C1 ABS/DSC module at CAN address 0x19. ZGW (Zentral-Gateway) on all F-series (2012+) and G-series (2018+) blocks $31 RoutineControl write operations from external ELM tools. Requires ZGW unlock via ISTA programming or third-party ZGW token prior to $31 transmission. E-series (E90/E91/E92/E60): fully ELM327 accessible — routine ID 31 01 00 04. F-series after ZGW unlock: routine ID 31 01 00 06. Always use BMW-approved DOT 4 LV fluid (part 83130139896).",
+      "VW/Audi": "Bosch ESP 9.x at CAN address 0x03. J533 CAN gateway present on all MQB platform vehicles (Golf 7+, A3 8V+, Passat B8+, Tiguan 2016+). ELM327 $31 RoutineControl blocked on MQB without gateway passthrough. PQ35 platform (Golf 6 and older, Jetta A5): fully ELM accessible — routine ID 31 01 06 B2. ODIS or VCDS strongly recommended for MQB. Use VW TL 766 spec DOT 4 fluid.",
+      "Stellantis": "TRW/ZF ABS module at 0x760. Routine ID: 31 01 20 09. 2018+ Ram 1500 (DT), Jeep Wrangler JL/JL, Jeep Grand Cherokee WL: SGW present — requires wiTECH 2.0 subscription or AutoAuth SGW bypass authentication token. Pre-2018 fully accessible via ELM327. Grand Cherokee SRT/Trackhawk 2018+ uses Bosch DSC — routine ID 31 01 F0 29 after SGW bypass.",
+      "Hyundai/Kia": "Mando/Mobis ABS module at CAN address 0x7B0. ELM327 fully accessible on pre-2019 Sonata, Tucson, Optima. Routine ID: 31 01 00 04 on Mando units. 2019+ Sonata, Telluride, Palisade, Sorento: gateway write-block prevents $31 from external tool — GDS-Mobile or similar required. Genesis GV80/G80/GV70 2020+: requires GDS-Mobile for full HCU bleed routine. Use Hyundai-spec DOT 3 or DOT 4 fluid per model."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,43 @@
+{
+  "service_type": "toyota_vvt_i_diagnosis",
+  "category": "oem_specific",
+  "title": "Toyota VVT-i / Dual VVT-i Cam Timing Diagnosis and Reset",
+  "description": "Diagnoses Toyota VVT-i and Dual VVT-i (D-4ST) cam phaser faults. Covers P0010/P0011/P0012/P0020/P0021/P0022 codes, OCV (Oil Control Valve) testing, and cam timing adaptation reset after OCV or cam sensor replacement.",
+  "oem_coverage": ["Toyota/Lexus"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2018,"engine":"2.5L A25A-FKS"},
+    {"make":"Toyota","model":"RAV4","year":2019,"engine":"2.5L A25A-FKS"},
+    {"make":"Toyota","model":"Tacoma","year":2018,"engine":"3.5L 2GR-FKS"},
+    {"make":"Lexus","model":"IS 350","year":2017,"engine":"3.5L 2GR-FSE"},
+    {"make":"Toyota","model":"4Runner","year":2019,"engine":"4.0L 1GR-FE"}
+  ],
+  "common_symptoms": ["P0010/P0011 intake cam timing over-advanced bank 1","P0012 intake cam timing over-retarded bank 1","P0020/P0021/P0022 bank 2 equivalents","rough idle","reduced fuel economy","failure at idle-warmup"],
+  "physical_solution": "Test OCV (Oil Control Valve) resistance and response. Check oil pressure and quality. If OCV clogged with sludge: clean or replace. Cam timing adaptation resets after OCV replacement.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (cam timing actual vs target)","$2F InputOutputControl (OCV actuation test)","$31 RoutineControl","Mode $01 PID $0E (timing advance proxy)"],
+    "elm327_feasibility": "Partial — Mode $01 PID $0E (timing advance) provides indirect VVT monitoring. Actual cam phase angle vs target via Techstream $22 DID to ECM 0x7E0. OCV actuation test: $2F accessible via ELM327 extended session on most 2GR/2AR engines.",
+    "server_free": true,
+    "preconditions": [
+      "Engine at operating temperature",
+      "Oil level correct and oil NOT sludgy (VVT extremely sensitive to oil quality)",
+      "No low oil pressure faults active",
+      "Record cam timing at idle and 2000 RPM"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"CHECK OIL FIRST: VVT-i is oil-pressure actuated. If oil is dark/sludgy, clean sludge is the root cause — not the OCV. Drain and refill with Toyota Genuine Motor Oil or 0W-20 synthetic. Clear code and recheck before replacing parts."},
+      {"step":2,"type":"send_uds","description":"Read cam timing: $22 [CAM_TIMING_DID] to ECM 0x7E0. Compare intake cam actual vs target. Targets: idle = 0° (retarded), 2000 RPM part load = 20-40° advanced. Stuck at 0° at all conditions = OCV not moving cam."},
+      {"step":3,"type":"send_uds","description":"OCV actuation test: $2F [OCV_B1_DID] 03 [MAX_ADVANCE_VALUE]. Command cam to full advance. Monitor cam angle change. If cam moves to target = OCV mechanical OK, issue is intermittent oil pressure or adaptation. If cam doesn't move = OCV failed or sludge blockage."},
+      {"step":4,"type":"instruct_mechanic","description":"OCV RESISTANCE TEST: Disconnect OCV connector. Measure resistance across OCV solenoid terminals. Spec: 6.9-7.9 ohms at 20°C for most Toyota VVT-i OCV. Open circuit or short = replace OCV. Note: sludge in OCV strainer is more common cause than electrical failure."},
+      {"step":5,"type":"instruct_mechanic","description":"OCV STRAINER CLEANING: Remove OCV (single bolt, intake cam cover). Inspect strainer screen on OCV body. If clogged with fine metallic particles or varnish: clean with brake cleaner and fine brush. Reinstall. If screen damaged: replace OCV."},
+      {"step":6,"type":"verify","description":"After OCV replacement/cleaning: clear DTCs. Warm engine to operating temp. Verify cam timing moves to commanded position across RPM range. No P0010/P0011/P0012 return after 2 drive cycles."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "VVT-i family: 1GR-FE (4.0L V6), 2GR-FKS/FSE (3.5L V6), 2AR-FKS (2.5L), A25A-FKS (2.5L), M20A-FKS (2.0L). Dual VVT-i controls both intake and exhaust cams on 2GR-FKS/A25A. D-4ST (Direct and Port Injection combined) on A25A — cam timing affects injection switching logic. Oil change interval compliance CRITICAL — sludge at 50k+ miles on non-synthetic oil destroys VVT system. Toyota recommends 0W-20 full synthetic."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,107 @@
+{
+  "service_type": "evap_purge_valve_test",
+  "category": "fuel_system",
+  "title": "EVAP Purge Valve and Canister Vent Actuator Test",
+  "description": "Directly activates the EVAP purge valve (canister purge solenoid) and canister vent valve via UDS RoutineControl or IO Control to verify operation, diagnose P0443/P0446 codes, and distinguish electrical valve faults from EVAP system leak issues. Valve actuation can also confirm purge flow via fuel trim response.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "RAV4", "year": 2020, "engine": "2.5L 2AR-FE"},
+    {"make": "Ford", "model": "Escape", "year": 2019, "engine": "1.5T EcoBoost"},
+    {"make": "VW", "model": "Golf", "year": 2019, "engine": "1.4T TSI"},
+    {"make": "GM", "model": "Equinox", "year": 2020, "engine": "1.5T Ecotec"},
+    {"make": "Honda", "model": "CR-V", "year": 2021, "engine": "1.5T L15B7"},
+    {"make": "BMW", "model": "3 Series", "year": 2019, "engine": "B46"},
+    {"make": "Nissan", "model": "Rogue", "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Stellantis", "model": "Jeep Wrangler", "year": 2021, "engine": "3.6L Pentastar"},
+    {"make": "Hyundai", "model": "Tucson", "year": 2021, "engine": "2.5L Smartstream"}
+  ],
+  "common_symptoms": [
+    "P0443 purge solenoid circuit fault",
+    "P0446 canister vent control circuit",
+    "P0441 incorrect purge flow",
+    "fuel trim spike during purge on startup",
+    "EVAP monitor not completing",
+    "strong fuel vapor smell at purge valve location"
+  ],
+  "physical_solution": "Locate EVAP purge valve (typically on intake manifold or vacuum line from intake to canister). Disconnect purge hose from intake manifold with engine running — should feel no vacuum at idle if purge valve is correctly closed at idle. Apply 12V directly to valve connector to verify it clicks/opens. Check valve resistance (typical 20-40 ohm). Canister vent valve (at charcoal canister): apply 12V to verify closure.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — purge valve actuation",
+      "$2F InputOutputControlByIdentifier — purge valve duty cycle",
+      "$27 SecurityAccess — required for $2F on some OEMs",
+      "$19 02 ReadDTCByStatusMask"
+    ],
+    "elm327_feasibility": "Partial — $31 purge valve activation accessible via ELM on Toyota (routine $C300), VW N80 purge valve test at ECM 0x01, Ford (pre-2018), GM, Honda, Nissan pre-2019. $2F duty cycle control more restricted. Gateway blocks: 2018+ Ford SGW, 2019+ VW SFD, 2018+ Stellantis SGW, 2019+ Hyundai/Kia.",
+    "server_free": false,
+    "preconditions": [
+      "engine warm (closed loop)",
+      "fuel tank 15-85% full",
+      "no pending misfire DTCs",
+      "canister and purge valve physically accessible"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "$19 02 FF — read all EVAP-related DTCs. Distinguish P0443 (purge valve circuit) vs P0441 (incorrect flow) vs P0446 (vent circuit) to separate electrical faults from functional/leak faults before actuation."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "$10 03 ExtendedDiagnosticSession at ECM. Send $3E 00 TesterPresent periodically to maintain session during procedure."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "$31 01 [PURGE_VALVE_ROUTINE] — activate purge valve test. Toyota: $31 01 C300. VW: $31 01 [N80_ROUTINE] at ECM 0x01. GM: $31 01 [EVAP_PURGE_ROUTINE] at ECM. Listen for audible click at purge valve location — confirms electrical function."
+      },
+      {
+        "step": 4,
+        "type": "instruct_mechanic",
+        "description": "While purge valve activated by scan tool (or manually via 12V test): connect vacuum gauge at manifold side of purge valve hose. Should see manifold vacuum (12-18 inHg) when open, zero when closed. Confirms valve is opening to manifold vacuum."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "$2F [PURGE_VALVE_DID] 03 [50% duty cycle byte] — command purge valve to 50% duty cycle. Monitor Mode $01 PID $06 STFT B1 — should see STFT drop/go rich as fuel vapors purge into intake. STFT change confirms actual vapor flow through canister."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "$31 01 [VENT_VALVE_ROUTINE] or $2F [VENT_VALVE_DID] — activate canister vent valve (vent to atmosphere). Verify valve closes (audible click). EVAP monitor requires vent valve to close and seal canister for vacuum decay test."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "Clear EVAP DTCs with $14 FF FF FF. Run EVAP monitor drive cycle (reference readiness_monitors.json). Verify P0443/P0446 do not return. Verify EVAP monitor status completes to PASS."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "VSV (Vacuum Switching Valve) = Toyota purge valve. Routine $C300 at ECM 0x700 activates VSV. ORVR system. Common: VSV failure causing P0441 on 2AR-FE engines. ELM accessible pre-2019. $31 C300 works on most 2006+ Toyota.",
+      "Honda/Acura": "Two-way valve and EVAP purge solenoid. $31 activation at ECM sub-address. Purge valve at throttle body vacuum port. P0441 from purge valve sticking open at idle causes rich condition. ELM accessible pre-2018.",
+      "Nissan/Infiniti": "EVAP canister purge valve (EVAP purge solenoid). $31 at ECM 0x7E0. P0443 common purge valve circuit fault. VQ35DE: purge valve under intake manifold — requires removal of upper intake for access. ELM accessible on most model years.",
+      "Ford": "Canister Purge Valve Solenoid (CPVS). P1450 — excessive canister vacuum (stuck closed purge valve) is Ford-specific DTC. Pre-2018 ELM $31 accessible. FDRS required 2018+. F-150 purge valve location: top of engine near coil pack area.",
+      "GM": "EVAP purge solenoid. $31 accessible via ELM on most GM. Ecotec 1.5T: purge valve on valve cover — common to stick open. P0496 high EVAP purge flow at idle — purge valve stuck open. Enhanced actuation routine via $31 at ECM.",
+      "BMW": "N80 valve at intake manifold (equivalent to purge valve). ECM 0x12. $31 activation accessible pre-ZGW. B46/B48: purge hose routing critical — ensure no kinks. EVAP duty cycle PID via DID at ECM. F/G-series ISTA required for $2F control.",
+      "VW/Audi": "N80 = EVAP purge valve. N115 = canister vent valve. $31 at ECM 0x01 activates N80 (test routine opens valve). Pre-SFD ELM accessible. P0441/P0443 on 2.0T TSI often N80 electrical fault. N115 at canister body, normally open, closes during EVAP leak test. ODIS required 2019+.",
+      "Stellantis": "Canister purge solenoid. $31 at PCM. Pre-2018 ELM accessible. Jeep Wrangler: EVAP system especially prone to small leaks from loose fuel cap and cracked filler neck — P0442 small leak very common on Wrangler. wiTECH required 2018+.",
+      "Hyundai/Kia": "Canister purge valve. $31 at ECM 0x7E0 accessible pre-2019. 2019+ gateway blocks scan tool control. Purge valve above throttle body on most models. P0443 from connector corrosion at purge valve harness. Lambda 3.3T: dual purge valves — both must be tested."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

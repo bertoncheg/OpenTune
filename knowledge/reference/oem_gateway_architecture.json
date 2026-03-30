@@ -1,0 +1,46 @@
+{
+  "service_type": "oem_gateway_architecture",
+  "category": "reference",
+  "title": "OEM Gateway Architecture Reference",
+  "description": "Critical routing reference for ProcedureEngineer: how each OEM's gateway affects ELM327 access to vehicle modules. Determines which procedures require OEM tools vs standard ELM327.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["ProcedureEngineer routing decision","pre-procedure feasibility check","user tool requirements"],
+  "physical_solution": "Reference only — use to determine correct tool and approach before starting any procedure.",
+  "technical_solution": {
+    "uds_services": ["Reference document — no active services"],
+    "elm327_feasibility": "Full — this document IS the gateway reference for routing decisions.",
+    "server_free": true,
+    "preconditions": [],
+    "procedure_steps": [
+      {"step":1,"type":"reference","description":"TOYOTA/LEXUS GATEWAY: CAN topology = PT-CAN (powertrain, pins 6/14) + Body network. Gateway ECU present but permissive. Pre-2022: all UDS services passthrough for external diagnostic tools. Write operations permitted on most ECUs. Network: ISO 15765-4 (CAN 500kbps). ELM bypass needed: NO for pre-2022. Lexus 2022+: enhanced gateway, some write restrictions."},
+      {"step":2,"type":"reference","description":"HONDA/ACURA GATEWAY: CAN topology = F-CAN (chassis/engine, pins 6/14) + B-CAN (body, separate bus). Gateway at junction between F-CAN and B-CAN. External tools access F-CAN freely via OBD-II connector. B-CAN body modules NOT accessible via standard OBD-II pins. HDS (Honda Diagnostic System) bridges B-CAN. ELM bypass needed: NO for F-CAN. YES for B-CAN (need HDS or F-CAN/B-CAN bridge adapter)."},
+      {"step":3,"type":"reference","description":"NISSAN/INFINITI GATEWAY: CAN topology = CAN-C (main, 500kbps, pins 6/14) + CAN-B (body, 125kbps). CONSULT-III+ gateway interface. External tools access CAN-C freely. Body modules on CAN-B require CONSULT passthrough or special addressing. CVT uses separate CAN addressing. ELM bypass needed: NO for CAN-C. Partial for CAN-B."},
+      {"step":4,"type":"reference","description":"FORD GATEWAY (PRE-2018): CAN topology = HS-CAN (high speed, pins 6/14, 500kbps) + MS-CAN (medium speed, pins 3/11, 125kbps). NO SGW on pre-2018. Both buses physically present at OBD-II connector but standard ELM327 only reads HS-CAN. Body/BCM/PATS on MS-CAN require MS-CAN capable adapter. ELM bypass needed: NO for HS-CAN. YES (MS-CAN adapter) for body modules."},
+      {"step":5,"type":"reference","description":"FORD GATEWAY (2018+): Adds FDRS (Ford Diagnostic and Repair System) cloud-linked operations for some procedures. SGW not present like Stellantis but dealer-level operations require FDRS account. Programming and calibration increasingly cloud-gated. ELM bypass needed: NO for diagnostics. FDRS for dealer-level calibrations."},
+      {"step":6,"type":"reference","description":"GM GATEWAY: CAN topology = HS-CAN (pins 6/14, 500kbps) + SW-CAN (Single Wire CAN, pin 1, 33.3kbps) + MS-CAN on some. NO hard SGW like Stellantis. PCM/ECM/TCM/ABS on HS-CAN — all accessible. BCM/TPMS/PEPS/interior on SW-CAN — NOT accessible via standard ELM327 (different bus, different protocol). ELM bypass needed: NO for HS-CAN. YES (SW-CAN adapter) for body/interior."},
+      {"step":7,"type":"reference","description":"BMW ZGW (ZENTRAL-GATEWAY) F-SERIES (2012-2018): Central gateway routes all bus traffic. Buses: PT-CAN (powertrain) + K-CAN (body, 100kbps) + LIN + FlexRay (some). ZGW passes external diagnostic requests to all buses. F-series ZGW: permissive for most operations including $2E writes and $31 routines. ISTA preferred but ELM327 extended session works for most service procedures. ELM bypass needed: NO on F-series for most operations."},
+      {"step":8,"type":"reference","description":"BMW ZGW G-SERIES (2019+): Enhanced ZGW with Ethernet backbone (DoIP). Much more restrictive: $2E writes blocked without security access escalation. Coding requires ISTA + BMW credentials. Diagnostic reads remain accessible. Ethernet OBD-II adapter (ENET) for some operations. ELM bypass needed: NO for reads. YES (ISTA) for writes/coding on G-series."},
+      {"step":9,"type":"reference","description":"VW/AUDI J533 GATEWAY (PRE-2019): J533 (Diagnose-Interface) connects all vehicle buses. Completely transparent to external diagnostic tools — routes UDS requests to any module via physical addressing. All services accessible: reads, clears, $31 routines, $2E writes. ELM327 with direct module addressing works for everything. ELM bypass needed: NO."},
+      {"step":10,"type":"reference","description":"VW/AUDI J533 + SFD (2019+): Adds SFD (Software Feature Disable) security layer. Reads, DTC clears, and $31 routine TRIGGERS remain accessible. $2E WRITES and adaptation BLOCKED — SFD requires cryptographic token from VW AG to unlock. Aftermarket tools without SFD token cannot write adaptations or coding. ELM bypass needed: NO for reads/clears. YES (ODIS + SFD token) for writes."},
+      {"step":11,"type":"reference","description":"STELLANTIS SGW (2018+): SGW (Secure Gateway Module) physically sits between OBD-II port and vehicle CAN buses. Default state: BLOCKS all $31 RoutineControl and $2E WriteDataByIdentifier from external tools. Only Mode $01-$09 reads and DTC reads ($19) passthrough. To enable write access: mechanic must authorize via FCA/Stellantis toolchain (wiTECH 2.0) — requires $10 subscription/day. SGW bypass modules available (Autel, Launch) but legal gray area. ELM bypass needed: YES for all write operations 2018+."},
+      {"step":12,"type":"reference","description":"HYUNDAI/KIA GATEWAY (2019+): Gateway module added 2019 model year. READS: fully open — all diagnostic reads, DTC reads, freeze frame, live data accessible without restriction. WRITES: $2E blocked on most body/chassis modules. $31 routine triggers: mixed — some accessible, some blocked. Distinction from Stellantis: read-heavy diagnostics (90% of field work) fully accessible via ELM327. ELM bypass needed: NO for diagnostics. YES for adaptation writes and coding."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Most ELM327-friendly OEM for write operations. Virtually all service procedures (EPB, SAS, TPMS, oil reset, adaptation) executable without OEM tool on pre-2022.",
+      "Honda/Acura": "F-CAN operations excellent. B-CAN body work requires HDS. For shop work: 90% of procedures on F-CAN = ELM327 sufficient.",
+      "Nissan/Infiniti": "CAN-C dominant for service procedures. CVT adaptation and ATTESA benefit from CONSULT. Most high-demand procedures on CAN-C.",
+      "Ford": "Two-bus architecture is the primary limitation. Powertrain/ABS = excellent. Body = needs MS-CAN adapter. FDRS increasingly required for 2020+ calibrations.",
+      "GM": "Same two-bus challenge as Ford. Powertrain = excellent. Body BCM/PEPS = needs SW-CAN. Most high-demand shop procedures (engine, transmission, ABS) on HS-CAN.",
+      "BMW": "F-series: very workable. G-series: read-focused usage only with ELM327. ISTA required for any G-series coding or adaptation. BMW customers often need BMW-specific tools.",
+      "VW/Audi": "Pre-2019 gold standard for ELM327 access. 2019+ write-locked. For shop context: most customers have pre-2022 vehicles where full access still works.",
+      "Stellantis": "Hardest gateway to work around. wiTECH subscription $10/day. For shops: pre-2018 Stellantis fully open. 2018+ requires investment in wiTECH or bypass module.",
+      "Hyundai/Kia": "Best post-2019 gateway of all OEMs — reads completely open, only writes blocked. Excellent for diagnostic-heavy workflows."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

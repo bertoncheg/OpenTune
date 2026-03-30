@@ -1,0 +1,44 @@
+{
+  "service_type": "hyundai_theta2_engine_failure",
+  "category": "oem_specific",
+  "title": "Hyundai/Kia Theta II Engine Bearing Failure Detection",
+  "description": "Hyundai Theta II 2.0T/2.4T engines have a known bearing failure issue (manufacturing debris not cleaned from oil galleries). Covers early detection via knock sensor data, oil pressure monitoring, and recall/warranty check protocol.",
+  "oem_coverage": ["Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Hyundai","model":"Sonata","year":2015,"engine":"2.0T Theta II GDI"},
+    {"make":"Hyundai","model":"Santa Fe Sport","year":2016,"engine":"2.0T Theta II"},
+    {"make":"Kia","model":"Optima","year":2016,"engine":"2.0T Theta II"},
+    {"make":"Kia","model":"Sportage","year":2016,"engine":"2.0T Theta II"},
+    {"make":"Hyundai","model":"Tucson","year":2016,"engine":"2.4L Theta II"}
+  ],
+  "common_symptoms": ["engine knocking under acceleration","P1326 (knock sensor detection system)","ticking at idle that worsens under load","oil consumption (secondary symptom)","sudden engine seizure with no warning (worst case)","KSDS (Knock Sensor Detection System) warning light"],
+  "physical_solution": "Check recall/warranty status FIRST (NHTSA recall 17V-226, class action settlement). Monitor knock sensor data via live data. If P1326 or knock activity detected: advise engine replacement under warranty/settlement terms.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (knock sensor raw data, KSDS status)","Mode $01 PID $0E (timing advance — retard indicates knock)","$19 ReadDTCInformation (P1326)"],
+    "elm327_feasibility": "Partial — Mode $01 PID $0E (timing advance) shows knock retard as indirect indicator. P1326 readable via Mode $03 or $19. KSDS status and raw knock sensor data require GDS2 or enhanced ELM327 addressing.",
+    "server_free": true,
+    "preconditions": [
+      "ALWAYS check NHTSA recall database by VIN first",
+      "Check Hyundai/Kia settlement claim eligibility",
+      "Oil level and quality check before any diagnosis",
+      "Note mileage — warranty extension covers specific mileage ranges"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"WARRANTY CHECK FIRST: Go to NHTSA.gov recall search or Hyundai/Kia owner portal. Enter VIN. Theta II recall: NHTSA 17V-226 (Sonata/Santa Fe), 17V-224 (Optima/Sportage). Settlement extends warranty to 150k miles or 15 years on affected engines. Never bill customer for Theta II engine repair before confirming warranty status."},
+      {"step":2,"type":"send_uds","description":"Read P1326: Mode $03 or $19 02 FF to ECM. P1326 (KSDS - Knock Sensor Detection System fault) is Hyundai's specific code for metal debris detected in engine via knock sensor pattern analysis. P1326 = engine replacement required. No P1326 = continue monitoring."},
+      {"step":3,"type":"send_uds","description":"Monitor knock retard: Mode $01 PID $0E (timing advance). At cruise (2000-3000 RPM, moderate load): timing should be 15-25° BTDC. Consistent retard below 10° BTDC under moderate load = knock activity = bearing wear."},
+      {"step":4,"type":"instruct_mechanic","description":"KNOCK SENSOR RAW DATA: GDS2 shows KSDS analysis results — pattern matching for metal bearing debris signature vs normal combustion knock. Different from standard knock detection. KSDS specifically listens for mechanical bearing noise pattern, not detonation."},
+      {"step":5,"type":"instruct_mechanic","description":"OIL INSPECTION: Drain small amount of oil. Check for metallic sheen or particles. Drain plug magnet: metallic particles confirm bearing wear in progress. Fine metallic paste = early bearing failure. Chunky metal = advanced failure — engine may not be salvageable."},
+      {"step":6,"type":"instruct_mechanic","description":"ENGINE REPLACEMENT SCOPE (if confirmed): Hyundai/Kia dealer installs remanufactured long block under warranty/settlement. Independent shop option: remanufactured engine from Hyundai ($4,000-6,000 installed). Document everything for warranty claim."},
+      {"step":7,"type":"verify","description":"If pre-failure (no P1326, no metal): change oil with OEM Hyundai 5W-20/5W-30 full synthetic immediately. Shorten oil change interval to 3,750 miles. Monitor P1326 and timing retard at each service. Clean oil is the only prevention measure."}
+    ],
+    "oem_notes": {
+      "Hyundai/Kia": "Affected vehicles: 2011-2019 Hyundai Sonata 2.4L/2.0T, 2013-2019 Santa Fe Sport 2.0T/2.4L, 2011-2019 Kia Optima 2.4L/2.0T, 2011-2019 Kia Sportage 2.4L/2.0T, 2016-2019 Tucson 2.0L/2.4L. Root cause: metal shavings from manufacturing left in engine oil galleries contaminate main/rod bearings. Hyundai implemented KSDS (Knock Sensor Detection System) software update to detect bearing failure before seizure. Settlement: Hyundai agreed to 150k mile/15-year warranty extension for covered vehicles. Class action attorneys: Chimicles Schwartz Kriner & Donaldson-Smith. CRITICAL: this engine is responsible for many sudden engine seizures and fires. Take P1326 seriously — vehicle should not be driven."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

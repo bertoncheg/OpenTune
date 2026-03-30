@@ -1,0 +1,43 @@
+{
+  "service_type": "bmw_n54_n55_hpfp_diagnosis",
+  "category": "oem_specific",
+  "title": "BMW N54/N55/B58 High Pressure Fuel Pump (HPFP) Diagnosis",
+  "description": "BMW N54, N55, and B58 engines have documented HPFP failures causing P0087, P008A, and hard start. This procedure diagnoses HPFP health via HP rail pressure monitoring, cam follower wear inspection, and adaptation reset.",
+  "oem_coverage": ["BMW"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"335i","year":2011,"engine":"3.0L N54B30"},
+    {"make":"BMW","model":"535i","year":2013,"engine":"3.0L N55B30"},
+    {"make":"BMW","model":"M240i","year":2018,"engine":"3.0L B58B30"},
+    {"make":"BMW","model":"135i","year":2012,"engine":"3.0L N54B30"},
+    {"make":"BMW","model":"X5 35i","year":2015,"engine":"3.0L N55B30"}
+  ],
+  "common_symptoms": ["P0087 fuel rail pressure too low","P008A low pressure fuel system low","hard cold start / cranks 3-5 seconds","power loss under boost","injector failure (secondary effect)","long crank after sitting overnight"],
+  "physical_solution": "Monitor HP rail pressure under various loads. Inspect cam follower (HPFP drive lobe interface). Replace follower if worn below 6mm. Replace HPFP if pressure insufficient. Reset adaptation after replacement.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (HP rail pressure DID)","$22 0xFD53 (IBS current, indirect)","Techstream-equivalent BMW ISTA SG-functions"],
+    "elm327_feasibility": "Partial — BMW HP rail pressure readable via $22 to DME 0x12 with correct DID. IBS current monitoring indirect. ISTA preferred for complete HPFP diagnosis but ELM327 with extended session provides HP pressure data.",
+    "server_free": true,
+    "preconditions": [
+      "Engine at operating temperature",
+      "Fuel tank above 1/4",
+      "Note: cold start symptoms (long crank) are often first sign of HPFP failure"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"Read HP fuel rail pressure: $22 [BMW_HP_FUEL_DID] to DME 0x12. Target values: idle = 40-55 bar (580-800 psi), part load = 100-120 bar (1450-1740 psi), full load = 180-200 bar (2610-2900 psi). Below 40 bar at idle = HPFP insufficient."},
+      {"step":2,"type":"instruct_mechanic","description":"CAM FOLLOWER INSPECTION: The HPFP is driven by a lobe on the intake camshaft (N54/N55: cylinder 6 cam lobe). The soft metal follower wears rapidly if oil changes are neglected. Remove HPFP mounting bolts (3 bolts, top of engine). Lift HPFP. Remove follower. Measure thickness."},
+      {"step":3,"type":"instruct_mechanic","description":"CAM FOLLOWER MEASUREMENT: New thickness = 7.0mm. Replace if worn to 6.0mm or less. If follower is worn to less than 5.5mm: inspect camshaft lobe for damage — may need cam replacement. Part number: N54/N55 follower = 13517524971."},
+      {"step":4,"type":"instruct_mechanic","description":"HPFP PRESSURE DECAY TEST: With key ON engine OFF (fuel pump primed but engine not started), HP rail should build to 50+ bar within 5 seconds of key-on. If pressure bleeds off within 60 seconds (read via live data): injector return check valves leaking or HPFP check valve failed."},
+      {"step":5,"type":"instruct_mechanic","description":"HPFP REPLACEMENT PROCEDURE: Depressurize fuel system. Remove engine cover. Remove HPFP supply line (line wrench, 17mm/22mm). Remove 3 HPFP mounting bolts. Note cam position before removing — HPFP must be installed when cam lobe is at base circle (not pressing follower)."},
+      {"step":6,"type":"send_uds","description":"After HPFP replacement: clear all fuel system DTCs via $14 FF FF FF. Crank engine 5 seconds (don't start) to allow HP system to prime. Then start. Monitor HP pressure immediately: should reach 50+ bar within 3 seconds of start."},
+      {"step":7,"type":"verify","description":"Verify at full operating temp: HP pressure at idle 50+ bar, at 3000 RPM WOT 180+ bar. No P0087/P008A. Hard start resolved. If pressure still low after HPFP replacement: check cam follower and cam lobe condition — follower damage causing repeat failure."}
+    ],
+    "oem_notes": {
+      "BMW": "N54 (twin turbo 2006-2013): most affected. Cam follower wear at every oil change interval if oil quality marginal. BMW extended P0087 warranty to 10 years/156k miles for N54. N55 (single turbo 2011-2016): less frequent but same failure mode. B58 (2016+): improved HPFP design, still monitor. HPFP part evolution: N54 original → updated N54 HPFP (2009 TSB) → current revision. Always install latest revision. Oil quality critical: use BMW Longlife-01 or Castrol Twinspower 5W-30."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

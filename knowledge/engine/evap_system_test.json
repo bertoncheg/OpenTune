@@ -1,0 +1,114 @@
+{
+  "service_type": "evap_system_test",
+  "category": "engine",
+  "title": "EVAP System Leak Test and Purge Valve Test",
+  "description": "Diagnoses P0440-P0458 EVAP system codes using OBD-II monitor status, UDS RoutineControl for leak detection pump tests, and purge/vent valve actuator tests. Physical smoke testing complements electronic diagnosis to locate leak source.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "Camry", "year": 2019, "engine": "2.5L 2AR-FE"},
+    {"make": "VW", "model": "Jetta", "year": 2019, "engine": "1.4T EA211"},
+    {"make": "Ford", "model": "Escape", "year": 2020, "engine": "2.0T EcoBoost"},
+    {"make": "GM", "model": "Equinox", "year": 2020, "engine": "1.5T LYX"},
+    {"make": "Honda", "model": "CR-V", "year": 2021, "engine": "1.5T L15B7"},
+    {"make": "BMW", "model": "3 Series", "year": 2019, "engine": "B46 2.0T"},
+    {"make": "Nissan", "model": "Altima", "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Jeep", "model": "Wrangler", "year": 2021, "engine": "3.6L Pentastar"},
+    {"make": "Hyundai", "model": "Tucson", "year": 2021, "engine": "2.5L Smartstream"}
+  ],
+  "common_symptoms": [
+    "P0440/P0441/P0442/P0446/P0455/P0456 codes active or pending",
+    "Fuel smell in cabin or near fuel filler area",
+    "Gas cap warning light illuminated on instrument cluster",
+    "Failed EVAP readiness monitor preventing emissions test",
+    "Fuel tank pressure sensor reading abnormal or erratic values"
+  ],
+  "physical_solution": "First perform gas cap check — remove, inspect rubber seal for cracks or deformation, reinstall finger tight until click. If large leak code (P0455), smoke test canister and hoses visually first. For small leak (P0442), use EVAP smoke machine at canister service port pressurized to 0.5 psi max. For purge valve mechanical test: disconnect purge hose at intake manifold with engine running — should have no vacuum at idle (purge valve should be closed). Electronic purge valve and vent valve tests via UDS $31 RoutineControl.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 41 OBD Monitor Status (Mode 01 PID 41)",
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — EVAP Leak Detection Pump test",
+      "$31 01 RoutineControl — Purge valve actuator test",
+      "$2F InputOutputControlByIdentifier — purge valve force control",
+      "$2F InputOutputControlByIdentifier — canister vent solenoid force control"
+    ],
+    "elm327_feasibility": "Partial — Mode $01 PID 41 EVAP monitor status readable via ELM327 on all OBD-II vehicles 1996+. $31 EVAP leak detect pump test accessible on Toyota (routine $C400 at ECM 0x700), VW N80 purge valve at ECM pre-SFD, Ford EVAP CVS on pre-2018 models. Gateway blocks on 2018+ Ford (SGW) and 2019+ VW (SFD). $2F purge valve IO control limited on most OEMs via ELM327 due to security access requirements.",
+    "server_free": true,
+    "preconditions": [
+      "Fuel level between 15% and 85% for leak detection pump test",
+      "Fuel cap properly tightened before testing",
+      "Engine coolant temperature above 160°F (71°C)",
+      "No active misfire DTCs present",
+      "EVAP system components physically accessible"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Read EVAP monitor status: send 01 41. Check byte C bit 2 for EVAP monitor complete/incomplete flag. If monitor shows incomplete, conditions for EVAP test have not been met — verify fuel level 15-85% and required drive cycle conditions."
+      },
+      {
+        "step": 2,
+        "type": "instruct_mechanic",
+        "description": "Record all EVAP DTCs with freeze frame data. Note fuel level and coolant temperature at fault moment. Large leak (P0455) is often visible or audible — inspect cap, filler neck, canister hoses. Small leak (P0442) requires smoke machine or EVAP pressure test."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Enter extended diagnostic session: send $10 03 to ECM address. Required before $31 RoutineControl commands on most OEMs. Toyota ECM: 0x700. VW/Audi ECM: 0x01. BMW ECM: 0x12. GM ECM: 0x7E0. Ford PCM: 0x7E0. Nissan ECM: 0x7E0. Hyundai/Kia ECM: 0x7E0."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "Initiate EVAP leak detection pump test: send $31 01 [EVAP_LDP_ROUTINE_ID] 00. Toyota: routine $C400 at ECM 0x700. VW/Audi: routine $2600 via $31 01 26 00 at ECM 0x01. Ford: EVAP monitor force initiation at PCM 0x7E0. Monitor response for positive confirmation $71 01 [ID]."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Perform smoke test at canister service port — pressurize EVAP system to 0.5 psi maximum (do not exceed — rubber components can be damaged). Inspect all EVAP hoses, canister body, purge valve inlet and outlet connections, fuel cap seal area, and fuel tank filler neck seam. Use UV dye under UV light for low-rate leaks."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Actuate purge valve: send $31 01 [PURGE_VALVE_ROUTINE_ID] 01 (open). Listen for audible click at purge valve location. With propane enrichment test active: STFT should respond when purge valve cycles — active purge should alter fuel trims. If no STFT response during commanded purge, valve stuck closed or passage blocked."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "Activate canister vent solenoid: send $2F [VENT_VALVE_DID] 03 [active control byte]. Vent valve closed during EVAP monitor — verify ECM can command close. If vent stuck open, EVAP system cannot build pressure and monitor will not complete. Return control: $2F [DID] 04."
+      },
+      {
+        "step": 8,
+        "type": "verify",
+        "description": "After repair, clear DTCs with $14 FF FF FF FF. Run EVAP drive cycle: cold start below 86°F, idle 2-3 minutes, city driving 5-10 minutes, steady highway cruise 10 minutes, return to idle. Recheck $01 41 EVAP monitor status — verify monitor runs to complete. If monitor still incomplete, refer to readiness_monitors.json for OEM-specific drive cycle conditions."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Leak Detection Pump (LDP) system — motor-driven diaphragm pump located at charcoal canister. Routine $C400 at ECM 0x700 initiates LDP self-test. VSV (Vacuum Switching Valve) is Toyota's term for purge solenoid — located at intake manifold. Common failure: LDP diaphragm cracking causes P0441. Also check LDP filter screen for blockage. ELM327 accessible on pre-2019 models.",
+      "Honda/Acura": "Natural Vacuum EVAP (NV-EVAP) system — no LDP pump. Uses thermal contraction of fuel vapors after hot soak for leak detection. CVS (Canister Vent Solenoid) at canister rear. EVAP VSV purge solenoid at intake. Common failure: CVS sticking causes P0446 (vent control circuit). NV monitor requires specific ambient temperature and soak conditions. ELM $31 accessible on pre-2018.",
+      "Nissan/Infiniti": "EVAP canister located at fuel tank or body rail depending on model. P0447 canister vent control valve common failure. NVLD (Natural Vacuum Leak Detection) system on some Nissan platforms — similar to Honda NV-EVAP. $31 purge valve actuator test at ECM 0x7E0. ELM327 accessible on most model years.",
+      "Ford": "CVS (Canister Vent Solenoid) and CPVS (Canister Purge Valve Solenoid) system. P1450 excessive vacuum buildup common on Ford — indicates CVS stuck closed or CPVS stuck open. EVAP monitor requires specific soak time and temperature window. Pre-2018 ELM accessible for $31. 2018+ SGW blocks $31 and $2F — FDRS required for routine initiation.",
+      "GM": "EVAP canister with vent valve (normally open) and purge solenoid. P0496 high purge flow common on GM 3.5L-4.2L engines — purge valve stuck open. LDP present on some platforms. $31 accessible via ELM327 on pre-2021 GM. EVAP system fuel tank pressure sensor (FTP) DTC interpretation critical for diagnosis direction.",
+      "BMW": "EVAP LDP pump located under hood near strut tower on most models. N80 purge valve at intake manifold — known failure point. B46/B48 engines require purge check valve inspection. ECM at 0x12. ELM327 accessible for $31 on E-series (pre-2009). ZGW security gateway blocks $31 and $2F on F-series (2012+) and G-series — ISTA/P required.",
+      "VW/Audi": "N80 component code is purge valve; N115 is canister vent valve. EVAP diagnostic routine via $31 01 26 00 at ECM 0x01. Common failure: N80 sticking open causes rich running condition and P0441. SFD (Schutz Funktion Diagnose) gateway blocks on 2019+ MQB/MLB — ODIS required. Pre-2019 ELM accessible. P0441 N80-related very common on 2.0T EA888 engine.",
+      "Stellantis": "Ram/Jeep EVAP system with duty-cycle purge solenoid and LDP. P0455 large leak often loose gas cap on Wrangler and Grand Cherokee. P0456 small leak common on Jeep models — check filler neck seal and cap O-ring. SGW blocks $31 and $2F on 2018+ models. Pre-2018 ELM accessible. wiTECH required for routine initiation on 2018+ platforms.",
+      "Hyundai/Kia": "Canister purge solenoid at intake manifold. FTPS (Fuel Tank Pressure Sensor) failure common — causes false EVAP codes. P0441 purge flow insufficient — purge solenoid sticking closed. 2019+ security gateway blocks $31 write commands. $31 purge valve actuator test accessible via ELM327 on pre-2019 models. Gateway does not block Mode $01 reads."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

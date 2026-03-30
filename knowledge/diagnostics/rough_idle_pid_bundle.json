@@ -1,0 +1,43 @@
+{
+  "service_type": "rough_idle_pid_bundle",
+  "category": "diagnostics",
+  "title": "Rough Idle Diagnostic PID Bundle",
+  "description": "Targeted live data capture for rough idle complaints. Guides ProcedureEngineer through the most valuable PIDs to read and what each reading means for root cause isolation.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["engine shakes at idle","RPM hunting at idle","rough idle only when warm","rough idle only when cold","idle quality degrades at operating temp"],
+  "physical_solution": "Capture this PID bundle at idle (cold and warm if possible). Data pattern reveals whether idle issue is: lean (vacuum leak/MAF), rich (injector/purge valve), misfiring (ignition/compression), or IAC-related.",
+  "technical_solution": {
+    "uds_services": ["Mode $01 multiple PIDs"],
+    "elm327_feasibility": "Full — all PIDs are Mode $01 standard. Best captured at idle with engine fully warmed.",
+    "server_free": true,
+    "preconditions": ["Engine at operating temperature for warm idle reading","Engine cold (ambient temp) for cold idle comparison","A/C OFF, all accessories OFF for baseline"],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"IDLE RPM: Mode $01 PID $0C. Normal idle: 600-900 RPM. Hunting (oscillating): 500-1100 RPM cycling = IAC/IACV issue or vacuum leak. Below 500 RPM stalling = severe lean or IACV failure. Above 1200 RPM idle = stuck-open IACV or throttle body issue."},
+      {"step":2,"type":"send_uds","description":"FUEL TRIMS AT IDLE: Mode $01 PID $06 (STFT B1) and $07 (LTFT B1). Rough idle with STFT >+10% = lean at idle (vacuum leak, MAF reading low). Rough idle with STFT <-10% = rich at idle (stuck purge valve, leaking injector, coolant temp sensor cold-bias)."},
+      {"step":3,"type":"send_uds","description":"ENGINE LOAD AT IDLE: Mode $01 PID $04 (calculated engine load). Normal idle: 15-30%. Higher than expected load at idle (>40%) = high parasitic load or restricted exhaust (check for collapsed cat or plugged DPF)."},
+      {"step":4,"type":"send_uds","description":"TIMING ADVANCE AT IDLE: Mode $01 PID $0E. Normal idle: 8-20° BTDC. Excessive retard (0-5° at idle) = knock retard from low-octane fuel or carbon deposits. Negative timing at idle = ECU fighting detonation."},
+      {"step":5,"type":"send_uds","description":"MAF RATE AT IDLE: Mode $01 PID $10. Normal idle: 2-5 g/s per liter of displacement. Below spec = MAF reading low or intake restriction. Above spec = MAF reading high or large vacuum leak after MAF."},
+      {"step":6,"type":"send_uds","description":"COOLANT TEMP vs IAT: Mode $01 PID $05 (ECT) and $0F (IAT). If ECT and IAT both at ambient on warm engine = coolant temp sensor failure (causes rich cold-start strategy at all times = rough warm idle)."},
+      {"step":7,"type":"instruct_mechanic","description":"MISFIRE AT IDLE PATTERN: P0300 at idle with neutral fuel trims = mechanical misfire (compression, spark, injector). Read per-cylinder misfire counts PID $4C-$53. Cylinder-specific counts point directly to affected cylinder. Swap COP coil to confirm."},
+      {"step":8,"type":"instruct_mechanic","description":"EVAP PURGE AT IDLE: If STFT goes rich at idle with no other cause, command purge valve CLOSED via actuator test. If idle immediately smooths and STFT normalizes = stuck-open purge valve flooding intake at idle."},
+      {"step":9,"type":"verify","description":"Capture all PIDs above and build pattern: lean-rough, rich-rough, or misfiring-rough. Match pattern to most likely root cause. Fix root cause, clear codes, re-capture same PIDs to confirm values in normal range."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "IAC carbon buildup very common on older 2ZR/2AZ — dirty IACV causes hunting idle. Clean with throttle body cleaner. VVT-i cam code alongside P0300 = cam timing issue causing idle misfire.",
+      "Honda/Acura": "IACV (Idle Air Control Valve) carbon buildup on K-series common. Honda idle hunting = IACV primary suspect. Also check VTEC solenoid screen (clogged = rough at VTEC engagement RPM, not idle).",
+      "Nissan/Infiniti": "IACV failure on QR/VQ. Nissan Altima/Sentra: IACV replacement common at 80k+. VQ35DE: upper intake manifold gaskets cause lean idle that appears as rough idle with lean trims.",
+      "Ford": "EcoBoost: rough idle at cold start from turbo lag and cold oil in turbo bearings — normal. If rough when warm: IMRC (intake manifold runner control) failure on 2.0/3.5T. Check IMRC motor and runner positions.",
+      "GM": "AFM engines: rough idle at light throttle from active fuel management (normal 4-cylinder mode feel). Disable AFM to confirm if idle concern is just AFM sensation. 3.6L Pentastar (GM): cam follower failures cause rough idle.",
+      "BMW": "Valvetronic eccentric shaft sensor failure causes rough idle with no codes initially. VANOS solenoid failures cause warm rough idle. Check crankcase ventilation (Valvetronic cover membrane common failure N52/N55).",
+      "VW/Audi": "EA888: rough warm idle almost always PCV failure (cracked membrane in valve cover). Check for oil in intake manifold. DSG rough at idle = clutch pack wear (different issue — transmission, not engine).",
+      "Stellantis": "Hemi 5.7: MDS misfire at idle (deactivation cycling). Disable MDS to confirm. 2.4L Tigershark: PCV failure causing rough idle with oil consumption.",
+      "Hyundai/Kia": "Theta II: GDI carbon on intake valves causes cold rough idle that clears when warm. Walnut blast needed. Also: ISG (idle stop-go) system occasionally causes perceived rough restart on stop-start models."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

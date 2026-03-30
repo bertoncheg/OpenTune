@@ -1,0 +1,112 @@
+{
+  "service_type": "freeze_frame_analysis",
+  "category": "dtc",
+  "title": "Freeze Frame Data Analysis",
+  "description": "Reading and interpreting the snapshot of vehicle operating conditions captured at the moment a DTC was set, enabling diagnosis of intermittent faults without recreating the exact failure conditions. Combines SAE Mode $02 standard freeze frame with OEM-enhanced UDS $19 04 snapshot records for deeper diagnostic insight.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "RAV4 XA50", "year": 2020, "engine": "2.5L A25A-FKS"},
+    {"make": "Ford", "model": "Focus ST MK3", "year": 2016, "engine": "2.0L EcoBoost"},
+    {"make": "Nissan", "model": "Altima L34", "year": 2019, "engine": "2.0L KR20DDET VC-Turbo"},
+    {"make": "BMW", "model": "435i F32", "year": 2015, "engine": "3.0L N55 Turbo"},
+    {"make": "Chevrolet", "model": "Malibu 9th Gen", "year": 2017, "engine": "1.5L LFV Turbo"},
+    {"make": "Hyundai", "model": "Tucson NX4", "year": 2022, "engine": "2.5L Smartstream GDI"}
+  ],
+  "common_symptoms": [
+    "Intermittent check engine light that is off when customer brings vehicle in",
+    "Fault that occurred once while driving and cannot be reproduced on lift",
+    "Customer complaint of driveability concern with no currently active DTC",
+    "Pending code stored with no MIL — mechanic needs fault context before recommending repair",
+    "Multiple DTCs from one event — freeze frame identifies which DTC was primary vs secondary"
+  ],
+  "physical_solution": "Connect scan tool immediately after DTC is detected — before clearing codes. Read and document all freeze frame data. Photograph or print freeze frame values. Use the snapshot to reconstruct exact operating conditions (vehicle speed, engine load, coolant temp, fuel trims, throttle) at fault moment to guide targeted bench testing or road test replication.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 02 OBD Mode 02 ReadFreezeFrameData — SAE standard freeze frame PIDs",
+      "$19 04 ReadDTCSnapshotRecordByDTCNumber — UDS OEM-enhanced snapshot record",
+      "$19 06 ReadDTCExtendedDataRecordByDTCNumber — fault occurrence counter and age"
+    ],
+    "elm327_feasibility": "Full for SAE OBD-II Mode $02 — always accessible via any ELM327 adapter on all 1996+ OBD-II vehicles without exception. Mode $02 PID $02 returns the DTC that triggered the freeze frame, then all Mode $01 PIDs can be queried at that frozen snapshot. OEM-enhanced freeze frames via UDS $19 04 contain significantly more data channels but require extended session — partial ELM access on non-gateway vehicles. Gateway-blocked vehicles (BMW F/G ZGW, VW/Audi MQB SFD, Ford SGW 2018+): $19 04 to powertrain module still generally accessible as powertrain reads are not blocked.",
+    "server_free": true,
+    "preconditions": [
+      "DTC must be currently stored in ECM memory (not cleared) — confirmed or pending status",
+      "Ignition ON (KOEO or KOER both work for Mode $02 read)",
+      "DO NOT clear DTCs before reading freeze frame — clearing erases the snapshot data",
+      "Note MIL status: solid on = confirmed DTC with freeze frame. Off with stored DTC = pending (may have less complete freeze frame data)"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Read full DTC list first: send 19 02 FF to ECM at 0x7E0 (or OEM-specific address). Record every DTC with its complete status byte. Status byte bits: 0=testFailed, 1=testFailedThisDriveCycle, 2=pendingDTC, 3=confirmedDTC, 4=testNotCompleted, 5=testFailedSinceLastClear, 6=testNotCompletedSinceLastClear, 7=warningIndicatorRequested. This tells you which DTCs have freeze frames (confirmed, bit 3 set)."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Request OBD-II Mode $02 freeze frame for primary DTC: ELM327 AT SH 7DF (functional broadcast). Send: 02 02 02. Response byte 4 is freeze frame DTC high byte, byte 5 is DTC low byte — confirms which DTC triggered the freeze frame. Then query each PID at the freeze frame: 02 [PID] 00 (frame 0). Key PIDs: 02 04 00 (calculated load), 02 05 00 (coolant temp), 02 06 00 (STFT B1), 02 07 00 (LTFT B1), 02 0B 00 (MAP kPa), 02 0C 00 (RPM), 02 0D 00 (speed), 02 11 00 (throttle position)."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Document all Mode $02 freeze frame values. Critical PIDs to capture and their diagnostic significance: RPM (0x0C) — idle RPM fault vs highway RPM fault is key diagnostic differentiator. Vehicle Speed (0x0D) — fault at 0 mph vs moving. Calculated Engine Load (0x04) — 0-100%, high load at fault = mechanical or sensor under stress. Coolant Temp (0x05) — fault at cold start vs normal operating temp."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "Fuel trim analysis at freeze frame moment: STFT B1 (0x06) and LTFT B1 (0x07): if both positive and sum >+15% = lean condition active at fault moment. Diagnosis: unmetered air (vacuum leak, cracked intake tube), MAF under-reading (dirty sensor), low fuel pressure. If STFT negative and LTFT negative, sum <-15% = rich condition: stuck-open injector, coolant temp sensor cold bias causing over-fueling, EVAP purge valve stuck open. Asymmetric bank-to-bank LTFT difference >4% = single bank issue (intake manifold gasket, O2 sensor cross-contamination, bank-specific injectors)."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "Coolant temp and load interpretation: fault at ECT below 60 C (140 F) = cold-start specific concern: coolant temp sensor accuracy, choke-rich cold fueling, cold-start misfires (spark plug fouling from short trips), EVAP purge running too early on cold start. Fault at ECT above 100 C (212 F) = thermal concern: possible coolant temp sensor accuracy at high temp, fuel vapor issues on hot restart, vapor lock. Fault at normal temp (70-95 C): standard running condition fault."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Request OEM-enhanced UDS snapshot for deeper data: send 10 03 to ECM (enter extended session). Then send 19 04 [DTC_BYTE1] [DTC_BYTE2] [DTC_BYTE3] 01 — where DTC bytes are the 3-byte UDS DTC encoding. Example for P0171 (0x002A1F in UDS format): 19 04 00 2A 1F 01. Response contains OEM-specific parameters not in SAE Mode $02 (see oem_notes for OEM-specific extended data contents)."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "Read DTC fault occurrence counter: send 19 06 [DTC_BYTE1] [DTC_BYTE2] [DTC_BYTE3] 01. Response byte contains fault occurrence count (how many times this DTC has set since last clear) and fault age (drive cycles since last occurrence). High occurrence count = recurring/worsening fault. Occurrence count of 1 on old code = single event that has not recurred — may be resolved."
+      },
+      {
+        "step": 8,
+        "type": "send_uds",
+        "description": "Speed analysis: fault at specific vehicle speed range (e.g. only at 45-55 mph) may indicate wheel speed sensor dropout at specific rotor frequency, torque converter clutch engagement (TCC lock at 45 mph causing misfire-like vibration), or transmission shift point fault. Fault only at 0 mph = idle condition only. Fault at full throttle only = WOT enrichment, MAF saturation, boost-related on turbo engines."
+      },
+      {
+        "step": 9,
+        "type": "physical",
+        "description": "After diagnosis and repair: document the freeze frame operating conditions (RPM, load, speed, temp). Road test specifically recreating those conditions — same speed, load, gear, temperature window. Monitor live PIDs while recreating conditions. Confirm fault does not recur. Clear DTCs, repeat drive cycle conditions 2-3 times to confirm repair success before releasing vehicle."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota ECM at 0x700 stores up to 5 freeze frames per DTC (latest 5 occurrences). Enhanced snapshot via $19 04 at 0x700 includes: A/F sensor (oxygen sensor) ratio (1.0 = stoichiometric, <1 = rich, >1 = lean), VVT cam timing deviation (actual vs target), ignition timing advance, knock sensor count per cylinder, injector pulse width. Techstream displays all 5 freeze frames with timeline. ELM Mode $02 returns only the first (oldest) frame.",
+      "Honda/Acura": "Honda ECM at 0x7E0 stores 1 freeze frame per DTC (most recent event). Enhanced snapshot includes: MAP sensor kPa, VTEC oil pressure switch state (0/1 = off/on), throttle actuator motor current, A/F sensor ratio, injector duty cycle. HDS shows additional engine parameters beyond Mode $02. Honda freeze frame includes ignition switch state and battery voltage at time of fault — useful for detecting voltage-related intermittent DTCs.",
+      "Nissan/Infiniti": "Nissan ECM at 0x7E0 stores multiple snapshots. CONSULT-III+ enhanced freeze frame includes: CVTC (cam phaser) angle deviation bank 1 and 2, individual cylinder knock retard degrees, IPDM relay status at fault time, ATTESA AWD torque split percentage on AWD models. ELM327 Mode $02 returns standard frame only — CONSULT required for extended snapshot. Nissan GT-R stores extensive data including individual coil on-time and injector pulse per cylinder.",
+      "Ford": "Ford PCM at 0x7E0 stores multiple freeze frames. IDS/FDRS enhanced frame includes: ETC throttle position actual vs desired (critical for throttle body diagnosis), fuel rail pressure sensor psi, individual injector pulse width, cam phaser position actual vs target, boost pressure on EcoBoost models. Mode $02 via ELM returns standard SAE frame. Ford freeze frame also includes BARO (barometric pressure) at fault time — altitude correction is important for forced induction diagnosis.",
+      "GM": "GM PCM at 0x7E0 stores freeze frame per DTC. GDS2 enhanced data includes: desired vs actual throttle angle, spark advance degrees B1/B2, injector balance rate per cylinder (deviation from average = identifies contributing injector), AFM/DOD (Active Fuel Management) cylinder deactivation status, turbo boost psi on forced induction engines. ELM Mode $02 returns standard OBD-II frame. GM enhanced frame accessible via $19 04 extended session on most platforms.",
+      "BMW": "BMW DME at 0x12 stores multiple freeze frames in proprietary format. ISTA displays extended snapshot including: Valvetronic eccentric shaft position (actual vs setpoint), VANOS inlet/exhaust cam deviation degrees, charge air pressure psi at turbo outlet, lambda controller integrator value, individual cylinder combustion contribution variance, oil temperature vs coolant temperature (deviation indicates thermostat concern). ELM327 Mode $02 returns only standard SAE frame — BMW proprietary frame not accessible via ELM.",
+      "VW/Audi": "VW/Audi ECM at 0x01 (J533 routes to functional 0x7E0). VCDS and ODIS show environmental snapshot (Umweltbedingungen) alongside DTC, including: DSG clutch temperature and engagement data (if DSG), DPF soot loading mg/stroke on diesel, individual injector correction values IMA (injector minimum quantity adaptation), charge pressure actual vs setpoint, lambda regulation bank 1/2. ELM Mode $02 accessible for standard frame. VAG extended snapshot via $19 04 with extended session — pre-2022 accessible via ELM on non-SFD platforms.",
+      "Stellantis": "Stellantis PCM at 0x7E0. wiTECH/StarScan enhanced freeze frame includes: target vs actual MAP kPa, EGR position sensor actual vs commanded, EVAP purge duty cycle at fault moment, individual cylinder combustion pressure contribution (if equipped with in-cylinder pressure sensor on some diesel platforms), turbo vane position percentage on 3.0L EcoDiesel. ELM Mode $02 fully accessible on all Stellantis platforms including 2018+ (SGW does not block Mode $02 read). Enhanced $19 04 accessible on pre-2018; 2018+ SGW allows powertrain reads.",
+      "Hyundai/Kia": "Hyundai/Kia ECM at 0x7E0. GDS-Mobile enhanced freeze frame includes: APS (accelerator pedal position sensor) actual percentage, VIS (variable intake system) valve position, CVVT (continuous variable valve timing) cam angle deviation, individual knock sensor count per cylinder, dual injection system state (MPI vs GDI vs both) on Smartstream GDI+MPI engines. ELM Mode $02 fully accessible on ALL Hyundai/Kia years including 2019+ gateway models (gateway does not restrict Mode $02 or $03 reads). Important: if P1326 present, read freeze frame RPM and load carefully — high RPM at fault indicates engine was under stress when knock detected."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

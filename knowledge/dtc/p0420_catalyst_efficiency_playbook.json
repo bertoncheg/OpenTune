@@ -1,0 +1,46 @@
+{
+  "service_type": "p0420_catalyst_efficiency_playbook",
+  "category": "dtc",
+  "title": "P0420 Catalyst Efficiency Below Threshold Bank 1 — Diagnostic Playbook",
+  "description": "Decision tree for P0420 (catalytic converter efficiency below threshold). Distinguishes between a truly failed catalytic converter, a bad downstream O2 sensor, and other causes that mimic catalyst failure.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2013,"engine":"2.5L 2AR-FXE"},
+    {"make":"Honda","model":"Accord","year":2014,"engine":"2.4L K24Z3"},
+    {"make":"Ford","model":"Escape","year":2014,"engine":"2.5L Duratec"}
+  ],
+  "common_symptoms": ["P0420 catalyst efficiency below threshold","steady check engine light (not flashing)","no driveability symptoms in most cases","failed emissions test"],
+  "physical_solution": "P0420 does NOT automatically mean the converter needs replacement. Diagnose downstream O2 sensor health, check for rich-running conditions, and confirm with waveform comparison before condemning converter.",
+  "technical_solution": {
+    "uds_services": ["Mode $01 O2 sensor PIDs ($14-$1B)","Mode $01 fuel trims ($06/$07)","Mode $06 catalyst monitor test results"],
+    "elm327_feasibility": "Full — O2 sensor voltage PIDs fully accessible via Mode $01. Mode $06 catalyst test results accessible on all OBD-II. No OEM tool needed for diagnosis.",
+    "server_free": true,
+    "preconditions": ["Engine at full operating temperature","Drive at highway speeds to run catalyst monitor","No active misfires or rich-running conditions"],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"⚠️ DO NOT REPLACE CONVERTER IMMEDIATELY. P0420 has a false-positive rate >30%. Always diagnose before condemning a $500-$2000 part."},
+      {"step":2,"type":"send_uds","description":"Read upstream O2 (pre-cat) and downstream O2 (post-cat): Mode $01 PIDs $14/$15 (O2 bank 1 sensor 1/2). UPSTREAM should switch rapidly 0.1-0.9V. DOWNSTREAM on a GOOD catalyst should stay steady near 0.6-0.7V (cat is buffering)."},
+      {"step":3,"type":"instruct_mechanic","description":"DOWNSTREAM O2 WAVEFORM: If downstream O2 is switching rapidly (mimicking upstream) = catalyst not storing oxygen = converter failed OR downstream O2 sensor lazy/stuck-switching (false P0420). Compare switching frequency: upstream fast switching OK, downstream slow/flat = good cat."},
+      {"step":4,"type":"send_uds","description":"Read Mode $06 catalyst monitor results. ELM327: AT SH 7DF, 06 21. Returns catalyst efficiency test value vs min/max threshold. Value near threshold = marginal cat. Well below threshold = strong converter failure signal."},
+      {"step":5,"type":"send_uds","description":"CHECK FUEL TRIMS: Mode $01 PID $07 (LTFT). If LTFT is positive lean (+10%+): false P0420 possible — lean O2 bias can mimic catalyst failure. Fix lean condition first, clear code, re-run catalyst monitor. Rich conditions also damage converter."},
+      {"step":6,"type":"instruct_mechanic","description":"DOWNSTREAM SENSOR TEST: Tap on downstream O2 sensor connector (engine running). If P0420 clears temporarily or downstream O2 pattern improves = loose/faulty sensor connection causing false signal. Replace downstream sensor (much cheaper than converter)."},
+      {"step":7,"type":"instruct_mechanic","description":"CONVERTER PHYSICAL CHECK: Shake converter — rattling metalite substrate = converter internally damaged. Tap with rubber mallet — hollow vs solid sound difference. Infrared temp gun: converter should be 50-150°F hotter on outlet than inlet when functioning. Equal temps = no catalytic activity."},
+      {"step":8,"type":"verify","description":"After repair: clear P0420. Complete catalyst monitor drive cycle (cold start → 20 min highway at 55-60mph → idle 5 min). Catalyst monitor must run to READY. If P0420 does not return after 3 drive cycles: repair successful."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota P0420 has high false-positive rate from downstream sensor (#2) failure. Toyota sensor uses narrowband O2 — $80-150 to replace vs $800+ for OEM converter. Always test sensor first. Toyota OEM converters are durable — P0420 before 150k miles often = sensor issue.",
+      "Honda/Acura": "Honda P0420 often from oil burning fouling the converter (K-series valve stem seals). If oil consumption present: fix burning before replacing converter or new converter will fail within 20k miles.",
+      "Nissan/Infiniti": "VQ35: P0420 + P0430 common together (both banks). May indicate fuel trim issue affecting both banks. Check MAF and IACV first. Nissan converters generally durable.",
+      "Ford": "EcoBoost: P0420 from rich conditions (injector leaking). 2.5L Duratec: downstream O2 sensor failures common. Ford recommends verifying fuel trim and misfire history before converter replacement.",
+      "GM": "V8 engines: P0420 + P0430 together with AFM issues. Fix AFM lifter problem first — oil in exhaust destroys converter. 3.6L: check cam follower before condemning converter.",
+      "BMW": "BMW P0420 often from N54/N55 injector leaking rich. Rich conditions poison catalyst quickly. Fix injector first. BMW OEM converters expensive — verify with Mode $06 before ordering.",
+      "VW/Audi": "EA888: P0420 from PCV failure causing oil burning. Fix PCV first. TDI: SCR/DPF system different — P0420 equivalent codes are emissions system faults requiring DEF/AdBlue check.",
+      "Stellantis": "Hemi 5.7: P0420 + P0430 from MDS-related oil burning. Fix MDS first. Pentastar 3.6L cam follower failures cause exhaust contamination — address mechanical cause before converter.",
+      "Hyundai/Kia": "Theta II: P0420 well documented as downstream O2 sensor failure on 2014-2019 models. GDS2 shows O2 sensor adaptation — high adaptation = sensor at end of life. Replace sensor first (common fix under $150)."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

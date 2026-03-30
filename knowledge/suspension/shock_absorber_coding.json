@@ -1,0 +1,48 @@
+{
+  "service_type": "shock_absorber_coding",
+  "category": "suspension",
+  "title": "Adaptive / CDC Shock Absorber Coding and Reset",
+  "description": "Codes and calibrates adaptive dampers after shock replacement on vehicles with CDC/EDC/MagneRide systems.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"5 Series","year":2019,"engine":"2.0L B48"},
+    {"make":"Audi","model":"A6","year":2018,"engine":"3.0T"},
+    {"make":"GM","model":"Cadillac CT5","year":2020,"engine":"2.0T"},
+    {"make":"Ford","model":"Mustang","year":2020,"engine":"5.0L"}
+  ],
+  "common_symptoms": ["suspension warning after adaptive shock replacement","ride too stiff/soft after damper install","CDC/EDC module fault code","uneven damping side-to-side"],
+  "physical_solution": "Install correct adaptive damper part number, then code/calibrate damper module so ECU recognizes component and applies correct damping maps.",
+  "technical_solution": {
+    "uds_services": ["$2E WriteDataByIdentifier","$31 RoutineControl","$10 ExtendedDiagnosticSession"],
+    "elm327_feasibility": "Limited — coding generally requires OEM tools (ISTA/ODIS/GDS2/FDRS). ELM327 can often read DTCs but cannot complete secure coding on modern platforms.",
+    "server_free": false,
+    "preconditions": [
+      "Correct OEM or equivalent adaptive shock installed",
+      "Vehicle at curb weight on level surface",
+      "Battery support charger connected"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Verify damper type matches vehicle option code (CDC/EDC/MagneRide variant). Wrong part causes immediate coding mismatch."},
+      {"step":2,"type":"send_uds","description":"Read suspension module DTCs and identify coding-related faults before calibration."},
+      {"step":3,"type":"instruct_mechanic","description":"Run OEM coding/calibration routine (ISTA for BMW, ODIS for VW/Audi, GDS2 for GM, FDRS/IDS for Ford)."},
+      {"step":4,"type":"send_uds","description":"If supported, execute damper adaptation reset via $31 routine and store coding values via $2E."},
+      {"step":5,"type":"verify","description":"Road test over low/high frequency bumps and verify no warning lights, balanced damping response, and no return DTCs."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Adaptive Variable Suspension on select Lexus models may need Techstream calibration after replacement.",
+      "Honda/Acura": "Limited adaptive damper coding; most replacements are straightforward. SH-AWD adaptive variants may need HDS checks.",
+      "Nissan/Infiniti": "Electronic damping on select Infiniti models, CONSULT preferred for calibration.",
+      "Ford": "MagneRide-equipped models require IDS/FDRS service functions after replacement.",
+      "GM": "MagneRide/Continuous Damping Control often requires GDS2 relearn and calibration.",
+      "BMW": "EDC (Electronic Damper Control) coding via ISTA is standard on adaptive suspension replacements.",
+      "VW/Audi": "DCC/CDC coding typically requires ODIS, with SFD restrictions on newer platforms.",
+      "Stellantis": "Adaptive damping on select performance trims requires wiTECH routines.",
+      "Hyundai/Kia": "Electronically controlled suspension on some Genesis platforms may require GDS2 adaptation."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

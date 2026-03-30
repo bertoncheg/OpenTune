@@ -1,0 +1,110 @@
+{
+  "service_type": "window_sunroof_calibration",
+  "category": "electrical",
+  "title": "Power Window / Sunroof One-Touch Calibration Reset",
+  "description": "After battery disconnect, window motor replacement, or regulator replacement, the window control module loses its learned travel limits and disables one-touch open/close and anti-pinch protection. Recalibration restores full functionality and critical safety features.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "BMW",        "model": "5 Series G30",    "year": 2020, "engine": "B58 3.0T"},
+    {"make": "VW",         "model": "Jetta",           "year": 2019, "engine": "1.4T EA211"},
+    {"make": "Toyota",     "model": "Camry",           "year": 2021, "engine": "2.5L A25A-FXS"},
+    {"make": "Honda",      "model": "CR-V",            "year": 2022, "engine": "1.5T L15B7"},
+    {"make": "Ford",       "model": "Mustang",         "year": 2020, "engine": "5.0L Coyote"},
+    {"make": "Chevrolet",  "model": "Equinox",         "year": 2021, "engine": "1.5T LFV"},
+    {"make": "Nissan",     "model": "Rogue",           "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Chrysler",   "model": "Pacifica",        "year": 2021, "engine": "3.6L Pentastar"},
+    {"make": "Hyundai",    "model": "Tucson",          "year": 2022, "engine": "2.5L Smartstream G"}
+  ],
+  "common_symptoms": [
+    "window stops partway and reverses with no obstruction",
+    "one-touch up/down not working after battery disconnect",
+    "sunroof not fully opening or closing",
+    "anti-pinch triggering with no obstruction",
+    "window motor replaced but auto function inoperative"
+  ],
+  "physical_solution": "Physical calibration procedure (preferred, works on most vehicles without scan tool): Turn ignition ON. Lower window fully by holding switch DOWN until window fully open — hold extra 2-3 seconds after bottom travel limit. Then raise window fully by holding switch UP until window fully closed — hold extra 2-3 seconds after top travel limit. Release switch. Test one-touch function. For sunroof: TILT UP fully and hold 3 seconds, then SLIDE OPEN fully and hold 3 seconds, then SLIDE CLOSE fully and hold 3 seconds, then TILT DOWN fully and hold 3 seconds.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — Window Calibration",
+      "$2E WriteDataByIdentifier — travel limit write",
+      "$3E 00 TesterPresent"
+    ],
+    "elm327_feasibility": "Partial — Physical hold-switch method works on most vehicles without any scan tool. UDS $31 calibration routine accessible on older platforms without gateway. BMW FRM (0x62) requires ISTA for full calibration on F/G-series. VW door control units (0x42/0x43/0x44/0x45) accessible via $31 on pre-SFD vehicles (pre-2019).",
+    "server_free": true,
+    "preconditions": [
+      "battery fully charged (above 12.4V)",
+      "window motor and regulator properly installed",
+      "no mechanical obstruction in window track or seals",
+      "ignition ON"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "instruct_mechanic",
+        "description": "Check battery voltage — must be above 12.4V. Low voltage causes calibration to fail or learn incorrect travel limits, resulting in window stopping short or anti-pinch misfires."
+      },
+      {
+        "step": 2,
+        "type": "instruct_mechanic",
+        "description": "Physical method (attempt first — resolves 80% of cases without scan tool): with ignition ON, hold window switch DOWN until window reaches full open position. Continue holding switch DOWN for 3 seconds past the mechanical stop. Release."
+      },
+      {
+        "step": 3,
+        "type": "instruct_mechanic",
+        "description": "Then hold window switch UP until window reaches full closed position. Continue holding switch UP for 3 seconds past the mechanical stop. Release. Test one-touch by briefly pressing switch — window should traverse full travel and stop."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "If physical method fails, enter door module extended session. Window module addresses: VW/Audi front-left 0x42, front-right 0x43, rear-left 0x44, rear-right 0x45. BMW FRM 0x62. Toyota body ECU 0x750. Ford GEM/BCM 0x726. Nissan BCM 0x729. Hyundai BCM 0x7A5. GM BCM 0x40."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "$10 03 ExtendedDiagnosticSession at door/body module address. Send $3E 00 TesterPresent every 2 seconds to maintain session during calibration."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "$31 01 [window calibration routine ID per OEM] — initiates electronic calibration sequence. Module drives motor to both travel limits and records encoder positions. Routine typically completes in 10-20 seconds."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "Test one-touch function: briefly press switch — window should traverse full travel and stop. Test anti-pinch: apply slight upward resistance against window glass during auto-close — window must reverse within 100ms of obstruction detection."
+      },
+      {
+        "step": 8,
+        "type": "instruct_mechanic",
+        "description": "For sunroof calibration: enter sunroof/panoramic module in extended session ($10 03), execute $31 sunroof calibration routine per OEM, OR perform manual sequence: full tilt-up and hold 3 sec, full slide-open and hold 3 sec, full slide-close and hold 3 sec, full tilt-down and hold 3 sec."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Physical hold method works universally on all Toyota and Lexus models — no scan tool required. Power window master switch has built-in initialization logic. For moonroof/sunroof: press CLOSE until fully closed, then hold CLOSE switch 4+ seconds — audible beep confirms successful calibration. Lexus RX/LS $31 path available via body ECU at 0x750 for scan-tool path.",
+      "Honda/Acura": "Physical hold method works on all standard models. Driver door module accessible at 0x18 area sub-address. CR-V and Pilot sunroof: close fully, hold CLOSE switch 2 seconds, open fully, hold OPEN 2 seconds — sequence completes calibration. Pre-2018 ELM327 accessible for $31 routine.",
+      "Nissan/Infiniti": "Physical initialization: ignition ON, hold window DOWN switch 2 seconds after reaching full open, then hold UP switch 2 seconds after reaching full close. Nissan Infiniti sunroof: close fully, hold close button 3 seconds. Body Control Module (BCM) at 0x729 for scan-tool path.",
+      "Ford": "Physical method works on most Ford/Lincoln models. Some Explorer and Edge variants require IDS or FDRS for door module calibration routine. Mustang fastback sunroof requires FDRS on 2018+ (SGW-blocked). Pre-2018 ELM $31 accessible at approximately 0x757 (address varies by model).",
+      "GM": "Physical hold method works universally on all GM models — no scan tool required. Cadillac CT6 and Escalade panoramic sunroof may require GDS2 $31 routine on some model years. BCM at 0x40 for scan-tool path; window modules integrated into BCM on most GM platforms.",
+      "BMW": "FRM (Footwell Module) at 0x62 controls all power windows and sunroof. Physical method: hold window switch fully DOWN past travel limit, hold 5 seconds, then hold fully UP past top limit, hold 5 seconds — releases. On F/G-series, FRM initialization for a newly replaced FRM module requires ISTA — ELM327 can read DTCs but write/calibration operations are blocked by ZGW on these platforms. Sunroof controlled by SHD module at approximately 0x60.",
+      "VW/Audi": "Door control units: J386 (FL) at 0x42, J387 (FR) at 0x43, J388 (RL) at 0x44, J389 (RR) at 0x45. Sunroof/panoramic roof at J245 module 0x76. Physical method: hold DOWN full-open 4 seconds, then hold UP full-close 4 seconds. $31 01 routine ID 0x0038 accessible via ELM327 on pre-2019 vehicles. SFD security on 2019+ requires ODIS for module write operations.",
+      "Stellantis": "Physical hold method works on all Ram/Jeep/Chrysler models — hold switch 3 seconds past mechanical travel limit in each direction. Chrysler Pacifica sliding door window modules require wiTECH $31 calibration routine on 2018+ (SGW-blocked). Body domain controller integrated on WL-platform (2022+ Grand Cherokee) — wiTECH required.",
+      "Hyundai/Kia": "Physical method: hold DOWN switch 2 seconds past full-open position, then hold UP switch 2 seconds past full-close position. Genesis GV80 and GV70 SCCM sunroof module may require GDS-Mobile $31 calibration routine. BCM located at approximately 0x7A5. Pre-2019 ELM327 fully accessible for door module $31. Power folding mirror calibration is separate — performed via cluster menu or GDS-Mobile."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

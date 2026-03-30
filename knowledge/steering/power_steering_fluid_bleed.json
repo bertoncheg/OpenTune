@@ -1,0 +1,49 @@
+{
+  "service_type": "power_steering_fluid_bleed",
+  "category": "steering",
+  "title": "Hydraulic Power Steering Fluid Flush and Bleed",
+  "description": "Flushes and bleeds hydraulic power steering systems after hose, pump, or rack work. Not applicable to EPS-only vehicles.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2011,"engine":"2.5L 2AR-FE"},
+    {"make":"GM","model":"Silverado","year":2014,"engine":"5.3L"},
+    {"make":"Ford","model":"F-150","year":2013,"engine":"5.0L"},
+    {"make":"Nissan","model":"Frontier","year":2015,"engine":"4.0L VQ40DE"}
+  ],
+  "common_symptoms": ["whining power steering pump","foamy or aerated PS fluid","heavy steering after hose/rack replacement","groaning noise at full lock"],
+  "physical_solution": "Drain reservoir, refill with correct fluid, then bleed by turning lock-to-lock with front wheels off ground. Repeat until no bubbles and noise is gone.",
+  "technical_solution": {
+    "uds_services": ["N/A (physical hydraulic service)"],
+    "elm327_feasibility": "Limited — no scan commands required for hydraulic bleed. ELM327 not needed.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle uses hydraulic PS (not EPS)",
+      "Front wheels lifted off ground",
+      "Correct OEM fluid available"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Confirm vehicle uses hydraulic PS. If EPS (electric rack), stop — this procedure does not apply."},
+      {"step":2,"type":"instruct_mechanic","description":"Drain reservoir and return line. Reconnect lines and fill with correct fluid to MAX."},
+      {"step":3,"type":"instruct_mechanic","description":"Engine OFF: turn steering wheel lock-to-lock 10 times slowly. Check fluid level and top off."},
+      {"step":4,"type":"instruct_mechanic","description":"Start engine and idle. Turn lock-to-lock 5 more times. Do not hold at full lock more than 2 seconds."},
+      {"step":5,"type":"instruct_mechanic","description":"Inspect reservoir for foam/bubbles. If present, wait 5 minutes and repeat bleed cycle."},
+      {"step":6,"type":"verify","description":"Road test and verify no whining, no heavy steering, and no leaks at hose/rack connections."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Older Toyota/Lexus typically use ATF Dexron III equivalent in hydraulic PS systems. Many 2012+ switched to EPS.",
+      "Honda/Acura": "Use Honda Power Steering Fluid only (not ATF). Older Accord/CR-V use hydraulic systems.",
+      "Nissan/Infiniti": "Most older trucks/SUVs use ATF-based PS fluid. Frontier/Xterra commonly hydraulic.",
+      "Ford": "Older F-150 and body-on-frame platforms hydraulic. Use Mercon V/LV per model spec.",
+      "GM": "Trucks/SUVs commonly hydraulic through mid-2010s. Use GM approved PS fluid/ATF spec by model year.",
+      "BMW": "Older BMW may use CHF-11S/CHF-202 (NOT ATF). Check reservoir cap spec.",
+      "VW/Audi": "Hydraulic systems use Pentosin CHF variants on older models. Many newer MQB platforms are EPS.",
+      "Stellantis": "Many Ram/Jeep older platforms hydraulic; use ATF+4 on many models.",
+      "Hyundai/Kia": "Mostly EPS on modern platforms; older hydraulic systems use OEM PS fluid spec."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

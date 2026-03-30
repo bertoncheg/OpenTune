@@ -1,0 +1,51 @@
+{
+  "service_type": "cvt_fluid_reset",
+  "category": "transmission",
+  "title": "CVT Fluid Change and Adaptation Reset",
+  "description": "Clears CVT transmission learned adaptation values after fluid service so the TCM relearns shift logic with fresh fluid. Nissan Jatco CVT in particular requires this to prevent P17F0 and shudder after fluid change.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Nissan","model":"Altima","year":2019,"engine":"2.5L QR25DE","transmission":"Jatco JF017E CVT8"},
+    {"make":"Nissan","model":"Rogue","year":2018,"engine":"2.5L QR25DE","transmission":"Jatco CVT8"},
+    {"make":"Toyota","model":"RAV4","year":2019,"engine":"2.5L A25A","transmission":"K120 CVT"},
+    {"make":"Honda","model":"CR-V","year":2018,"engine":"1.5L L15B7","transmission":"Honda CVT"}
+  ],
+  "common_symptoms": ["P17F0 CVT line pressure low (Nissan post-fluid change)","CVT shudder after fluid service","harsh belt engagement after fluid change","CVT hesitation on takeoff after service"],
+  "physical_solution": "Change CVT fluid per OEM spec. Execute CVT adaptation reset routine. Follow conservative drive cycle: no WOT for first 500 miles. TCM relearns belt clamp pressure and pulley ratio mapping.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl (CVT adaptation clear)","$10 ExtendedDiagnosticSession","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — Nissan Jatco CVT: $31 adaptation reset accessible on older platforms (2010-2016) via CONSULT emulation addressing. Toyota K120: enhanced addressing needed, Techstream preferred. Honda CVT: drive-cycle adaptation only. 2019+ gateway restrictions on Nissan. Most CVT adaptation resets work best with OEM tool.",
+    "server_free": true,
+    "preconditions": [
+      "CVT fluid service physically completed with CORRECT OEM fluid (wrong fluid = immediate damage)",
+      "Correct fluid volume verified (check level per OEM dipstick or fill procedure)",
+      "Engine at operating temperature (CVT fluid at 40-45°C for level check)",
+      "No active CVT DTCs other than post-service adaptations",
+      "Parking brake applied"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"⚠️ FLUID WARNING: Use ONLY OEM-specified CVT fluid. Nissan: NS-3 or NS-2 (NEVER use Dexron or generic CVT fluid — immediate damage). Toyota: Toyota CVT Fluid (type FC). Honda: Honda HMMF or HCF-2. Wrong fluid voids warranty and causes immediate belt failure."},
+      {"step":2,"type":"instruct_mechanic","description":"Verify correct fluid volume. Most CVTs use fill-level check at specific fluid temperature (35-45°C): fluid should flow from check hole when correct level. Do not overfill."},
+      {"step":3,"type":"send_uds","description":"Enter TCM extended session: $10 03 to TCM address (Nissan TCM: 0x7E1, Toyota TCM: 0x7E1, Honda TCM: varies)."},
+      {"step":4,"type":"send_uds","description":"Execute CVT adaptation reset: $31 01 [CVT_ADAPT_ROUTINE_ID]. Routine clears learned belt clamp pressures, pulley ratios, and torque converter clutch adaptation maps."},
+      {"step":5,"type":"instruct_mechanic","description":"Post-reset drive cycle: GENTLE driving for first 50 miles. No sudden acceleration. No towing. Speed variation: 0→30→0→50→0→highway cruise. TCM relearns optimal belt pressure and ratio mapping across operating range."},
+      {"step":6,"type":"verify","description":"After 50 miles: verify no CVT shudder, no P17F0 return, smooth ratio changes. Monitor CVT fluid temperature if possible — should not exceed 120°C during break-in drive."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "K120 CVT on RAV4/Corolla/C-HR. Toyota CVT fluid (Toyota Genuine CVT Fluid FC). Techstream for adaptation reset. ELM327: requires enhanced addressing to TCM. Drive cycle self-adaptation works without reset on most Toyota CVTs.",
+      "Honda/Acura": "Honda CVT (Earth Dreams). HMMF or HCF-2 fluid. Honda recommends drive-cycle adaptation only — no scan-tool reset needed. First 50 miles gentle driving sufficient for relearn. Fit/HR-V: HMMF. CR-V/Accord: HCF-2.",
+      "Nissan/Infiniti": "Jatco CVT7/CVT8 — MOST CRITICAL OEM for adaptation reset. NS-3 fluid mandatory. P17F0 extremely common after fluid change without reset. CONSULT III+ for adaptation reset. ELM327 accessible on 2010-2016 via CONSULT emulation. 2017+: CONSULT preferred. CVT warranty considerations: always use NS-3.",
+      "Ford": "Powershift DCT (not true CVT) on Fiesta/Focus: adaptation reset via IDS after fluid service. True CVT: not widely used on Ford NA. Focus DCT: specific clutch adaptation procedure, not standard CVT.",
+      "GM": "No true CVT in mainstream GM lineup (as of 2024). Some older Saturn models had CVT — not relevant for current fleet.",
+      "BMW": "No CVT in BMW lineup. N/A — not applicable.",
+      "VW/Audi": "No CVT in main VW/Audi lineup (they use DSG). Audi Multitronic (01J) CVT: older models (2001-2012 A4/A6). Adaptation reset via VCDS. Audi Multitronic fluid: G 052 180 A2. Very old platform — limited current market relevance.",
+      "Stellantis": "No CVT in mainstream Stellantis lineup. Fiat 500 had CVT (Fiat C635/C513) — limited. Not relevant for primary procedure targeting.",
+      "Hyundai/Kia": "No CVT in main lineup. Hyundai uses IVT (Intelligent Variable Transmission) which is functionally CVT. IVT fluid: Hyundai genuine IVT fluid. GDS2 for adaptation. ELM327 $31 accessible pre-2019. Tucson/Sonata: IVT adaptation important after fluid service."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

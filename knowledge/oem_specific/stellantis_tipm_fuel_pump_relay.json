@@ -1,0 +1,43 @@
+{
+  "service_type": "stellantis_tipm_fuel_pump_relay",
+  "category": "oem_specific",
+  "title": "Stellantis TIPM Fuel Pump Relay Failure (2007-2016 Jeep/Chrysler/Dodge)",
+  "description": "The TIPM (Totally Integrated Power Module) internal fuel pump relay failure is the most common Jeep/Chrysler no-start and intermittent stall complaint. Covers diagnosis, bypass wire test, and TIPM replacement vs relay bypass fix.",
+  "oem_coverage": ["Stellantis"],
+  "vehicles_seen": [
+    {"make":"Jeep","model":"Grand Cherokee","year":2012,"engine":"3.6L Pentastar"},
+    {"make":"Dodge","model":"Durango","year":2013,"engine":"3.6L Pentastar"},
+    {"make":"Chrysler","model":"300","year":2012,"engine":"3.6L Pentastar"},
+    {"make":"Jeep","model":"Wrangler JK","year":2013,"engine":"3.6L Pentastar"},
+    {"make":"Ram","model":"1500","year":2012,"engine":"5.7L Hemi"}
+  ],
+  "common_symptoms": ["intermittent no-start (fuel pump not priming)","engine stalls randomly and won't restart for 15-30 minutes","hear starter but no fuel pump prime","fuel pump runs continuously after engine off","horn honking randomly or windows rolling down by themselves (TIPM controls everything)"],
+  "physical_solution": "Diagnose by listening for fuel pump prime on key-on. If no prime sound: bypass test at TIPM fuel pump relay socket. Confirm TIPM failure. Fix: TIPM replacement (expensive) or fuel pump relay external bypass kit (cheap, effective).",
+  "technical_solution": {
+    "uds_services": ["Mode $01 PID $42 (control voltage)","$19 02 FF (read DTCs from BCM/TIPM if accessible)","$22 ReadDataByIdentifier (fuel pump relay status if available)"],
+    "elm327_feasibility": "Partial — TIPM modules are on CAN-IHS (pins 3/11) — not accessible via standard ELM327. Diagnosis is primarily physical (listen for pump prime). Powertrain reads via standard ELM327 still work. P0230 (fuel pump circuit) readable via Mode $03.",
+    "server_free": true,
+    "preconditions": [
+      "Complaint: intermittent no-start or stall",
+      "Verify: listen for fuel pump prime buzz (2-second hum from fuel tank) on key-on",
+      "Check: battery voltage (TIPM issues worsen with low voltage)"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"LISTEN TEST: Turn key to ON (not start). Listen at fuel tank area for 2-second electric hum (fuel pump prime). If no hum = no fuel pump activation. Repeat 3x — if intermittent pump prime = classic TIPM relay failure."},
+      {"step":2,"type":"send_uds","description":"Read P0230 (fuel pump primary circuit): Mode $03 or $19 to PCM. P0230 stored during no-start event confirms fuel pump circuit failure detected by ECU. P0230 intermittent = TIPM relay sticking."},
+      {"step":3,"type":"instruct_mechanic","description":"BYPASS TEST: Locate TIPM under hood (right side fender, black module). Find C3 connector and fuel pump relay output pin (typically pin 85/87 area depending on model). Jump 12V directly to fuel pump feed wire. If pump primes and engine starts = TIPM confirmed bad."},
+      {"step":4,"type":"instruct_mechanic","description":"TIPM BYPASS KIT (permanent fix option): Install external relay bypass kit (EasyFix or equivalent, ~$20-40). Kit taps battery power and uses a standalone relay triggered by PCM fuel pump command signal. Bypasses TIPM relay entirely. Vehicle functions normally — permanent fix without replacing $1,200+ TIPM."},
+      {"step":5,"type":"instruct_mechanic","description":"TIPM REPLACEMENT (full fix): OEM TIPM replacement requires VIN-specific programming. Used TIPM requires wiTECH programming. Cost: $800-$1,500 parts + programming. Not necessary if bypass kit resolves complaint."},
+      {"step":6,"type":"instruct_mechanic","description":"OTHER TIPM FAILURES: Same TIPM controls: horn (random honking), windows (random roll-down), wipers (won't turn off), A/C (random activation). If customer reports multiple electrical gremlins = TIPM is the common failure module."},
+      {"step":7,"type":"verify","description":"After bypass install or TIPM replacement: verify fuel pump primes on every key-on. Drive cycle 30 minutes. Verify no P0230 return. Verify no other TIPM-controlled systems misbehaving. Test horn, windows, wipers."}
+    ],
+    "oem_notes": {
+      "Stellantis": "TIPM failure affects: 2007-2016 Jeep Grand Cherokee, Wrangler JK, Liberty, Compass, Patriot; 2007-2016 Chrysler 300, Town & Country; 2007-2016 Dodge Journey, Durango, Grand Caravan, Avenger, Charger; 2007-2012 Ram 1500/2500/3500. Class action lawsuits filed. Chrysler extended warranty on TIPM to 10 years/150k miles on some VINs (check NHTSA database by VIN before billing customer). Bypass kit is most cost-effective solution. Remanufactured TIPM available from Dorman (cost ~$400) as OEM alternative."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

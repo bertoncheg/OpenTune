@@ -1,0 +1,110 @@
+{
+  "service_type": "srs_airbag_reset",
+  "category": "electrical",
+  "title": "SRS/Airbag Fault Reset After Repair",
+  "description": "Clears SRS airbag diagnostic trouble codes after legitimate sensor or component replacement. CRITICAL SAFETY: Crash/deployment records are permanent and cannot be cleared — always flag module replacement requirement when deployment data is present.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "BMW",        "model": "3 Series G20",        "year": 2019, "engine": "B48 2.0T"},
+    {"make": "Toyota",     "model": "Camry",               "year": 2021, "engine": "2.5L A25A-FXS"},
+    {"make": "Honda",      "model": "Accord",              "year": 2020, "engine": "1.5T L15B7"},
+    {"make": "Ford",       "model": "F-150",               "year": 2022, "engine": "3.5L EcoBoost"},
+    {"make": "VW",         "model": "Golf",                "year": 2020, "engine": "1.4T EA211"},
+    {"make": "Hyundai",    "model": "Sonata",              "year": 2021, "engine": "2.5L Smartstream G"},
+    {"make": "Nissan",     "model": "Altima",              "year": 2020, "engine": "2.5L KR25DE"},
+    {"make": "Jeep",       "model": "Grand Cherokee",      "year": 2022, "engine": "3.6L Pentastar"},
+    {"make": "Chevrolet",  "model": "Malibu",              "year": 2019, "engine": "1.5T LFV"}
+  ],
+  "common_symptoms": [
+    "SRS warning light after accident sensor replacement",
+    "airbag light after clock spring replacement",
+    "seat belt pretensioner code after seat belt replacement",
+    "SRS light after steering wheel replacement"
+  ],
+  "physical_solution": "After replacing defective SRS component (seat belt pretensioner, crash sensor, clock spring, airbag module), connect scan tool to SRS module. Verify NO crash/deployment records are stored. If deployment record present — STOP, module must be replaced, not reset. If no deployment data, clear component fault code via scan tool. CRITICAL SAFETY RULES: (1) NEVER attempt to clear crash/deployment records (B0001-B0099 range typically). (2) If scan shows deployed airbag history — module replacement mandatory. (3) Crash data is a permanent safety record required by law in many jurisdictions. (4) SRS system must be live-tested after any repair before returning to customer.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$19 02 ReadDTCByStatusMask",
+      "$19 04 ReadDTCSnapshotRecord",
+      "$14 ClearDiagnosticInformation",
+      "$27 SecurityAccess (on some OEMs)"
+    ],
+    "elm327_feasibility": "Partial — SRS module address accessible on pre-gateway vehicles. Read operations ($19) accessible via ELM on most pre-2018 models. Clear ($14) may require security access ($27) on some OEMs — ELM limited for this step. NEVER attempt airbag reset without first confirming no deployment records exist.",
+    "server_free": false,
+    "preconditions": [
+      "replacement component properly installed and torqued",
+      "no deployment/crash records stored in module",
+      "ignition ON, 10+ seconds wait for SRS capacitor discharge",
+      "no active airbag deployment risk"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Address SRS module — Toyota 0x750, Honda SRS 0x18 (sub-address varies), BMW ACSM 0x1C, VW Airbag ECU 0x15, Ford RCM 0x738, GM SDM 0x54, Nissan Air Bag Sensor Unit 0x790, Stellantis ORC 0x744, Hyundai SRSCM 0x7A0"
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "$10 03 — enter ExtendedDiagnosticSession at SRS module address"
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "$19 02 FF — read all DTCs with any status mask. CRITICAL: examine full DTC list for deployment records before proceeding to any clear command"
+      },
+      {
+        "step": 4,
+        "type": "instruct_mechanic",
+        "description": "CHECK FOR DEPLOYMENT RECORDS — any codes in B0001-B0050 range with confirmed/testFailed status may indicate airbag deployment. If found: STOP, advise module replacement. Do NOT attempt to clear deployment data under any circumstances."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "$19 04 [DTC high byte] [DTC mid byte] [DTC low byte] 01 — read freeze-frame snapshot for any suspicious DTCs to check crash event data (impact force, pyrotechnic squib resistance delta, deployment loop voltage)"
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "$14 FF FF FF — clear DTCs only after confirming no deployment data present. Some OEMs require $27 security access seed/key exchange before this command is permitted."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "$19 02 FF — re-read DTCs to confirm successful clear. Any remaining codes require further diagnosis of the physical SRS circuit."
+      },
+      {
+        "step": 8,
+        "type": "verify",
+        "description": "Cycle ignition OFF then ON. Verify SRS warning light performs self-test blink then extinguishes within 5 seconds. Road test — verify SRS light remains OFF. Confirm all belt pretensioners reconnected. Document repair in vehicle history."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "SRS ECU at address 0x750. Clear via $10 03 then $14 FF FF FF. Toyota SRS modules store impact data separately — check DTC B1610-B1615 range for deployment history. Lexus requires Techstream for ASSTR (airbag system) check on 2018+ models with advanced SRS architecture.",
+      "Honda/Acura": "SRS module at 0x18 (sub-address varies by model). SRS-II system on 2013+. DTCs B0020-B0028 indicate squib circuits — verify not deployed before any clear attempt. Clock spring replacement very common — B1243/B1244 codes. ELM accessible on pre-2017 vehicles.",
+      "Nissan/Infiniti": "Air bag diagnosis sensor unit at 0x790. Clear via extended session $10 03 then $14. B1000-B1003 codes indicate crash data stored — module replacement required, not reset. Most common fault: seat belt pretensioner code B1036 after minor collision.",
+      "Ford": "Restraint Control Module (RCM) at 0x738. Ford SGW blocks external tool access on 2018+ — requires Ford FDRS or SGW bypass. B0001 is the deployment indicator — if set, RCM must be replaced. B0002 indicates seat belt pretensioner deployed. RCM cannot be cleared after deployment by any means.",
+      "GM": "Sensing and Diagnostic Module (SDM) at 0x54. GM uses proprietary DTC format within B-code range. B0012-B0019 are frontal crash sensor codes. If AIR BAG DEPLOYED message appears in Driver Information Center (DIC), SDM replacement is mandatory. ELM CAN accessible on most GM platforms pre-2018.",
+      "BMW": "ACSM (Advanced Crash Safety Module) at 0x1C on F-series platforms. ZGW gateway blocks extended diagnostic sessions without ISTA on F/G-series. BMW crash data is fully protected — if any crash event has been recorded in ACSM, module must be replaced per BMW repair instructions. Fault codes use AIRBAG01 through AIRBAGxx numbering.",
+      "VW/Audi": "Airbag ECU (J234) at address 0x15. SFD (Security Feature Disable) protection on 2019+ blocks $14 clear command without ODIS authorization token. Crash data DTC 01217 (squib circuit triggered and recorded) indicates deployment — module replacement required. J533 CAN gateway present on all MQB platforms.",
+      "Stellantis": "Occupant Restraint Controller (ORC) at 0x744. 2018+ SGW blocks all external write access — wiTECH 2.0 or authorized SGW bypass required. B0001-B0004 are deployment indicator codes. Pre-2018 ELM327 accessible for both read and clear. Crash data protection is federally mandated.",
+      "Hyundai/Kia": "SRS Control Module (SRSCM) at 0x7A0. B1000-B1010 range indicates deployment data codes. Pre-2019 ELM327 fully accessible. 2019+ CAN gateway blocks write operations. GDS-Mobile recommended for complete SRS reset on 2019+ platforms. Genesis GV80 requires dealer-level security access for SRS module interaction."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

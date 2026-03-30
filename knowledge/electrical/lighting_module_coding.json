@@ -1,0 +1,51 @@
+{
+  "service_type": "lighting_module_coding",
+  "category": "electrical",
+  "title": "Exterior Lighting / DRL / Adaptive LED Module Coding",
+  "description": "After headlight assembly replacement on vehicles with adaptive, matrix, or LED lighting systems, the lighting module requires coding to match the new component. Simpler OEMs are plug-and-play; German OEMs require ISTA/ODIS.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"7 Series","year":2018,"engine":"3.0L B58"},
+    {"make":"VW","model":"Touareg","year":2019,"engine":"3.0T"},
+    {"make":"Audi","model":"A6","year":2018,"engine":"3.0T"},
+    {"make":"Ford","model":"F-150","year":2019,"engine":"3.5L EcoBoost"}
+  ],
+  "common_symptoms": ["adaptive headlight fault after assembly replacement","DRL stays on or stays off after headlight swap","headlight leveling fault","matrix light function lost after replacement","coding fault B-code after headlight work"],
+  "physical_solution": "For OEMs requiring coding: use OEM tool to code new component variant into FEM/BCM. Simpler OEMs: plug-and-play with no coding required. Perform headlight aiming after any headlight work.",
+  "technical_solution": {
+    "uds_services": ["$2E WriteDataByIdentifier (component coding)","$31 RoutineControl (headlight leveling calibration)","$10 ExtendedDiagnosticSession"],
+    "elm327_feasibility": "Partial — Most Toyota/Honda/Nissan/GM/Stellantis headlight replacements: no coding required, plug-and-play. BMW FEM coding: ISTA required on F/G-series. VW/Audi FEM coding: ODIS required on 2016+ with adaptive/matrix. Ford headlamp leveling calibration: IDS on newer, ELM327 $31 on older. Hyundai/Kia DRL: ELM327 accessible pre-2019.",
+    "server_free": true,
+    "preconditions": [
+      "New headlight assembly physically installed and connected",
+      "All connectors fully seated (adaptive headlight connectors are multi-pin)",
+      "No physical damage to wiring harness",
+      "Battery charged"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"DETERMINE IF CODING NEEDED: Standard halogen/LED non-adaptive headlights on any OEM: NO coding required. Adaptive/steerable headlights on BMW/VW/Audi 2016+: coding REQUIRED. Matrix LED on BMW/VW/Audi 2018+: coding REQUIRED. AFS (Adaptive Front lighting System) on Honda/Toyota: Techstream/HDS coding may be needed."},
+      {"step":2,"type":"send_uds","description":"Read lighting-related DTCs: $19 02 FF to FEM/BCM (BMW FEM 0x00, VW FEM 0x55). Any B-code related to headlight variant mismatch indicates coding required."},
+      {"step":3,"type":"instruct_mechanic","description":"BMW PROCEDURE: ISTA → Vehicle → Headlight → Component coding. Select correct headlight variant (halogen/bi-xenon/full LED/LaserLight). Code variant to FEM. Then: Service Functions → Headlight Vertical Aim Calibration. Applies to F-series and G-series."},
+      {"step":4,"type":"instruct_mechanic","description":"VW/AUDI PROCEDURE: ODIS → Component coding → Front electronics (J519/J623). Select headlight type from coding menu. Pre-2019: VCDS coding channel also works. After coding: Basic Settings → Headlight range control calibration."},
+      {"step":5,"type":"send_uds","description":"Ford headlamp leveling calibration: $31 01 [HEADLAMP_LEVEL_ROUTINE] to BCM after F-150/Edge/Explorer headlight replacement. Aligns automatic leveling to neutral position. ELM327 accessible pre-2018."},
+      {"step":6,"type":"instruct_mechanic","description":"HEADLIGHT AIMING (ALL VEHICLES): After any headlight replacement, aim headlights regardless of coding. Use aiming screen or alignment targets at 25ft. Adjust vertical aim screw. Left headlight: aim cutoff 2 inches below horizontal. Right headlight: slight upward kick on right side of cutoff."},
+      {"step":7,"type":"verify","description":"Verify: no B-codes related to lighting. Adaptive function (swiveling) operates during test drive turns. DRL activates at engine start. Headlight leveling adjusts under load. Auto high-beam function (if equipped) operates correctly."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Most Toyota/Lexus: plug-and-play. AFS (Adaptive Front-lighting System) on Lexus LS/RX: HDS/Techstream calibration after replacement. HID auto-leveling sensor calibration after headlight or leveling sensor work. ELM327 $31 accessible.",
+      "Honda/Acura": "Most Honda: plug-and-play. Acura MDX/RDX with AFS: HDS calibration required. LED headlights on 2019+ Accord: plug-and-play. No coding for standard replacement.",
+      "Nissan/Infiniti": "Most Nissan: plug-and-play. Infiniti adaptive LED (QX80/Q60): CONSULT III+ calibration. Pre-2015: no coding needed.",
+      "Ford": "Most Ford: plug-and-play. Adaptive headlights on MKZ/Continental: IDS coding. F-150 with auto-leveling: IDS leveling calibration on 2018+. ELM327 $31 works on older for leveling calibration.",
+      "GM": "Most GM: plug-and-play. Cadillac with IntelliBeam (auto high-beam): calibration via GDS2. Chevy/GMC standard replacement: no coding.",
+      "BMW": "MOST COMPLEX: Every headlight replacement on F/G-series requires ISTA coding. FEM stores headlight variant. Wrong coding = permanent faults, no adaptive function. Matrix/LaserLight on G7/i8: ISTA absolutely required. F-series bi-xenon: ISTA coding + leveling calibration.",
+      "VW/Audi": "Second most complex: ODIS required for any adaptive/IQ.Light system 2018+. Pre-2016 halogen: no coding. 2016-2018 LED with AFS: VCDS coding works. 2019+: ODIS + SFD. Audi Matrix LED: ODIS mandatory.",
+      "Stellantis": "Most Stellantis: plug-and-play. Ram 1500 with adaptive headlights: wiTECH calibration. Jeep Grand Cherokee with LED: plug-and-play on pre-2022.",
+      "Hyundai/Kia": "Most Hyundai/Kia: plug-and-play. Genesis G80/G90 with adaptive LED: GDS2 calibration. DRL coding: ELM327 $2E accessible pre-2019 for DRL enable/disable."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

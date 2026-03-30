@@ -1,0 +1,47 @@
+{
+  "service_type": "no_start_pid_bundle",
+  "category": "diagnostics",
+  "title": "No Start Diagnostic PID Bundle",
+  "description": "Captures the critical live data and sensor readings needed to diagnose a no-start condition. Covers: cranks-but-won't-start vs won't-crank. All via ELM327.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["cranks but won't start","no start after sitting overnight","starts then immediately stalls","intermittent no-start"],
+  "physical_solution": "Use PID bundle to identify which system is at fault: fuel (pressure/crank signal), spark (coil/crank), air (throttle), or security (immo). Isolate before replacing parts.",
+  "technical_solution": {
+    "uds_services": ["Mode $01 (multiple PIDs)","$19 ReadDTCInformation","Mode $02 freeze frame"],
+    "elm327_feasibility": "Full — all PIDs in this bundle are Mode $01 standard. Key-on readings available without engine running.",
+    "server_free": true,
+    "preconditions": [
+      "Battery fully charged (12.4V+ static, 10V+ cranking)",
+      "Key ON (KOEO) first, then KOEC (Key On Engine Cranking) readings",
+      "Note: if immobilizer active, security light will flash during crank"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"BATTERY/VOLTAGE: Mode $01 PID $42 (control module voltage). KOEO: should be 12.4V+. During cranking: should not drop below 9.5V. Below 9.5V cranking = weak battery or starter draw. Fix charging system before diagnosing no-start."},
+      {"step":2,"type":"send_uds","description":"CRANK SIGNAL: Mode $01 PID $0C (RPM). During cranking: should show 150-300 RPM. If PID shows 0 RPM while starter is engaged = no crank signal to ECU (CKP sensor fault, timing belt/chain broken, or ECU no-power)."},
+      {"step":3,"type":"send_uds","description":"COOLANT TEMP: Mode $01 PID $05. Cold start: should show actual ambient temp (proves sensor reading correctly). If reading -40°C or 150°C+ = sensor fault causing incorrect fueling strategy. -40°C = sensor open circuit."},
+      {"step":4,"type":"send_uds","description":"THROTTLE POSITION: Mode $01 PID $11. KOEO with foot off pedal: should be 0-15%. If 100% = 'clear flood mode' — ECU thinks pedal is floored, cuts fuel. Verify actual pedal position. If mismatch = TPS or APP sensor fault."},
+      {"step":5,"type":"send_uds","description":"FUEL PRESSURE (if available): Mode $01 PID $0A. KOEO (before cranking): fuel pump should prime — pressure should be 40-60 psi within 2 seconds of key-on. If pressure stays at 0 = pump not priming (relay, fuse, pump failure)."},
+      {"step":6,"type":"send_uds","description":"READ ALL DTCs: $19 02 FF to ECM. Note any P0335/P0336 (CKP), P0340/P0341 (CMP), P0230 (fuel pump), U-codes (network). No codes + cranks-no-start often = spark or fuel (not ECU-detectable without running)."},
+      {"step":7,"type":"instruct_mechanic","description":"SECURITY CHECK: Does security light flash during crank? If yes = immobilizer active. Key programming issue or transponder fault. See immobilizer_key_programming.json. If no security indicator = immo not the cause."},
+      {"step":8,"type":"instruct_mechanic","description":"SPARK TEST: Remove one coil, attach test spark plug, ground spark plug body to engine block, crank — should see bright blue spark. Orange/yellow weak spark = coil fault. No spark = no ignition trigger (CKP or ignition module)."},
+      {"step":9,"type":"verify","description":"After identifying and fixing root cause: verify PID $0C shows 150-300 RPM cranking, $42 voltage stays above 9.5V, $05 reads realistic temp, $11 throttle near 0%, fuel pressure primes on key-on. Engine should start."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Common no-start causes: crankshaft position sensor (P0335), fuel pump relay (check IGSW relay), immobilizer (security light pattern). D-4ST engines: check both LP and HP fuel systems.",
+      "Honda/Acura": "Common: main relay failure (older models), CKP sensor. PGM-FI relay on older Accord/CR-V is notorious. Check under dash relay box. Mode $01 PID $0C during crank shows 0 RPM if CKP failed.",
+      "Nissan/Infiniti": "Common: IPDM-ER (Intelligent Power Distribution Module) fuel pump relay failure. CKP sensor on VQ engines. CVT no-start: some CVTs won't allow start if P17F0 is active.",
+      "Ford": "Common: EcoBoost fuel pump low pressure (no-start after hot soak). PATS immo fault (most common after battery disconnect). Mode $01 PID $42 during crank — Ford drops to 8V with failing battery.",
+      "GM": "Common: passlock/passkey immo (security light on = 10-minute learn procedure). Crankshaft position sensor on V8s (P0336). Check SECM (Security Control Module) DTC alongside engine DTCs.",
+      "BMW": "Common: CAS module immo sync after battery disconnect. HP fuel pump no-start. DME power supply relay. Mode $01 RPM shows 0 if CKP failed during crank.",
+      "VW/Audi": "Common: EVAP/leak detection pump codes interfering with start. Immobilizer PIN issue after cluster replacement. EA888: HPFP failure causes crank-no-start with fuel system lean codes.",
+      "Stellantis": "Common: TIPM (Totally Integrated Power Module) fuel pump relay failure on 2007-2016 Jeep/Chrysler — extremely common. Security light flash = SKIM immo active. TIPM relay clicking = confirm fuel pump priming.",
+      "Hyundai/Kia": "Common: crankshaft position sensor failure. Theta II: engine seizure causes no-start (check oil pressure history). Smart key battery dead (fob battery, not car battery). Mode $01 PID $0C shows 0 RPM if CKP failed."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

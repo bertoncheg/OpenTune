@@ -1,0 +1,119 @@
+{
+  "service_type": "dtc_reference_powertrain",
+  "category": "dtc",
+  "title": "Powertrain DTC Reference Guide (P-Codes)",
+  "description": "Comprehensive reference for SAE J2012 powertrain diagnostic trouble codes covering P0xxx through P3xxx families. Provides severity ratings, common root causes, and ELM327 read accessibility for each code range to guide efficient diagnosis.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "Corolla E210", "year": 2020, "engine": "2.0L M20A-FKS"},
+    {"make": "Ford", "model": "Mustang GT", "year": 2019, "engine": "5.0L Coyote V8"},
+    {"make": "BMW", "model": "528i F10", "year": 2016, "engine": "2.0L N20 Turbo"},
+    {"make": "Honda", "model": "Accord Sport", "year": 2018, "engine": "1.5L L15B7 Turbo"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2017, "engine": "2.4L Theta II GDI"},
+    {"make": "GM", "model": "Silverado 1500", "year": 2020, "engine": "5.3L L84 V8"}
+  ],
+  "common_symptoms": [
+    "Check engine light (MIL) illuminated — solid or flashing",
+    "Reduced power / limp mode activated",
+    "Failed OBD-II emissions test",
+    "Rough idle, misfire, or stumble under acceleration",
+    "Poor fuel economy or excessive fuel smell"
+  ],
+  "physical_solution": "Connect scan tool and read all active and pending DTCs. Note freeze frame data at fault moment before clearing. Cross-reference code range below for common causes and severity. Clear only after root cause identified and repair confirmed. Verify repair with appropriate drive cycle per readiness_monitors.json.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$19 02 ReadDTCByStatusMask — read all DTCs with status byte",
+      "$19 04 ReadDTCSnapshotRecordByDTCNumber — enhanced freeze frame",
+      "$14 ClearDiagnosticInformation — clear DTCs",
+      "$01 OBD-II Mode 01 ReadData — live PIDs",
+      "$03 OBD-II Mode 03 RequestEmissionRelatedDTCs"
+    ],
+    "elm327_feasibility": "Full — All P0xxx SAE standard codes readable via ELM327 OBD-II Mode $03. P1xxx OEM-specific codes readable via UDS $19 02 with extended session on most platforms using physical address 0x7E0 for ECM. Freeze frame via Mode $02 fully accessible via ELM. ELM327 cannot access body or chassis modules for any P-codes assigned to those controllers (e.g. P0850 park-neutral switch if in BCM). Gateway restrictions do not block powertrain read access on any supported OEM.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle ignition ON, engine may be running or off per diagnosis need",
+      "Scan tool connected to OBD-II DLC (J1962 connector, pins 6/14 for CAN)",
+      "Note MIL status: continuous (confirmed) vs pending vs permanent DTC",
+      "Record all DTCs before clearing — photograph cluster if needed"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Read all current DTCs: send 19 02 FF to ECM physical address (0x7E0 most OEMs, 0x700 Toyota, 0x12 BMW DME) to get all DTCs with status mask. Also send OBD-II broadcast: AT SH 7DF, then 03 to get standard emissions P-codes. Record all codes with status bytes before any repair or clear."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "P0100-P0199 MAF/Airflow — Severity: MONITOR (usually driveable). Common codes: P0101 MAF range/performance, P0102 MAF low, P0103 MAF high, P0171/P0174 lean (MAF under-read + vacuum leak common cause). Check MAF voltage at idle: 0.5-1.0V typical, at WOT: 4.0-4.9V. STFT/LTFT both positive and lean confirms MAF under-reading or unmetered air. Check intake resonator, air box, hose between MAF and throttle body for cracks."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "P0200-P0299 Fuel/Injectors — Severity: IMMEDIATE on P0201-P0208 (injector circuit codes cause misfire risk). P0201-P0208: individual injector circuit — check resistance (12-16 ohm typical port injector, 10-16 ohm GDI injector), check wiring harness for chafe. P0251-P0254: injection pump (diesel HPFP concern — low fuel pressure, contaminated fuel). Run injector balance test to identify contributing cylinder (reference injector_balance_test.json if available)."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "P0300-P0399 Misfire — Severity: IMMEDIATE on P0300 random misfire or any misfire with flashing MIL (catalytic converter overtemp risk — stop driving immediately if MIL flashing). P0301-P0308 cylinder-specific. Diagnosis path: swap coil pack to adjacent cylinder (if code follows coil = coil fault). Check spark plug condition. Compression test (should be 150+ psi, <15% variation bank-to-bank). Check injector contribution. Distinguish lean misfire vs mechanical: lean misfire shows lean fuel trims, improves with propane enrichment test."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "P0400-P0499 Emissions/EVAP/EGR — Severity: INFORMATION/MONITOR (not a drive safety concern, emissions only). P0440-P0458: EVAP system — gas cap, purge solenoid, vent valve, canister. Reference evap_system_test.json for smoke test procedure. P0400-P0408: EGR flow codes — check EGR valve operation, carbon buildup. P0420/P0430: catalyst efficiency — compare upstream vs downstream O2 sensor waveforms. Downstream should be stable (not switching) on good catalyst."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "P0500-P0599 Speed Sensors/Idle — Severity: MONITOR to IMMEDIATE depending on code. P0500: VSS (vehicle speed sensor) — check wheel speed sensor at transmission output or at individual wheel. P0505: IAC/idle control system. P0507: high idle — check throttle body for carbon deposits (reference throttle_idle_relearn.json). P0562/P0563: battery voltage codes — check charging system before condemning ECM."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "P0600-P0699 ECU/Communications — Severity: IMMEDIATE. P0600: serial communications link error — CAN bus fault. Check CAN bus differential voltage: 2.5V +/- 0.5V between CAN Hi (pin 6) and CAN Lo (pin 14). P0606: ECM processor fault — verify battery voltage at ECM, all grounds torqued to spec (chassis ground, intake manifold ground). P0700: TCM fault present — read TCM DTCs separately."
+      },
+      {
+        "step": 8,
+        "type": "send_uds",
+        "description": "P0700-P0799 Transmission — Severity: IMMEDIATE if drivability affected. P0700 is a relay code only — read TCM separately for specific fault. P0715: input shaft speed sensor. P0720: output shaft speed sensor. P0730: incorrect gear ratio — check ATF level and condition first. P0740-P0744: torque converter clutch (TCC) — shudder under light throttle, scan TCC slip RPM. P0760-P0773: solenoid circuit faults. Reference torque_converter_clutch_test.json if available."
+      },
+      {
+        "step": 9,
+        "type": "send_uds",
+        "description": "P1xxx OEM-specific codes: not SAE standardized — meanings differ per manufacturer. Read via $19 02 with extended session at ECM physical address. Reference oem_notes section below for P1xxx coverage by OEM. Never clear P1xxx codes without consulting OEM technical service bulletins — some P1xxx codes indicate critical mechanical concerns (e.g. Hyundai P1326 — do not clear, check for engine damage recall)."
+      },
+      {
+        "step": 10,
+        "type": "send_uds",
+        "description": "After repair verification: clear all DTCs with $14 FF FF FF FF broadcast. Perform appropriate drive cycle for monitor readiness (reference readiness_monitors.json). Re-read DTCs after drive cycle with 19 02 FF to confirm no codes returned. Verify all required OBD-II monitors show READY before releasing vehicle for emissions test."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota ECM at CAN address 0x700 (physical) / 0x7E8 (functional response). P0xxx fully accessible via OBD-II Mode $03. Toyota P1xxx range: P1300-P1349 ignition (igniter circuit per cylinder), P1130/P1150 A/F sensor ratio bank 1/2 (Lexus lean/rich indication), P1349 VVT-i oil control valve stuck. Access P1xxx via $19 02 with extended session at 0x700. Toyota uses Toyota-specific DTCs in parallel with SAE codes — Techstream shows both.",
+      "Honda/Acura": "Honda ECM at 0x7E0 (send) / 0x7E8 (response). Full OBD-II compliance. Honda P1xxx: P1259 VTEC system malfunction (check oil pressure switch, oil level, variable valve timing solenoid), P1163/P1166 A/F sensor response range bank 1/2, P1361 TDC position sensor intermittent. Access via $19 at 0x7E0 with $10 03. ELM327 reads all Honda P1xxx without gateway restriction.",
+      "Nissan/Infiniti": "Nissan ECM at 0x7E0. P0xxx fully accessible. Nissan P1xxx: P1273/P1283 A/F sensor lean/rich (bank 1/2), P1800 CVTC (continuously variable valve timing control) system fault, P1564 ASCD (cruise control) steering switch input malfunction — very common on Infiniti QX models. Nissan GT-R 0x7E0 has extensive P1xxx range for ATTESA and launch control systems.",
+      "Ford": "Ford PCM at 0x7E0. P0xxx via Mode $03 or $19. Ford P1xxx: P1000 OBD-II readiness monitors incomplete (normal post-clear, not a fault — appears after DTC clear or battery disconnect), P1260 anti-theft fuel cut active (immobilizer), P1450 EVAP canister unable to bleed fuel tank vacuum (common — check purge solenoid and vent valve). Ford P2xxx used heavily for ETC throttle body codes. FDRS for P3xxx dealer-specific codes.",
+      "GM": "GM ECM/PCM at 0x7E0 / TCM at 0x7E1. P0xxx via Mode $03. GM P1xxx: P1133/P1153 HO2S insufficient switching bank 1/2 sensor 1 (oxygen sensor lazy), P1174/P1175 A/F imbalance. GM uses $19 02 via enhanced addressing for P1xxx. GDS2 provides full OEM description. ELM327 reads all P0xxx, most P1xxx accessible via $19 with physical address.",
+      "BMW": "BMW DME at 0x12 (send) / 0x1A (response) on older, varies on newer. BMW stores P-codes in SAE format AND internal BMW fault codes (e.g. 29CD = P0300). Both stored simultaneously — ISTA shows BMW internal codes, ELM reads SAE OBD-II codes. BMW P1xxx via $19 04 to 0x12: P1421 secondary air injection bank 1 (common on E46/E90 M54/N52), P1083/P1085 fuel control at rich limit bank 1/2. ZGW does NOT block powertrain reads.",
+      "VW/Audi": "VW/Audi ECM at CAN address 0x01 (J533 gateway routes to 0x7E0 functional). VAG uses 5-digit internal fault codes alongside SAE P-codes: internal code 17xxx = P1xxx, 16xxx = P0xxx approximately. VCDS shows both formats. P1xxx via $19 at 0x01 with extended session: P1177/P1178 mixture adaptation bank 1 at rich/lean limit (injector wear or fuel pressure), P1296 coolant temp sensor signal correlation (check for air in cooling system). ODIS required for Audi TFSI carbon cleaning-related P1xxx on GDI engines.",
+      "Stellantis": "Stellantis PCM at 0x7E0. P0xxx via Mode $03 — fully accessible. SGW (2018+) does NOT block powertrain reads. P1xxx: P1004 short runner valve position sensor (common on 3.6L Pentastar — runner stuck), P1495 leak detection pump solenoid fault, P1521 engine oil type incorrect. TIPM (Totally Integrated Power Module) generates P06xx communication codes frequently on pre-2015 Jeep/Ram platforms — check TIPM connectors and grounds before replacing. wiTECH for full P3xxx coverage.",
+      "Hyundai/Kia": "Hyundai/Kia ECM at 0x7E0. Full OBD-II compliance. P1xxx: P1326 KSDS (Knock Sensor Detection System) — THIS IS CRITICAL. P1326 on 2011-2019 Theta II 2.0T/2.4L engines indicates engine bearing damage has been detected. DO NOT clear P1326 without inspecting for engine knock and checking for active recall (campaign 953). Hyundai extended engine warranty covers Theta II — verify VIN in recall database before any repair. P1326 is not a standard knock sensor code — it indicates the vehicle's own knock detection algorithm has flagged bearing failure."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,114 @@
+{
+  "service_type": "high_pressure_fuel_pump",
+  "category": "fuel_system",
+  "title": "High Pressure Fuel Pump (HPFP) Diagnostic — GDI Engines",
+  "description": "Diagnoses high-pressure fuel pump failures on Gasoline Direct Injection engines using live data comparison of rail pressure vs target across the RPM range. HPFP failures cause lean/no-start conditions that worsen with engine warm-up due to fuel vapor in the high-pressure circuit.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "VW", "model": "Golf GTI", "year": 2018, "engine": "2.0T EA888 GDI"},
+    {"make": "BMW", "model": "335i", "year": 2017, "engine": "N55"},
+    {"make": "Ford", "model": "Fusion", "year": 2019, "engine": "2.0T EcoBoost"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2021, "engine": "2.5T Smartstream"},
+    {"make": "GM", "model": "Equinox", "year": 2021, "engine": "1.5T Ecotec"},
+    {"make": "Toyota", "model": "RAV4", "year": 2020, "engine": "2.5L 2AR-FXE"},
+    {"make": "Audi", "model": "A4", "year": 2020, "engine": "2.0T EA888"},
+    {"make": "Stellantis", "model": "Jeep Cherokee", "year": 2020, "engine": "2.0T Hurricane"},
+    {"make": "Honda", "model": "Accord", "year": 2020, "engine": "2.0T K20C4"}
+  ],
+  "common_symptoms": [
+    "P0087/P008A/P008B/P00C6 codes active",
+    "hard start hot soak condition",
+    "engine stumble or surge at steady throttle",
+    "worsening performance as engine warms up",
+    "fuel trim lean at WOT",
+    "rough cold start with multiple HPFP pulses audible",
+    "metallic ticking noise from fuel pump area"
+  ],
+  "physical_solution": "Monitor HP fuel rail pressure via scan tool during cold start (where symptoms often absent) and after hot soak restart. Compare HP rail pressure to target/commanded value across RPM range. HPFP on GDI is cam-driven — test at various RPMs. LP fuel pump pressure (in-tank) must be confirmed good first before condemning HPFP. After replacement: adaptation reset recommended.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$22 ReadDataByIdentifier — HP fuel pressure DID",
+      "$22 ReadDataByIdentifier — LP fuel pressure DID",
+      "$22 ReadDataByIdentifier — fuel pressure target DID",
+      "$31 01 RoutineControl — fuel pressure adaptation reset",
+      "$19 02 ReadDTCByStatusMask"
+    ],
+    "elm327_feasibility": "Partial — Mode $01 PID $0A gives low-resolution fuel pressure (3 kPa/bit, max 765 kPa). OEM-specific HP fuel pressure DIDs via $22 require ECM access on pre-gateway vehicles. P0087/P008A accessible via Mode $03 on all ELM adapters. Gateway blocks $22 on F/G-series BMW (ZGW), 2019+ VW (SFD). Most HP fuel pressure diagnosis requires OEM enhanced PIDs.",
+    "server_free": false,
+    "preconditions": [
+      "LP fuel pressure confirmed adequate (50-80 psi)",
+      "fuel filter not restricted",
+      "injector circuits verified OK",
+      "engine hot soak condition reproduced if possible"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "$19 02 FF — confirm DTC codes: P0087 (rail pressure low), P008A (LP circuit low), P008B (LP circuit high), P00C6 (LP pressure fuel injector control). Note: P008A suggests LPFP failure; P0087 with adequate LP pressure suggests HPFP failure."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "$22 [LP_PRESSURE_DID] — read low-pressure fuel supply value. Target: 50-80 psi at all operating conditions. If LP < 40 psi at idle or drops under load: in-tank pump failing — replace LPFP before further HPFP diagnosis."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "$22 [HP_PRESSURE_DID] — stream HP rail pressure at idle (target varies by OEM: 363-2175 psi at idle). At 2000 RPM target typically 1000-1500 psi. At WOT target 2000-3000 psi. HPFP is cam-driven — pressure increases with RPM."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "$22 [HP_TARGET_DID] — read commanded HP target pressure alongside actual. If actual trails commanded by more than 20% at any RPM point: HPFP output is inadequate for demand."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Hot soak test — record HP pressure cold (should be high at idle). Drive until fully warm, turn off for 15-30 minutes. Restart and immediately record HP pressure. HPFP failure often worst on hot restart due to vapor lock in pump. If HP < 500 psi on restart with LP confirmed good: HPFP suspect."
+      },
+      {
+        "step": 6,
+        "type": "instruct_mechanic",
+        "description": "Cam follower inspection (VW/Audi/BMW/Ford) — HPFP cam follower at top of HPFP housing. Remove pump, extract follower. Check follower face for wear (concave depression > 0.5mm = replace follower AND HPFP). Follower wear causes progressive HP pressure loss over time."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "After HPFP replacement: $31 01 [FUEL_ADAPT_RESET_ROUTINE] — reset fuel pressure adaptation map in ECM. Clear all DTCs. Crank engine 3-4 times for 5 seconds each to prime HP circuit before extended crank."
+      },
+      {
+        "step": 8,
+        "type": "verify",
+        "description": "Monitor HP pressure on new pump — should reach target pressure within 1-2 seconds of start. Verify P0087 cleared and does not return. Confirm hot restart now produces adequate HP pressure matching target DID."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "HPFP on 2AR-FXE, 2GR-FXS, 8AR-FTS engines. DID 0x1201 at ECM 0x700 for HP pressure. Known ticking noise from HPFP on 2AR-FXE (2013+ RAV4 Hybrid) — noise alone is not cause for replacement if pressure meets target. ELM accessible pre-2019.",
+      "Honda/Acura": "HPFP on 1.5T L15B7, 2.0T K20C4. Known P008A concern on 1.5T at high altitude — Honda service bulletin for LP pressure drop. HP pressure DID at ECM via HDS enhanced data. ELM limited for extended session access.",
+      "Nissan/Infiniti": "HPFP on KR20DDET (Sentra Turbo), VR30DDTT (Infiniti Q50/Q60). LP circuit important — check LPFP filter at tank first. HP pressure DID via CONSULT. Infiniti VR30: cam follower inspection recommended at 30k mile intervals.",
+      "Ford": "HPFP on all EcoBoost variants (1.5T/1.6T/2.0T/2.7T/3.5T). Cam follower wear pattern on 2010-2016 EcoBoost well-documented — Ford TSB issued. HP pressure DID via enhanced PCM. 2018+ SGW blocks ELM. Updated steel billet follower part number supersedes original.",
+      "GM": "HPFP on 1.5T/2.0T Ecotec, LTG engines. Check in-tank LP pump first — P008A on 1.5T Equinox/Terrain is common failure. HP pressure DID via GDS2 enhanced. ELM limited for enhanced PID access.",
+      "BMW": "N54/N55 HPFP known early failure pattern well-documented. B46/B48/B58 improved reliability. DID 0x2F21 HP pressure at ECM 0x12. Cam follower: check via dipstick hole on B58 or pump removal on N54. ZGW blocks on F/G-series — ISTA required for extended diagnostics. N54: HPFP replacement includes fuel line check valve inspection.",
+      "VW/Audi": "EA888 2.0T TSI gen 1/gen 2: cam follower wear is well-known failure pattern. Follower inspection via pump removal or valve cover access hole (varies by model year). DID 0x0192 HP pressure at ECM 0x01. Pre-SFD ELM accessible. Updated follower and revised HPFP available from VW/Audi parts.",
+      "Stellantis": "Hurricane 2.0T in Wrangler 4xe/Jeep Grand Cherokee. HP pressure DID via wiTECH enhanced data. 2018+ SGW blocks ELM access. Follower design improved on Hurricane vs earlier VW/GM cam-follower wear issues.",
+      "Hyundai/Kia": "Theta II 2.0T/2.4T: HPFP issues less common than engine bearing concern, but P0087 appears at high mileage. Smartstream GDI engines have improved HPFP design. HP pressure DID [HKG_HPFP_DID] at ECM. 2019+ gateway blocks ELM. Kia Sportage/Tucson 1.6T: HPFP check during timing chain inspection interval service."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

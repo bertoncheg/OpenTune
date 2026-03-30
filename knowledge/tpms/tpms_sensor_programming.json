@@ -1,0 +1,50 @@
+{
+  "service_type": "tpms_sensor_programming",
+  "category": "tpms",
+  "title": "TPMS Sensor Programming (Blank/Aftermarket Sensors)",
+  "description": "Programs a blank or universal aftermarket TPMS sensor to match the OEM protocol before installation. Required when using universal sensors (Schrader EZ-sensor, Autel MX-sensor, etc.) instead of OEM sensors.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2019,"engine":"2.5L"},
+    {"make":"BMW","model":"X5","year":2018,"engine":"3.0L"},
+    {"make":"Ford","model":"F-150","year":2018,"engine":"5.0L"},
+    {"make":"VW","model":"Tiguan","year":2019,"engine":"2.0T"}
+  ],
+  "common_symptoms": ["installing universal TPMS sensor","OEM sensor discontinued/unavailable","cost-saving replacement option","sensor programming before tire mounting"],
+  "physical_solution": "Use TPMS programming tool to clone OEM protocol onto blank sensor. Install programmed sensor in tire. Perform relearn procedure (see sensor_registration.json or tpms_service_positions.json).",
+  "technical_solution": {
+    "uds_services": ["NOTE: Sensor programming requires dedicated TPMS tool (Autel TS508/TS601, ATEQ VT56, Bartec TECH400) — NOT ELM327. Post-installation relearn uses $31 RoutineControl via ELM327."],
+    "elm327_feasibility": "Limited — sensor programming cannot be done with ELM327. Requires TPMS programming tool with RF capability (315MHz or 433MHz). Post-programming relearn procedure accessible via ELM327 $31.",
+    "server_free": true,
+    "preconditions": [
+      "TPMS programming tool available",
+      "Correct blank/universal sensor selected for vehicle application",
+      "OEM protocol known for vehicle",
+      "Sensor valve stem type matched to wheel (rubber vs aluminum)"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Identify vehicle TPMS protocol and frequency. Use chart below (OEM notes). Select correct blank sensor for the protocol."},
+      {"step":2,"type":"instruct_mechanic","description":"On TPMS programming tool: select OEM make/model/year. Select 'Program Sensor' or 'Clone'. Place blank sensor near tool antenna. Tool transmits protocol data to sensor via LF (low frequency) activation."},
+      {"step":3,"type":"instruct_mechanic","description":"Verify programming: tool reads back programmed sensor to confirm ID and protocol match. Some tools assign random unique ID; others copy a specified ID."},
+      {"step":4,"type":"instruct_mechanic","description":"Install programmed sensor in tire valve hole BEFORE mounting tire on rim. Torque sensor nut to spec: rubber-stem type = finger tight + 1/4 turn; aluminum clamp-style = 3.5-4.5 ft-lbs (do not overtorque — sensor body cracks)."},
+      {"step":5,"type":"instruct_mechanic","description":"Mount and inflate tire to vehicle spec. Confirm sensor is not damaged during mounting (stay clear of sensor with tire machine)."},
+      {"step":6,"type":"instruct_mechanic","description":"After installation: perform TPMS relearn procedure to register new sensor ID with TPMS ECU. See sensor_registration.json for relearn steps."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Frequency: 315 MHz (North America) / 433 MHz (Europe/Asia). Protocol: Toyota-specific Calsonic/TDK-style. Sensor pressure range: 0-87 psi. Most Toyota sensors activate at cold 33 psi threshold. Popular compatible: Schrader 33500, Autel MX-sensor programmed to Toyota protocol.",
+      "Honda/Acura": "Frequency: 315 MHz (North America). Protocol: Honda-Nidec style. Threshold: typically 28 psi low warning. Compatible: most universal sensors support Honda 315MHz protocol. Acura RDX/MDX: same as Honda.",
+      "Nissan/Infiniti": "Frequency: 315 MHz (North America pre-2014) / 433 MHz (some 2014+ and global). Protocol: Nissan-specific. Check model year and market carefully. Compatible: Schrader, Autel support both Nissan protocols.",
+      "Ford": "Frequency: 315 MHz (North America). Protocol: Beru/Schrader Ford-specific. Some 2011-2013 F-150: 433 MHz (early adoption). Check model year. Compatible: Motorcraft OEM sensors or Schrader 20001 for most Ford applications.",
+      "GM": "Frequency: 315 MHz (North America). Protocol: Delphi/Schrader GM-specific. Pressure threshold: typically 25% below recommended. Compatible: ACDelco 13586335 equivalent or Autel MX-sensor programmed to GM protocol.",
+      "BMW": "Frequency: 433 MHz (worldwide). Protocol: BMW-specific RDC (Reifendruck Control). Sensor includes temperature monitoring. BMW RDC sensors store wheel position (FL/FR/RL/RR). Compatible: Schrader 5600 BMW, Continental A2C9606130080.",
+      "VW/Audi": "Frequency: 433 MHz (worldwide). Protocol: VW/Audi-specific. MQB platform (2013+): updated protocol vs PQ35. Must match platform generation. Compatible: VDO/Continental S180052016Z for most MQB. Autel MX-sensor with VW-specific programming.",
+      "Stellantis": "Frequency: 433 MHz (North America and worldwide). Protocol: Chrysler-specific. Note: switched from 315MHz to 433MHz around 2012-2013. Verify model year frequency. Compatible: Schrader 29020, Autel MX-sensor.",
+      "Hyundai/Kia": "Frequency: 433 MHz (worldwide). Protocol: Hyundai/Kia-specific. Threshold: 25 psi typical. Genesis: same protocol as standard Hyundai on most models. Compatible: Autel MX-sensor, Schrader with Hyundai/Kia programming."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

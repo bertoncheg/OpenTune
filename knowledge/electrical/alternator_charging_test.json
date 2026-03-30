@@ -1,0 +1,105 @@
+{
+  "service_type": "alternator_charging_test",
+  "category": "electrical",
+  "title": "Alternator / Charging System Diagnostic",
+  "description": "Tests alternator output voltage, current regulation, and intelligent charging system operation via live data PIDs to diagnose charging system faults without external meters. Mode $01 PID $42 provides ECM-sensed control module voltage; OEM PIDs add charge current, regulator duty cycle, and temperature.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota",     "model": "Camry",         "year": 2019, "engine": "2.5L A25A-FKS"},
+    {"make": "Honda",      "model": "Accord",        "year": 2020, "engine": "1.5T L15B7"},
+    {"make": "Ford",       "model": "F-150",         "year": 2021, "engine": "3.5L EcoBoost"},
+    {"make": "Chevrolet",  "model": "Silverado",     "year": 2020, "engine": "5.3L L83"},
+    {"make": "BMW",        "model": "3 Series",      "year": 2018, "engine": "3.0L B58"},
+    {"make": "VW",         "model": "Jetta",         "year": 2019, "engine": "1.4T EA211"},
+    {"make": "Nissan",     "model": "Altima",        "year": 2020, "engine": "2.5L KR25DE"},
+    {"make": "Dodge",      "model": "Charger",       "year": 2021, "engine": "5.7L Hemi MDS"},
+    {"make": "Hyundai",    "model": "Sonata",        "year": 2021, "engine": "2.5L Smartstream G"}
+  ],
+  "common_symptoms": [
+    "battery warning light",
+    "battery draining overnight",
+    "charging voltage above 15V or below 13V at idle",
+    "alternator bearing noise",
+    "B+ cable hot to touch",
+    "intelligent charging system fault code"
+  ],
+  "physical_solution": "Connect scan tool and stream live charging voltage via Mode $01 PID $42 or OEM-specific PIDs. Compare against target: 13.5-14.7V at idle, 13.0-14.2V under load (AC on, blower max, rear defrost active). If INA (intelligent network alternator) equipped, additionally check regulator duty cycle PID — normal is variable, not fixed. Perform load test: activate all electrical loads and monitor voltage stability. Physical inspection: check drive belt tension and condition (max 10mm deflection on unloaded span), inspect B+ cable at alternator stud and battery for heat damage or corrosion, verify all chassis ground straps secure.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 42 OBD Mode 01 — Control Module Voltage",
+      "$22 ReadDataByIdentifier — OEM charging PIDs",
+      "$01 46 OBD Ambient Air Temperature (cross-reference)"
+    ],
+    "elm327_feasibility": "Full for Mode $01 PID $42 — control module voltage accessible on all ELM327 adapters (send: 01 42, response byte A: voltage = A * 0.1V). OEM enhanced PIDs ($22 at ECM address) accessible on non-gateway vehicles for charge current and regulator duty. INA duty cycle PID typically accessible via $22 at ECM on pre-2018 most OEMs. Post-2018 gateway vehicles: $01 PID $42 still works, enhanced $22 PIDs may be blocked.",
+    "server_free": true,
+    "preconditions": [
+      "engine running and at operating temperature (coolant temp above 70 C)",
+      "scan tool connected and streaming Mode $01 live data",
+      "battery state-of-charge noted before test"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Stream Mode $01 PID $42 (OBD-II functional address 0x7DF, request: 01 42). This is ECM-sensed battery and charging voltage. Response formula: byte A * 0.1 = volts. Scaling range: 0-25.5V per SAE J1979 specification."
+      },
+      {
+        "step": 2,
+        "type": "instruct_mechanic",
+        "description": "Read baseline charging voltage at idle with no electrical loads active. Target range: 13.5-14.7V. Below 13.5V suspects regulator failure or belt slip. Above 15.0V indicates voltage regulator overvoltage fault — immediate battery damage risk."
+      },
+      {
+        "step": 3,
+        "type": "instruct_mechanic",
+        "description": "Apply full electrical load — AC at maximum, blower at maximum, rear window defrost ON, headlights ON, heated seats ON if equipped. Charging voltage must not fall below 13.0V under sustained full load. Drop to 12.5V or below indicates alternator ampere output is insufficient for vehicle demand."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "Read OEM charging current and regulator PIDs. BMW: $22 DID 0x601E (generator target voltage setpoint), 0x601F (generator load demand percent). VW/Audi: $22 DID 0x0280 (generator load signal, 0-100% duty cycle). Ford PCM: $22 DID for ALT duty cycle at PCM address 0x7E0. GM ECM enhanced PID for generator field duty. Toyota ECM: $22 DID 0x1206 at 0x700 for alternator load signal."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Interpret INA/intelligent alternator data: on BMW and VW/Audi platforms, charging voltage intentionally varies from 12.8V to 14.5V based on battery state-of-charge and load demand. A fixed 14.4V output on an INA-equipped vehicle (no variation under any condition) suggests regulator is operating in limp-home mode or has a LIN bus communication fault."
+      },
+      {
+        "step": 6,
+        "type": "instruct_mechanic",
+        "description": "Physical inspection: inspect drive belt for glazing, cracking, or fraying. Check belt tension — deflection of more than 10mm on the longest unloaded span indicates belt or tensioner replacement needed. Inspect B+ cable at alternator output stud and battery positive for heat discoloration, insulation damage, or connection resistance. Check negative ground strap from engine to chassis for corrosion."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "After repair, retest PID $42 at idle and under full load. Verify voltage stable within 13.5-14.7V range. Clear any charging-related B-code DTCs with $14 FF FF FF. If battery was also replaced, perform battery BMS reset procedure (reference battery_bms_reset.json) so INA learns new battery capacity."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Standard non-INA alternator on most non-hybrid ICE models. Mode $01 PID $42 reliable and accurate. INA (intelligent alternator) equipped on 2007+ ICE models — voltage varies 12.5-14.8V based on regeneration and load strategy. DID 0x1206 at ECM address 0x700 provides alternator load signal percentage. Common failure: alternator on 2GR-FE V6 (Camry/Highlander) at 120k+ miles, brush wear. Hybrid models use DC-DC converter — different diagnostic procedure.",
+      "Honda/Acura": "Smart charging system on 2013+ Accord and 2017+ CR-V. Mode $01 $42 reliable. Honda charging DTC P1297 (charge system low voltage) and P0562. Common failure: brush wear on K24A and K24Z series 2.4L engines. Pre-2013 models: simple regulator — fixed 14.4V target. ELM327 accessible for all charging PIDs on all Honda/Acura platforms.",
+      "Nissan/Infiniti": "IC-Reg (Intelligent Control alternator regulator) on 2009+ platforms. Mode $01 $42 reliable. Common: rear alternator connector corrosion and pin oxidation on VQ35DE engine causing intermittent charging faults (DTC P0562). $22 DID for duty cycle accessible via ELM on pre-2019. Target voltage: 14.0-14.7V non-INA.",
+      "Ford": "Smart Charge system standard from 2000+. PCM controls alternator via LX+ (load response) signal wire — not a simple internal regulator. Mode $01 $42 reliable at PCM address 0x7E0. PCM enhanced PID for alternator duty cycle accessible via $22. EcoBoost engines: belt routing and tensioner critical — belt squeal under throttle indicates tensioner degradation. Common DTC: P0561 battery voltage unstable, P0562 low voltage.",
+      "GM": "ECM-controlled voltage regulator (load response control) on most 2010+ platforms. Enhanced PID for generator field duty cycle accessible via ECM. Silverado and Sierra 1500 with 5.3L L83: known alternator bearing failure pattern 2014-2018 at 80-100k miles. Mode $01 $42 reliable. Voltage intentionally reduced at highway speed by ECM for fuel economy — test at idle for accurate baseline. Common DTC: P0562 low charging voltage.",
+      "BMW": "IBS (Intelligent Battery Sensor) mounted on negative battery cable post — communicates with DME via LIN bus. INA regulator varies voltage 12.8-14.8V. DIDs 0x601E (generator target voltage) and 0x601F (generator load demand percentage) at DME address. ZGW blocks extended $22 sessions on F/G-series — use ISTA for full charging data. E-series (pre-2012): ELM327 fully accessible for enhanced charging PIDs. Common failure: N54 and N55 engine alternator (Valeo type) bearing failure at 80k+ miles.",
+      "VW/Audi": "INA (intelligent alternator) managed via LIN bus from ECM. Mode $01 $42 accessible. $22 DID 0x0280 provides generator load signal (0-100% duty cycle) at ECM address. J533 CAN gateway on MQB blocks enhanced $22 PIDs on 2019+ — use VCDS or ODIS for full data. Common failure: 2.0T TSI EA888 drive belt tensioner failure causing belt slip and charging fault MALF 01369 (generator signal implausible).",
+      "Stellantis": "PCM smart charge on Ram/Jeep/Chrysler. Mode $01 $42 reliable. Enhanced PIDs available via $22 at PCM on pre-SGW models. SGW blocks on 2018+ — ELM restricted to Mode $01 only. Common fault: Ram 1500 alternator B+ connector (Molex type) overheating and melting under sustained heavy electrical load (common with aftermarket accessories). DTCs P0562 (low voltage) and P0563 (high voltage).",
+      "Hyundai/Kia": "Smart alternator system on 2012+ ICE models. ISG (Idle Stop-Go) vehicles use enhanced charging strategy — rapid charge before stop event. Mode $01 $42 reliable. $22 DID for alternator load accessible on pre-2019 platforms. Gateway blocks write on 2019+, but read PID $42 still accessible via Mode $01. Common fault: GEN warning light on 2.4L Theta II engine at high ambient temperatures (regulator thermal shutdown). DTCs P0562 and P0563."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

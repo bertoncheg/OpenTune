@@ -1,0 +1,113 @@
+{
+  "service_type": "dtc_reference_body_chassis",
+  "category": "dtc",
+  "title": "Body and Chassis DTC Reference (B/C/U-Codes)",
+  "description": "Reference guide for SAE J2012 body (B-codes), chassis (C-codes), and network communication (U-codes) diagnostic trouble codes, with ELM327 accessibility ratings and gateway blocking status by OEM. Critical for understanding which modules are accessible without OEM tools.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Ford", "model": "F-150 14th Gen", "year": 2021, "engine": "3.5L PowerBoost Hybrid"},
+    {"make": "BMW", "model": "X3 G01", "year": 2020, "engine": "2.0L B48 Turbo"},
+    {"make": "Jeep", "model": "Wrangler JL", "year": 2019, "engine": "3.6L Pentastar V6"},
+    {"make": "Toyota", "model": "Highlander XU70", "year": 2021, "engine": "2.5L Hybrid A25A"},
+    {"make": "Volkswagen", "model": "Tiguan MK2", "year": 2020, "engine": "2.0L TSI EA888"},
+    {"make": "Hyundai", "model": "Palisade LX2", "year": 2022, "engine": "3.8L Lambda II GDI"}
+  ],
+  "common_symptoms": [
+    "Airbag/SRS warning light illuminated",
+    "ABS or electronic stability control (ESC) warning light on",
+    "U-code communication errors flagged during full system scan",
+    "HVAC system malfunction with climate control faults",
+    "Multiple module no-response on scan tool full system sweep",
+    "Network bus fault causing multiple unrelated warning lights simultaneously"
+  ],
+  "physical_solution": "Connect scan tool and perform full vehicle system scan (not just powertrain). Read all module DTCs including body, chassis, and network. Note which modules are communicating vs showing no response — U-codes on one module can indicate CAN bus wiring fault affecting multiple modules rather than individual module failures. For gateway-blocked vehicles, note that ELM327 may only reach OBD-II mandated powertrain controllers.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$19 02 ReadDTCByStatusMask — read all DTCs from target module",
+      "$14 ClearDiagnosticInformation — clear module DTCs",
+      "$3E 00 TesterPresent — keepalive for extended session"
+    ],
+    "elm327_feasibility": "Partial — B and C codes accessible on pre-2018 vehicles without gateway firewall restrictions. 2018+ Ford (SGW), 2019+ VW/Audi (SFD write lock), 2018+ Stellantis (SGW), 2019+ Hyundai/Kia gateway, 2012+ BMW (ZGW) all restrict extended module access in varying degrees. ELM327 on gateway-blocked vehicles typically can read OBD-II mandated controllers (ECM/TCM) but body module extended sessions ($10 03 to BCM, SRS, HVAC) are blocked. U-code reads are often still possible even on gateway-blocked platforms as they are stored in the powertrain module.",
+    "server_free": true,
+    "preconditions": [
+      "Ignition ON (KOEO)",
+      "Scan tool using ISO 15765-4 CAN protocol (pins 6 and 14)",
+      "For body modules on MS-CAN/SW-CAN/K-CAN networks: appropriate protocol adapter required (not standard ELM327)",
+      "For write or clear operations: extended session $10 03 required at target module address"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "B0xxx Airbag/SRS codes — CRITICAL SAFETY. B0001-B0020: deployment loop circuit faults (squib driver circuits). B0051-B0099: occupant detection sensor faults. B0100+: SRS system integration. NEVER attempt to clear crash/deployment records (B0051 CRASH DATA) without following OEM SRS reset procedure. Never work on SRS circuits with battery connected. Reference srs_airbag_reset.json for clear procedure. SRS module at 0x750 Toyota, 0x740 Honda, 0x736 BMW."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "B1xxx Body electrical codes — door modules (B1001-B1099), power window/mirror motors (B1100-B1299), lighting circuits (B1300-B1399), keyless entry (B1400-B1499). BCM/GEM typically at 0x726 Ford, 0x09 VW/Audi, 0x130 BMW. Gateway: blocked on BMW F/G-series ZGW (FRM module 0x00). VW/Audi door modules via J533 — accessible on most pre-2022. Ford body: SGW 2018+ blocks non-OBD modules."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "B2xxx Climate control / HVAC codes — blend door actuator position faults (B2001-B2050), blower motor circuit (B2051-B2099), refrigerant pressure sensor out of range (B2100+). HVAC module addresses: 0x740 Toyota, 0x60 BMW IHKA, 0x08 VW/Audi. Often directly addressable on all OEMs for read access. Write for actuator calibration may require extended session."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "C0xxx ABS/Stability Control codes — highest ELM327 accessibility of all body/chassis codes since ABS is OBD-II relevant. C0035-C0038: wheel speed sensor front right (circuit). C0040-C0043: wheel speed sensor front left. C0045-C0048: rear right. C0050-C0053: rear left. C0110: ABS pump motor circuit. C0186: lateral acceleration sensor. C0196: yaw rate sensor. ABS module: 0x760 Bosch, 0x7B0 Toyota Advics, 0x19 BMW Continental. Read these via $19 02 FF direct to ABS module."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "C1xxx Braking/EPB chassis codes — C1175-C1179: EPB motor overcurrent, EPB position sensor fault. C1234: ABS solenoid valve performance. C1276: yaw sensor calibration. EPB module at 0x7B0 on many platforms (may be integrated with ABS module). ELM327 accessible for reads on most pre-2019 platforms. Write for EPB service position requires extended session with possible security access. Reference epb_service.json."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "U0xxx Lost communication codes — indicate one module cannot communicate with another. U0001: high speed CAN communication bus fault (CAN Hi/Lo short or open). U0100: lost communication with ECM/PCM (entire powertrain CAN bus issue). U0101: lost communication with TCM. U0121: lost communication with ABS module. U0140: lost communication with BCM. U0155: lost communication with instrument cluster. Diagnose: check CAN bus differential voltage 2.5V +/- 0.5V at DLC pins 6 and 14. Check for shorts or opens. U-codes often accompany module connector corrosion or damaged wiring — do not replace module first."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "U1xxx OEM-specific network codes — manufacturer-defined communication faults not in SAE standard. Toyota U1xxx: often BEAN (Body Electrical Area Network) faults. GM U1xxx: class 2 bus communication errors. Require OEM diagnostic software for full interpretation text. ELM327 may read the numeric code but description needs OEM DTC database mapping."
+      },
+      {
+        "step": 8,
+        "type": "send_uds",
+        "description": "Gateway blocking identification — if scan shows multiple U0xxx codes or no module response on known-good modules: suspect gateway blocking or CAN bus fault. Test: connect ELM327 and attempt $10 03 to known module address (0x7B0 ABS). If no response on pre-2018 vehicle, check wiring. If on 2018+ Ford/Stellantis, expect SGW block — use OEM passthrough tool. For BMW F/G-series: ZGW limits write access but read-only extended session to ABS/DME is often still accessible."
+      },
+      {
+        "step": 9,
+        "type": "send_uds",
+        "description": "Clear DTCs after repair: $14 FF FF FF FF to specific module address (not broadcast for SRS — always address SRS module directly: $14 FF FF FF FF to SRS address). Cycle ignition OFF 30 seconds then ON. Perform full system scan again to confirm no DTCs returned. For network U-codes: verify all modules are communicating before clearing."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota gateway (TIS-II) present on 2019+ models but more permissive than European OEMs. Pre-2019 most modules freely accessible via ELM327. Toyota module addresses: BCM/multiplex 0x750, ABS/VSC 0x7B0, SRS 0x750 sub-address 0x10, HVAC 0x740, combination meter 0x760. Body modules on B-CAN accessible through gateway with correct routing. Techstream required for 2019+ Lexus full body scan. Toyota BEAN network (older pre-CAN models) not accessible via ELM327.",
+      "Honda/Acura": "Honda uses F-CAN (body), B-CAN (slower body systems), and HS-CAN (powertrain) architecture. ELM327 on HS-CAN readily accesses ECM/TCM/ABS. Body modules on B-CAN (BCM, TPMS, mirror motors) require B-CAN capable adapter or Honda HIM (Honda Interface Module) which bridges networks. HDS provides full sweep automatically. F-CAN module addresses: VSA 0x18, SRS 0x28. ELM327 v1.5+ needed for F-CAN protocol switching on some Honda platforms.",
+      "Nissan/Infiniti": "Nissan uses CAN-C (powertrain high speed) and CAN-B (body slower speed) networks. ELM327 on CAN-C reaches ECM, TCM, ABS, BCM sub-network. Body-specific modules on CAN-B (interior lighting, mirrors, door modules) require CONSULT-III+ network bridge. DDL (Data Link) connector on some older models provides separate body access. 2019+ Nissan/Infiniti with gateway: CONSULT passthrough required for extended body/chassis sessions.",
+      "Ford": "Ford uses HS-CAN (pins 6/14, powertrain and safety) and MS-CAN (pins 3/11, body modules — APIM, DDM, PDM, SYNC). Standard ELM327 connected to pins 6/14 CANNOT reach body modules on MS-CAN bus — these require MS-CAN capable adapter (Forscan with ELM327 MS-CAN support) or Ford FDRS. ABS, PCM, TCM on HS-CAN accessible normally via ELM. SGW 2018+ additionally blocks extended sessions to all non-OBD modules — FDRS cloud subscription or J2534 PassThru required.",
+      "GM": "GM uses HS-CAN (pins 6/14) for ECM/TCM/ABS and SW-CAN (pin 1, single-wire, 33.3 kbps) for most body modules (BCM, door modules, HVAC, cluster on older platforms). Standard ELM327 on pins 6/14 CANNOT communicate with SW-CAN body modules. Requires SW-CAN capable adapter (Tech2Win or MDI2) or GM-specific ELM327 with SW-CAN support. 2018+ GM trucks and SUVs migrated most body to HS-CAN — improved ELM327 accessibility on newer platforms.",
+      "BMW": "BMW architecture: PT-CAN (powertrain high speed), K-CAN (body, 100 kbps), K-CAN2 (body extended), LIN (individual actuators), MOST (multimedia optical). ZGW (Zentral-Gateay) on F-series (2012+) and G-series (2018+) routes all external OBD access. ZGW blocks: all write operations from external tools, extended sessions to most body modules on K-CAN, coding and programming. ZGW permits: read-only $19 02 to DME (0x12), read-only to some safety modules. ISTA with ICOM-A2 or ICOM-Next required for full F/G-series body diagnostic access. E-series (pre-2007) fully accessible via ELM327 on PT-CAN.",
+      "VW/Audi": "J533 (CAN gateway) is present on all modern VW/Audi group vehicles and routes between PT-CAN (powertrain), Infotainment-CAN, Comfort-CAN (body), Extended-CAN. J533 allows read access to most modules via $19 02 with direct module addressing. SFD (Schutzfunktion Diagnose / Security Feature Disable) 2019+ adds a cryptographic lock on write DIDs ($2E) and coding operations — read-only access mostly still available via ELM pre-2022. MEB platform (ID.3/ID.4) has stronger Ethernet-based gateway — standard ELM327 has very limited access. ODIS required for MEB full diagnostic.",
+      "Stellantis": "SGW (Secure Gateway Module) added across all platforms in 2018: Ram 1500 (DT), Jeep Wrangler JL, Jeep Grand Cherokee WK2 2019 refresh, Jeep Gladiator JT, Chrysler Pacifica 2019+. SGW blocks ALL non-OBD-II module access from external tools. ELM327 on 2018+ Stellantis: can read OBD-II powertrain DTCs via Mode $03, cannot access ABS, BCM, SRS, HVAC extended sessions. wiTECH 2.0 cloud subscription (Stellantis dealer tool) or AutoAuth SGW bypass token purchase required for full access. Pre-2018 Jeep/Ram/Chrysler/Dodge: all modules fully accessible via ELM327.",
+      "Hyundai/Kia": "Gateway module present on 2019+ Hyundai/Kia blocking write operations while preserving read access for most modules. ELM327 on 2019+ can still read B/C/U codes via $19 02 from most modules using direct addressing. Write restrictions affect coding, adaptation, and $2E DID writes. Genesis brand (GV80, G90, GV70) has stricter gateway aligned with premium brand positioning — GDS-Mobile strongly recommended. All pre-2019 Hyundai/Kia models: full ELM327 access to all modules including BCM (0x776), SRS (0x720), ABS (0x7B0), HVAC (0x7B0 sub-address)."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,98 @@
+{
+  "service_type": "pad_wear_sensor_reset",
+  "category": "brakes",
+  "title": "Brake Pad Wear Sensor Reset / Service Indicator",
+  "description": "After brake pad replacement, the pad wear warning light must be reset — either by replacing the physical wear sensor (which is consumed on contact with the rotor) or by clearing a software-based service counter via scan tool. Failure to reset causes persistent warning lights that confuse customers and may mask future wear events.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "BMW", "model": "3 Series F30", "year": 2018, "engine": "2.0L B48 Turbo"},
+    {"make": "Audi", "model": "A4 B9", "year": 2019, "engine": "2.0L TFSI EA888"},
+    {"make": "Ford", "model": "F-150", "year": 2020, "engine": "5.0L Coyote V8"},
+    {"make": "Toyota", "model": "Camry XV70", "year": 2021, "engine": "2.5L A25A-FKS"},
+    {"make": "Genesis", "model": "G80 RG3", "year": 2022, "engine": "2.5L T-GDI"},
+    {"make": "Chevrolet", "model": "Tahoe", "year": 2019, "engine": "5.3L L83 V8"}
+  ],
+  "common_symptoms": [
+    "Brake pad warning light on dash remains illuminated after installation of new brake pads",
+    "CBS (Condition Based Service) brake item still showing overdue after pad replacement on BMW",
+    "Service indicator in instrument cluster still showing brake service due",
+    "Worn pad sensor harness physically replaced but warning light did not extinguish",
+    "Customer complaint of brake warning light — pads are new — sensor not replaced"
+  ],
+  "physical_solution": "Replace physical wear sensor wire harness if sensor-based (BMW, VW/Audi, some Stellantis/Genesis) — these sensors are single-use consumables, do not reuse. For software counter vehicles (GM, Ford, Toyota, Honda), reset via scan tool adaptation write or cluster menu. BMW: always replace sensor clip at front left (and front right on performance models) before resetting CBS counter via ISTA or $31 routine.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$2E WriteDataByIdentifier — pad wear counter DID (VW/Audi adaptation channel write)",
+      "$31 01 RoutineControl — CBS brake reset routine (BMW KOMBI)",
+      "$14 ClearDiagnosticInformation (clears wear sensor open-circuit DTC post-reset)"
+    ],
+    "elm327_feasibility": "Partial — $14 DTC clear accessible via ELM on all platforms for wear sensor open-circuit codes. $2E write for wear counter reset limited by gateway on 2019+ VW/Audi (SFD lock) and 2018+ BMW G-series (ZGW). BMW F-series CBS reset via $31 01 accessible on F-series with correct DID and security level. Japanese/American OEMs typically do not require scan tool for pad wear reset — physical sensor replacement is sufficient.",
+    "server_free": false,
+    "preconditions": [
+      "New brake pads physically installed and torqued to spec",
+      "New wear sensor harness installed if vehicle uses physical contact sensor (do not reuse old sensor)",
+      "Sensor connector plugged in fully and clip seated",
+      "Ignition ON, engine OFF",
+      "No active DTCs from unrelated systems that would interfere with extended session"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "physical",
+        "description": "Identify sensor type: physical contact sensor (BMW, VW/Audi, Stellantis Grand Cherokee/Charger, Genesis) vs software mileage counter (GM, Ford, Toyota, Honda). Physical sensor: small two-wire harness clipped to pad backing plate, routed through caliper bracket. Replace sensor with new pads — single-use only."
+      },
+      {
+        "step": 2,
+        "type": "physical",
+        "description": "For physical sensor vehicles: install new sensor harness in pad groove. Route wire clear of caliper moving parts. Connect sensor harness plug — confirm click/lock. For rear sensor (BMW/Audi typically have front and rear sensors on separate part numbers) — repeat on rear axle."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "For BMW CBS reset: enter extended session with KOMBI (instrument cluster) at address 0x62: send 10 03. Confirm 50 03. Obtain security access if required: 27 [seed request], calculate key, send 27 [key]. Execute CBS brake reset routine: 31 01 [CBS_BRAKE_ROUTINE_ID]. Confirm 71 01 response. CBS brake item should clear from service display."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "For VW/Audi pre-2019 (PQ35/PQ46 platform): enter extended session with instrument cluster at address 0x17: send 10 03. Write pad wear adaptation channel to zero: 2E [PAD_WEAR_FRONT_DID] 00 00 for front, 2E [PAD_WEAR_REAR_DID] 00 00 for rear. Confirm 6E response. MQB platform: use VCDS adaptation channel 04-front wear, 05-rear wear via J533."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "Clear any open-circuit DTCs that were generated by worn/grounded sensor during service: send 14 FF FF FF FF broadcast. Or send 14 FF FF FF FF to specific module (BMW FRM at 0x30, VW BCM at 0x09). Confirm 54 response."
+      },
+      {
+        "step": 6,
+        "type": "physical",
+        "description": "Cycle ignition OFF for 30 seconds, then ON. Verify brake pad warning light is extinguished. For BMW: verify CBS display shows brake item removed from service list. For VW/Audi: verify spanner/warning in cluster is gone. If light remains, re-check sensor connector seating and re-read DTCs."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Most Toyota/Lexus models use a simple physical contact sensor that grounds out at minimum pad thickness — the warning circuit breaks when pad is new (sensor open), closes at wear limit (sensor contacts rotor, circuit closes, light on). Replace sensor with pads. Light extinguishes automatically after ignition cycle with new sensor installed — no scan tool reset required. Exception: Lexus LS 500/LS 500h and GX 550 with multi-information display may show a brake service reminder — reset via cluster menu: Settings -> Vehicle -> Service Reminder -> Brake.",
+      "Honda/Acura": "Physical contact sensor on most Accord/Civic/CR-V/Pilot/Odyssey. Replace sensor with pads. Light clears after ignition cycle — no scan tool needed. Acura NSX: Brembo system with wear sensor — replace with OEM Acura sensor only. Acura MDX/RDX with Maintenance Minder: reset B-service item via cluster menu (hold trip reset button with ignition in ACC). Honda Civic Type R FK8/FL5: front and rear physical sensors, both must be replaced.",
+      "Nissan/Infiniti": "Physical pad sensor on most Altima/Maxima/Murano/Rogue/Pathfinder/Frontier. Warning light extinguishes automatically when new sensor installed and ignition cycled — no scan tool needed. Infiniti QX80/Q70 may have electronic proximity sensor requiring resistance check: new sensor should read 100-150 ohms at room temp (NTC thermistor type). Q50/Q60 Red Sport 400: front and rear sensors — replace both sets.",
+      "Ford": "Physical contact sensor on most F-150, Explorer, Edge, Escape, Expedition. Sensor replaced with pads. Light clears after ignition cycle. F-150 with Brake Life Monitor (software based, no physical sensor on 2018+ trucks): reset via IPC message center — hold OK button, navigate to Brake Life, press OK to reset. Mustang GT350/GT500: Brembo system — visual inspection only, no sensor. ELM327 $2E write accessible on pre-2018 for any software counter modules.",
+      "GM": "GM Brake Pad Life Monitor is entirely algorithm-based (no physical wear sensors) on most Silverado/Sierra/Colorado/Tahoe/Yukon/Suburban platforms. The system calculates brake wear using speed, brake pressure, and deceleration data. Reset via DIC (Driver Information Center) cluster menu: push steering wheel buttons to navigate Vehicle Info -> Tire/Brake Life -> Brake Life -> Reset. Corvette C7/C8 and Cadillac CT5-V/CT6-V: software counter with optional $31 scan tool reset via GDS2. ELM327 limited on software counter reset.",
+      "BMW": "BMW uses physical wear sensors exclusively on all 3/5/7-Series, X3/X5/X7. Front axle: one sensor at front left caliper (standard). Performance models (M3/M4/M5/M8, X5M): front AND rear sensors on separate part numbers — do not mix. CBS (Condition Based Service) tracks brake life via sensor + algorithm. After sensor replacement: CBS reset is REQUIRED or CBS will show overdue. F-series (F10/F20/F30/F80): CBS reset via $31 at KOMBI address 0x62 or via iDrive menu. G-series (G20/G30/G80): ISTA preferred — ZGW blocks $31 from ELM. Always order sensor by axle (front/rear separate part numbers for M vehicles).",
+      "VW/Audi": "Physical front and rear wear sensors on most Golf/Jetta/Passat/Tiguan/Audi A3/A4/A6/Q5/Q7. Sensor connector in wheel well, routes through grommet. Replace sensor with pads — do not reuse. VW/Audi sensor triggers a DTC in instrument cluster (address 0x17) when pad wears to limit. After new sensor: adaptation reset required — VCDS adaptation channel reset (channel 04.0 front, 04.1 rear) or via scan tool $2E write. Pre-2019 PQ platform: ELM327 accessible. MQB 2019+ SFD: ODIS or VCDS with security token required for $2E write.",
+      "Stellantis": "Physical sensors on Jeep Grand Cherokee WK2/WL, Dodge Charger/Challenger, Chrysler 300. Sensor part of pad kit on most Mopar pad sets — replace as assembly. EVIC (Electronic Vehicle Information Center) cluster reset for service indicator: hold BACK button and navigate to tire/brake in cluster. Ram 1500/2500/3500: no physical sensors, mileage-based brake service reminder — reset via Uconnect cluster menu or DRB scan tool. 2018+ Pacifica: software counter — wiTECH reset path.",
+      "Hyundai/Kia": "Physical sensors on Genesis G70/G80/G90, Kia Stinger, Genesis GV80/GV70. Standard Hyundai/Kia models (Sonata, Elantra, Tucson, Sportage) do not have wear sensors — brake warning light triggers only via mechanical pad indicator tab contacting rotor. Genesis models with software counter: reset via BCM service interval routine in GDS-Mobile. Pre-2019: ELM327 accessible for DTC clear. Stinger GT rear Brembo calipers: physical sensor mounted on inboard pad — replace with OEM Kia sensor (separate from pad set)."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,113 @@
+{
+  "service_type": "fuel_trim_analysis",
+  "category": "engine",
+  "title": "Fuel Trim Diagnostic Procedure",
+  "description": "Systematic reading and interpretation of short-term and long-term fuel trim values via Mode $01 to diagnose lean or rich conditions. Fuel trim analysis is one of the most powerful diagnostic techniques for pinpointing vacuum leaks, sensor drift, fuel delivery problems, and exhaust leaks without additional equipment.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Toyota", "model": "Camry", "year": 2020, "engine": "2.5L 2AR-FE"},
+    {"make": "Honda", "model": "Accord", "year": 2019, "engine": "2.0T K20C4"},
+    {"make": "Ford", "model": "Mustang", "year": 2020, "engine": "5.0L Coyote"},
+    {"make": "GM", "model": "Silverado", "year": 2021, "engine": "5.3L L83"},
+    {"make": "BMW", "model": "3 Series", "year": 2019, "engine": "B58 3.0T"},
+    {"make": "VW", "model": "Golf GTI", "year": 2020, "engine": "2.0T EA888 Gen3"},
+    {"make": "Nissan", "model": "Altima", "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Dodge", "model": "Challenger", "year": 2021, "engine": "5.7L HEMI"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2021, "engine": "2.5L Smartstream G2.5"}
+  ],
+  "common_symptoms": [
+    "P0171/P0174 system lean bank 1 and bank 2 codes",
+    "P0172/P0175 system rich bank 1 and bank 2 codes",
+    "Rough idle with fuel trim deviation outside normal range",
+    "Hesitation on acceleration with elevated positive LTFT",
+    "Black smoke from exhaust with significantly negative LTFT",
+    "STFT swinging excessively at idle indicating active mixture correction"
+  ],
+  "physical_solution": "Connect scan tool and stream STFT (Short-Term Fuel Trim) and LTFT (Long-Term Fuel Trim) for both banks simultaneously. Normal range: STFT plus or minus 5%, LTFT plus or minus 5%. Problem range: STFT or LTFT greater than +10% indicates lean condition, less than -10% indicates rich condition. Use bank-selective diagnosis to narrow vacuum leak location to one side of engine. Correlate trim deviation with RPM range where trim is most extreme to identify root cause category.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 06 STFT Bank 1 (Mode 01 PID 06)",
+      "$01 07 LTFT Bank 1 (Mode 01 PID 07)",
+      "$01 08 STFT Bank 2 (Mode 01 PID 08)",
+      "$01 09 LTFT Bank 2 (Mode 01 PID 09)",
+      "$22 ReadDataByIdentifier — OEM extended fuel trim and adaptation PIDs"
+    ],
+    "elm327_feasibility": "Full — All Mode $01 fuel trim PIDs ($06, $07, $08, $09) fully accessible via ELM327 on all OBD-II vehicles 1996 and newer. Conversion formula: (A/1.28) - 100 where A is raw hex byte value. Examples: 0x80 = 0.0%, 0x90 = +7.8%, 0x70 = -7.8%, 0xA0 = +25.0%. O2 sensor voltage also accessible via PID $14 (O2 B1S1), $15 (O2 B1S2), $1B (A/F ratio B1S1 wideband). All Mode $01 reads via ELM327 are not blocked by any OEM security gateway.",
+    "server_free": true,
+    "preconditions": [
+      "Engine fully warmed to operating temperature in closed-loop operation",
+      "Fuel tank above quarter tank",
+      "No recent DTC clears — clearing resets LTFT to zero",
+      "Note any recent repairs that could affect air-fuel mixture"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Stream fuel trim PIDs simultaneously: send 01 06 (STFT B1), 01 07 (LTFT B1), 01 08 (STFT B2), 01 09 (LTFT B2). Conversion formula: (byte_value / 1.28) - 100 = percent trim. Also stream 01 0C (RPM), 01 04 (calculated engine load), 01 0B (MAP pressure), 01 10 (MAF g/s) for correlation."
+      },
+      {
+        "step": 2,
+        "type": "instruct_mechanic",
+        "description": "Evaluate at IDLE — if LTFT greater than +10% at idle indicating lean: vacuum leak is primary suspect. A vacuum leak affects idle most severely because throttle plate is nearly closed, making unmetered outside air a proportionally larger fraction of total airflow. If LTFT greater than +10% at all RPM ranges: fuel delivery issue suspected — check fuel pressure, pump volume, and injector flow rate. If LTFT negative (rich) at idle: EVAP purge fault, leaking injector, or coolant temp sensor biased cold."
+      },
+      {
+        "step": 3,
+        "type": "instruct_mechanic",
+        "description": "Evaluate at CRUISE (2000-2500 RPM) — if LTFT normalizes near 0% at cruise but was elevated at idle: vacuum leak confirmed. At cruise RPM the throttle is more open and unmetered air becomes a smaller fraction of total airflow. If LTFT stays elevated at both cruise and idle: fuel delivery issue. If LTFT elevated only under load: MAF under-reading at higher flow rates."
+      },
+      {
+        "step": 4,
+        "type": "instruct_mechanic",
+        "description": "BANK SELECTIVE DIAGNOSIS for V6 and V8 engines — if Bank 1 is lean and Bank 2 is normal: fault is isolated to Bank 1 side. Check: Bank 1 vacuum hoses and intake gaskets, Bank 1 injectors, Bank 1 exhaust manifold for crack or leak ahead of upstream O2 sensor, Bank 1 upstream O2 sensor for lazy response. If both banks show equal lean correction: common-source issue such as fuel pressure, MAF sensor, or EVAP system."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "VACUUM LEAK PINPOINT TEST — propane enrichment method: with STFT streaming live, briefly apply propane near suspected leak points including intake manifold gaskets, PCV hose, brake booster hose, and throttle body boot. STFT drops immediately (mixture goes richer momentarily) when propane finds an air leak. Confirmed when STFT drop corresponds to propane application at specific location. Smoke machine alternative: pressurize intake to 0.5 psi and look for smoke escaping."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Read O2 sensor data for sensor health assessment: PID $14 (B1S1 voltage) — healthy closed-loop upstream sensor cycles between 0.1 and 0.9 volts at approximately 1 Hz rate. Lazy O2 sensor shows slow switching (less than 0.5 Hz) causing erratic fuel trim correction. PID $15 (B1S2 downstream): should be relatively steady at 0.5-0.7V if catalyst is healthy. Excessive downstream O2 switching rate indicates catalyst efficiency loss."
+      },
+      {
+        "step": 7,
+        "type": "instruct_mechanic",
+        "description": "INJECTOR SUSPECT diagnosis — if one bank shows persistent lean trim: compare fuel pressure drop test between banks. Clogged injector delivers insufficient fuel causing bank-lean condition. Leaking injector delivers excess fuel causing rich condition most noticeable at cold idle then normalizing when hot. For injector balance testing procedure and flow rate comparison, reference injector_balance_test.json."
+      },
+      {
+        "step": 8,
+        "type": "verify",
+        "description": "After repair is made: clear all DTCs with $14 — this also resets LTFT to 0%. Drive 2-3 complete warm trips. Re-read LTFT from PID $07 and $09 — values should return to within plus or minus 5% if repair was correct and complete. If LTFT returns to the same elevated value after multiple trips, additional contributing causes are present and further diagnosis is required."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "A/F sensor (wide-range Bosch-type wideband) used on 2004 and newer Camry, Corolla, RAV4. PID $24 (air-fuel ratio equivalence ratio) is more accurate than $14 voltage for Toyota wideband interpretation. LTFT B1 via PID $07, B2 via $09. Toyota EFI has tight fuel control — LTFT greater than +8% is unusual and warrants investigation. 2GR-FE V6: common vacuum leak source at intake manifold runner control actuator gaskets, causing bank-selective lean condition.",
+      "Honda/Acura": "Wide-range A/F sensor on 2002 and newer Accord and CR-V. LTFT via Mode $01 fully accessible. Honda historically maintains tight LTFT tolerances within plus or minus 5%. K24 engines: PCV valve failure causes lean codes from unmetered crankcase air entering intake. J35 V6: intake manifold upper gasket leaks common source of bank-selective lean at higher mileage. ELM327 full Mode $01 access on all years.",
+      "Nissan/Infiniti": "LTFT via Mode $01 accessible on all years. VQ35DE V6: common upper intake manifold gasket leaks causing lean condition on both banks simultaneously. MAF sensor output drift documented on early QR25DE engines — verify MAF voltage output against specification before blaming downstream components. QR25DE: check crankcase vent tube routing and condition after cam cover service, as incorrect routing causes unmetered air entry.",
+      "Ford": "STFT and LTFT via Mode $01 accessible on all years. 5.0L Coyote V8: intake manifold runner valve plastic actuators crack causing lean condition on affected bank. 3.5L EcoBoost: intercooler charge pipe after intercooler is common boost leak point — causes lean under load specifically. P0171 single bank lean on Ford frequently indicates lazy upstream O2 sensor rather than actual lean condition. ELM327 full Mode $01 access.",
+      "GM": "STFT and LTFT via Mode $01 accessible on all years. 5.3L L83 with AFM (Active Fuel Management): lifter failure on deactivation cylinders causes rich condition on affected bank at light load. Gen V LT direct injection engines: check crankcase ventilation system for oil passage through PCV into intake causing rich trims. Enhanced per-cylinder LTFT monitoring available via GDS2 on some platforms beyond Mode $01.",
+      "BMW": "B46/B48 engines: swirl flap actuator diaphragm vacuum leak is common lean cause — check rubber vacuum line at swirl flap actuator. B58 engine: low-pressure EVAP purge system can cause STFT spike during purge cycle — this is normal and should not be confused with fault. BMW DME uses Bosch LSU 4.9 wideband O2. DID 0x1397 at ECM 0x12 for air mass adaptation value. LTFT via Mode $01 fully accessible. ZGW does not block Mode $01 reads. Crankcase vent system failure is common lean cause on N20/N26 engines.",
+      "VW/Audi": "EA888 2.0T: intake manifold runner flap seals known leak source causing lean trims — inspect flap shaft seals. EVAP purge DSG vehicles can cause momentary LTFT fluctuation during purge cycle — verify LTFT at steady cruise not during purge event. Group 032 measuring block via VCDS shows adaptation values complementing Mode $01. P0171 lean diagnosis: also check diverter valve (DV) for boost leak on turbocharged models. Air filter housing gasket misalignment after filter service is common overlooked leak.",
+      "Stellantis": "5.7L HEMI: MDS (Multi-Displacement System) deactivation cylinders cause bank-selective LTFT irregularity at light load — disable MDS via scan tool during diagnosis for accurate fuel trim reading. 3.6L Pentastar: intake manifold plastic gaskets leak at 60,000-80,000 mile range causing both-bank lean condition. Mode $01 full ELM327 access on all years including 2018+ SGW vehicles — SGW does not block Mode $01 reads.",
+      "Hyundai/Kia": "2.0T Theta II and 2.5L Smartstream GDI engines: direct injection means no port injection fuel wash of intake valves — carbon buildup on intake valve stems causes lean condition by restricting airflow into cylinder. Persistent lean LTFT with no vacuum leaks found: inspect intake valves with borescope for carbon deposits. Walnut blasting or chemical induction cleaning required. Mode $01 STFT and LTFT fully accessible via ELM327 on all years — Mode $01 not blocked by 2019+ security gateway."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

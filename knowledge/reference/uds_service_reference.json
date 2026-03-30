@@ -1,0 +1,48 @@
+{
+  "service_type": "uds_service_reference",
+  "category": "reference",
+  "title": "UDS Service Reference (ISO 14229)",
+  "description": "Quick reference for all UDS (Unified Diagnostic Services) used in OpenTune procedures. Maps hex service ID to function, common subfunction, and ELM327 support level. Used by ProcedureEngineer to construct correct byte sequences.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["developer reference","ProcedureEngineer byte construction","protocol validation"],
+  "physical_solution": "Reference only — use to construct correct UDS request frames for any procedure.",
+  "technical_solution": {
+    "uds_services": ["Full ISO 14229 UDS service set"],
+    "elm327_feasibility": "Varies by service — see individual entries. ELM327 sends raw CAN frames: AT SH [ECU_ADDRESS], then service bytes.",
+    "server_free": true,
+    "preconditions": ["Extended or programming session opened as required per service"],
+    "procedure_steps": [
+      {"step":1,"type":"reference","description":"$10 DiagnosticSessionControl: Opens diagnostic session. Subfunctions: $01 = Default, $02 = Programming, $03 = Extended Diagnostic. Example: 10 03 = enter extended session. ELM327: FULL support. Required before most write operations."},
+      {"step":2,"type":"reference","description":"$11 ECUReset: Resets the ECU. Subfunctions: $01 = Hard reset (power cycle), $02 = Key off/on reset, $03 = Soft reset. Example: 11 01 = hard reset. ELM327: FULL support. Use after write operations to apply changes."},
+      {"step":3,"type":"reference","description":"$14 ClearDiagnosticInformation: Clears stored DTCs. Subfunction: group of DTC (FF FF FF = all). Example: 14 FF FF FF = clear all DTCs. ELM327: FULL support on most OEMs. Requires extended session on some."},
+      {"step":4,"type":"reference","description":"$19 ReadDTCInformation: Reads DTCs with status. Subfunctions: $02 = by status mask (e.g., $02 FF = all), $04 = snapshot data, $06 = fault detection counter, $0E = most recent test. Example: 19 02 FF = read all DTCs. ELM327: FULL support."},
+      {"step":5,"type":"reference","description":"$22 ReadDataByIdentifier: Reads live data or calibration values by DID number. Two-byte DID. Example: 22 F1 90 = read VIN. 22 0C 00 = read engine RPM (OEM-specific DID). Response: 62 [DID_HI] [DID_LO] [DATA]. ELM327: FULL support for reads."},
+      {"step":6,"type":"reference","description":"$27 SecurityAccess: Unlocks ECU for protected write operations. Subfunctions: $01/$03/$05 = request seed (odd), $02/$04/$06 = send key (even). Flow: 27 01 → receive seed → calculate key → 27 02 [KEY]. ELM327: CAN send/receive works, but key calculation is OEM-specific algorithm."},
+      {"step":7,"type":"reference","description":"$28 CommunicationControl: Enables/disables ECU communication (used during programming). Subfunctions: $00 = enable Rx+Tx, $01 = enable Rx only, $02 = disable Tx. Example: 28 03 01 = disable non-diagnostic messaging. ELM327: FULL support."},
+      {"step":8,"type":"reference","description":"$2E WriteDataByIdentifier: Writes data to ECU by DID. Two-byte DID + data bytes. Example: 2E F1 90 [VIN_DATA] = write VIN. Requires: extended session ($10 03) + security access ($27) on most ECUs. ELM327: FULL send support, gateway may block on secured ECUs."},
+      {"step":9,"type":"reference","description":"$2F InputOutputControl: Commands ECU output or overrides sensor input. Example: 2F [ACTUATOR_DID] 03 [VALUE] = control output. $03 = shortTermAdjust, $04 = freezeCurrentState, $05 = resetToDefault. ELM327: FULL support, gateway may block on some OEMs."},
+      {"step":10,"type":"reference","description":"$31 RoutineControl: Executes ECU routine (test, calibration, adaptation). Subfunctions: $01 = start routine, $02 = stop routine, $03 = request results. Two-byte routine ID. Example: 31 01 F0 00 = start EPB service mode. ELM327: FULL support, gateway restricts on 2018+ Stellantis, 2019+ VW SFD."},
+      {"step":11,"type":"reference","description":"$34 RequestDownload / $36 TransferData / $37 RequestTransferExit: ECU flash programming sequence. Used for firmware updates. CRITICAL: never use without OEM software + stable power. ELM327: send possible but dangerous without full OEM toolchain. Not for field use."},
+      {"step":12,"type":"reference","description":"$3E TesterPresent: Keeps extended session alive. Must be sent every 2-5 seconds or ECU exits extended session. Example: 3E 00 = tester present. ELM327: FULL support. OpenTune must send this continuously during long procedures."},
+      {"step":13,"type":"reference","description":"$85 ControlDTCSetting: Enables/disables DTC storage. Example: 85 02 = disable DTC setting (used during calibration to prevent spurious DTCs). 85 01 = re-enable. ELM327: FULL support."},
+      {"step":14,"type":"reference","description":"NEGATIVE RESPONSE CODES (NRC): 7F [SERVICE] [NRC]. Common NRCs: 11 = service not supported, 12 = subfunction not supported, 13 = incorrect message length, 22 = conditions not correct, 24 = request sequence error, 31 = request out of range, 33 = security access denied, 35 = invalid key, 36 = exceeded attempts, 37 = time delay, 78 = response pending (wait)."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Full ISO 14229 UDS compliance. ECM at 0x7E0 (request) / 0x7E8 (response). Broadcast: 0x7DF. Most services accessible without security on F-tier ECUs.",
+      "Honda/Acura": "ISO 14229 UDS. ECM at 0x7E0/0x7E8. Uses both standard UDS and some Honda-proprietary service IDs. $3E mandatory during extended operations.",
+      "Nissan/Infiniti": "ISO 14229 UDS with CONSULT-III+ extensions. ECM at 0x7E0/0x7E8. Some services use Nissan-specific framing on pre-2010 vehicles.",
+      "Ford": "ISO 14229 UDS. PCM at 0x7E0/0x7E8. MS-CAN modules use same UDS but on different bus (pins 3/11). FDRS uses ISO 20730 telematics for 2018+ operations.",
+      "GM": "ISO 14229 UDS on HS-CAN. PCM at 0x7E0/0x7E8. GM-specific DIDs for enhanced data. SW-CAN uses GM-LAN protocol (different framing).",
+      "BMW": "ISO 14229 UDS. DME at 0x12 (physical) / 0x7DF (functional). BMW uses extended 4-byte DIDs for some modules. ZGW routes all diagnostic traffic.",
+      "VW/Audi": "ISO 14229 UDS. ECU at 0x7E0/0x7E8 (powertrain) or specific address per module. J533 gateway routes all traffic. VAG uses KWP2000 on older (pre-2008) vehicles.",
+      "Stellantis": "ISO 14229 UDS. PCM at 0x7E0/0x7E8. SGW 2018+ requires bypass for most $31/$2E operations. ORC/BCM at OEM-specific addresses.",
+      "Hyundai/Kia": "ISO 14229 UDS. ECM at 0x7E0/0x7E8. Standard UDS compliance. 2019+ gateway restricts writes but all read services remain fully accessible."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

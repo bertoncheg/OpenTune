@@ -1,0 +1,113 @@
+{
+  "service_type": "brake_fluid_flush",
+  "category": "brakes",
+  "title": "Brake Fluid Flush / DOT Grade Change",
+  "description": "Periodic replacement of hygroscopic brake fluid at manufacturer-specified intervals to restore boiling point and prevent internal corrosion. Proper bleed sequence (rear-to-front, farthest-to-nearest from master cylinder) ensures complete fluid exchange without introducing air.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "BMW", "model": "X5 G05", "year": 2021, "engine": "3.0L B58 Turbo"},
+    {"make": "Toyota", "model": "Tacoma", "year": 2019, "engine": "3.5L 2GR-FKS V6"},
+    {"make": "Honda", "model": "CR-V", "year": 2020, "engine": "1.5L L15B7 Turbo"},
+    {"make": "Chevrolet", "model": "Equinox", "year": 2018, "engine": "1.5L LFV Turbo"},
+    {"make": "Volkswagen", "model": "Golf GTI MK7", "year": 2017, "engine": "2.0L EA888 TSI"},
+    {"make": "Ford", "model": "Explorer", "year": 2019, "engine": "3.5L EcoBoost V6"}
+  ],
+  "common_symptoms": [
+    "Discolored dark brown or black brake fluid visible through reservoir",
+    "Soft spongy pedal under repeated heavy braking (vapor lock from moisture boil)",
+    "Moisture content above 3% on electrochemical tester strip",
+    "Brake fluid boiling point degraded below 205 C wet boiling point on DOT 3",
+    "Corrosion visible in master cylinder reservoir or at bleeder screws",
+    "OEM maintenance reminder or CBS indicator showing brake fluid service due"
+  ],
+  "physical_solution": "Connect pressure bleeder or use vacuum pump at each corner. Bleed sequence: RR -> RL -> FR -> FL (farthest to nearest from master cylinder). Pump fluid through each corner until fresh clean fluid runs clear. Check DOT spec for vehicle per OEM notes below. If EPB present, retract pistons first via scan tool before opening rear bleeders. Refill reservoir after each corner. Total fluid used approximately 16-32 oz depending on system volume.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession (EPB retract prerequisite only)",
+      "$2F InputOutputControlByIdentifier (EPB motor retract on applicable vehicles)",
+      "$31 01 RoutineControl (EPB service position open for bleed on applicable vehicles)"
+    ],
+    "elm327_feasibility": "N/A for the physical brake fluid bleed procedure itself — no scan tool required for standard gravity/pressure/vacuum bleed. ELM327 needed only if vehicle has electronic parking brake (EPB) on rear axle — EPB caliper pistons must be electrically retracted before opening rear bleeders. Reference epb_service.json for EPB retract procedure. EPB retract via $31 accessible on most pre-2019 vehicles via ELM; 2019+ gateway vehicles require OEM tool.",
+    "server_free": true,
+    "preconditions": [
+      "Fresh brake fluid of correct DOT grade sourced and available (at least 32 oz)",
+      "EPB retracted to service position if vehicle has rear electronic parking brake (see epb_service.json)",
+      "Pressure bleeder or vacuum pump and catch bottle available",
+      "Rags and drip protection for painted surfaces — brake fluid strips paint on contact",
+      "Brake fluid moisture tester available to verify old fluid condition"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "physical",
+        "description": "Identify correct DOT grade per OEM notes. Test existing fluid moisture content with electrochemical tester. Record result for customer documentation. BMW: use DOT 4 LV only — never standard DOT 3 or 4. VW/Audi: TL 766 spec DOT 4."
+      },
+      {
+        "step": 2,
+        "type": "physical",
+        "description": "If vehicle has rear EPB calipers: activate EPB service mode to retract pistons before proceeding. Do NOT attempt to open rear bleeders with EPB engaged — piston will not compress and fluid will spray under pressure. Reference epb_service.json for full EPB retract procedure."
+      },
+      {
+        "step": 3,
+        "type": "physical",
+        "description": "Fill reservoir with fresh fluid to MAX mark. Attach pressure bleeder lid or prepare assistant for pedal pumping. Set pressure bleeder to 10-12 psi maximum — do not exceed or risk master cylinder seal damage."
+      },
+      {
+        "step": 4,
+        "type": "physical",
+        "description": "Open RR bleeder screw 1/2 to 3/4 turn. Allow fluid to flow until color transitions from dark brown/yellow to clear light-amber fresh fluid. Minimum 6-8 oz per corner recommended. Close bleeder firmly but do not over-torque (5-8 Nm typical). Repeat on RL."
+      },
+      {
+        "step": 5,
+        "type": "physical",
+        "description": "Open FR bleeder 1/2 turn, flush until clear fresh fluid. Close. Repeat on FL. Maintain reservoir above MIN mark at all times — if reservoir runs dry even briefly, air enters master cylinder and full ABS bleed cycle (abs_brake_bleed.json) will be required."
+      },
+      {
+        "step": 6,
+        "type": "physical",
+        "description": "Final fill to MAX mark. Replace reservoir cap. Pump brake pedal 5-8 times to firm up. Pedal should be solid with less than 1.5 inches free travel. If soft, air was introduced — perform ABS activation bleed (abs_brake_bleed.json)."
+      },
+      {
+        "step": 7,
+        "type": "physical",
+        "description": "If EPB was retracted: re-engage EPB via scan tool service position close routine (reference epb_service.json). Verify EPB applies and holds vehicle on grade."
+      },
+      {
+        "step": 8,
+        "type": "send_uds",
+        "description": "BMW only: reset CBS brake fluid counter in KOMBI (instrument cluster at 0x62): $10 03 -> $27 [security level] -> $31 01 [CBS fluid reset routine]. Or reset via iDrive menu: Car -> Settings -> Service -> Reset -> Brake Fluid. This step is mandatory — CBS will show fluid service overdue if not reset."
+      },
+      {
+        "step": 9,
+        "type": "physical",
+        "description": "Road test: hard stop from 40 mph to verify pedal firmness. No sponginess, no ABS false activation, no warning lights. Recheck reservoir level after road test."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "DOT 3 minimum specified on most Camry/Corolla/RAV4/Tacoma models. DOT 4 required on Lexus IS-F, GS-F, RC-F and GR Supra. Service interval: 2 years or 30,000 miles per Toyota maintenance schedule. Pre-2020 Toyota/Lexus EPB accessible via ELM327 for retract. 2020+ requires Techstream for EPB service position.",
+      "Honda/Acura": "DOT 3 on most Civic/Accord/CR-V/Pilot. DOT 4 required on Honda Civic Type R (FK8/FL5), NSX. Honda maintenance minder code B includes brake fluid check. Interval: 3 years per Honda schedule. Rear EPB on 2018+ Accord and 2019+ Odyssey — retract required before rear bleed. Standard DOT 3 flush does not require scan tool on non-EPB models.",
+      "Nissan/Infiniti": "DOT 3 standard on most Altima/Rogue/Murano/Pathfinder. DOT 4 required on Nissan GT-R (use Motul RBF 600 or Brembo LCF 600 Plus — standard DOT 4 not acceptable). Nissan R35 GT-R: Brembo system with 6-piston fronts requires 1+ liter total system volume. Service interval: 2 years or 30,000 miles. Infiniti Q50/Q60 rear EPB: retract required.",
+      "Ford": "DOT 4 LV (Low Viscosity, SAE J1703) required on Focus with MK100 ABS module and on Mustang GT350/GT500. Standard DOT 3 on F-150, F-250/350, Explorer, Expedition, Escape. F-150/Expedition EPB: retract via FDRS required on 2018+ due to SGW. Pre-2018 ELM327 accessible for EPB retract. Service interval: 2 years per Ford schedule.",
+      "GM": "DOT 3 on most Silverado/Sierra/Colorado/Equinox/Traverse/Suburban platforms. DOT 4 on Camaro SS/ZL1 and Corvette C7/C8 (Corvette uses Brembo system — flush with DOT 4 only, do not use DOT 3). GM specification GM6032M for approved fluid. Cadillac CT5/CT6, Chevrolet Blazer, Equinox 2018+ have rear EPB — retract before bleeding. Service interval: 3 years per GM maintenance. Brake Monitoring System (BMS) may need reset after flush on some platforms via DIC.",
+      "BMW": "DOT 4 Low Viscosity (BMW part number 83130139896 or equivalent Pentosin DOT 4 LV) is MANDATORY on all F-series and G-series BMW. NEVER use standard DOT 3 or standard DOT 4 in F/G-series — seals and ABS module are designed for LV spec. E-series (E90, E60, E46) use standard DOT 4. Service interval: 2 years unconditional regardless of mileage — CBS tracks this separately from mileage. CBS brake fluid counter MUST be reset after flush. G-series EPB retract requires ISTA — ELM327 blocked by ZGW.",
+      "VW/Audi": "DOT 4 standard on most Golf/Jetta/Passat/Tiguan/Audi A3/A4/A6. DOT 4 Plus required on Audi RS3/RS4/RS5/RS6/RS7/R8 and VW Golf R. VW fluid specification: TL 766 (available as Pentosin Super DOT 4 or Liqui-Moly DOT 4). Service interval: 2 years unconditional. Most MQB platform (Golf 7+, Tiguan 2016+): rear EPB — retract required. VW/Audi recommends pressure bleeding for complete flush. Adaptation reset for brake pressure sensor may be required after flush on some MQB variants.",
+      "Stellantis": "DOT 3 standard on Ram 1500/2500/3500, Jeep Wrangler JK/JL, Jeep Grand Cherokee, Dodge Charger/Challenger standard models. DOT 4 on Charger/Challenger Hellcat/Trackhawk/Redeye. Mopar brake fluid (part 68218055AB) or equivalent. Service interval: 3 years per Stellantis maintenance schedule. 2019+ Grand Cherokee WL and Ram 1500 DT EPB: wiTECH 2.0 required for EPB retract due to SGW. Pre-2018 ELM327 accessible.",
+      "Hyundai/Kia": "DOT 3 on most Elantra/Sonata/Tucson/Sportage/Sorento. DOT 4 on Genesis G70/G80/GV80. Service interval: 2 years or 30,000 miles per Hyundai/Kia maintenance schedule. Genesis G70/G80 2020+ rear EPB: GDS-Mobile recommended for retract. Pre-2019 Hyundai/Kia EPB accessible via ELM327. Stinger rear Brembo calipers have dual bleed nipples per caliper — bleed both upper and lower nipple on each rear corner."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,115 @@
+{
+  "service_type": "eps_motor_calibration",
+  "category": "steering",
+  "title": "EPS Motor and Torque Sensor Calibration",
+  "description": "After electric power steering rack, EPS motor, or torque sensor replacement, the EPS torque sensor zero-point must be calibrated with wheels centered to establish the neutral reference. Without calibration, steering may pull to one side, assist may be uneven, or an EPS warning light will persist.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "Honda", "model": "Accord", "year": 2020, "engine": "2.0T K20C4"},
+    {"make": "Toyota", "model": "Camry", "year": 2019, "engine": "2.5L A25A-FKS"},
+    {"make": "Ford", "model": "Mustang", "year": 2020, "engine": "5.0L Coyote"},
+    {"make": "GM", "model": "Equinox", "year": 2020, "engine": "1.5T Ecotec"},
+    {"make": "BMW", "model": "3 Series", "year": 2018, "engine": "B48 G20"},
+    {"make": "VW", "model": "Golf", "year": 2019, "engine": "1.4T TSI"},
+    {"make": "Nissan", "model": "Altima", "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Stellantis", "model": "Jeep Wrangler", "year": 2021, "engine": "3.6L Pentastar"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2021, "engine": "2.5L Smartstream"}
+  ],
+  "common_symptoms": [
+    "EPS warning light after rack replacement",
+    "steering pull after EPS motor service",
+    "uneven power assist left vs right",
+    "C1511/C1512 torque sensor calibration codes",
+    "steering wheel not centered after rack replacement",
+    "variable steering effort after EPS module replacement"
+  ],
+  "physical_solution": "Park vehicle on level surface, center steering wheel (confirm wheels pointing straight ahead by driving slowly in straight line). Connect scan tool to EPS module. Enter calibration mode via $31 routine with wheels perfectly centered. Wait for calibration complete signal. Drive slowly to verify equal assist in both directions. Perform wheel alignment after rack work.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — EPS torque sensor calibration",
+      "$27 SecurityAccess — required on some platforms",
+      "$22 ReadDataByIdentifier — torque sensor offset DID",
+      "$2E WriteDataByIdentifier — torque zero point write",
+      "$14 ClearDiagnosticInformation"
+    ],
+    "elm327_feasibility": "Partial — $31 EPS calibration routine accessible via ELM on Honda (ECU address 0x18 EPS sub-address), Toyota (EPS at 0x75), Nissan, pre-2018 Ford, pre-2018 Hyundai/Kia. BMW EPS on F/G-series at 0x65 — ZGW blocks. VW/Audi EPS at 0x44 — SFD blocks 2019+. ELM viable on older platforms without gateway.",
+    "server_free": false,
+    "preconditions": [
+      "vehicle on level flat surface",
+      "front wheels pointed exactly straight ahead",
+      "steering wheel centered",
+      "vehicle stationary",
+      "ignition ON engine OFF or engine idling per OEM requirement",
+      "battery voltage above 12.4V"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "instruct_mechanic",
+        "description": "Drive vehicle slowly in straight line 20+ feet. Release steering wheel. Wheels must be self-centered. Apply parking brake or have assistant hold service brakes before proceeding."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Address EPS module — Toyota 0x75, Honda 0x18 (EPS function), BMW 0x65, VW 0x44, Ford EPAS 0x740 (varies), GM EPS varies by platform, Nissan EPS 0x769, Stellantis EPS 0x762, Hyundai/Kia MDPS 0x57B."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "$10 03 — enter ExtendedDiagnosticSession at EPS module address. Send $3E 00 TesterPresent to maintain session."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "$22 [TORQUE_SENSOR_DID] — read current torque sensor offset value before calibration. Document pre-calibration value for reference."
+      },
+      {
+        "step": 5,
+        "type": "send_uds",
+        "description": "$31 01 [EPS_CALIBRATION_ROUTINE_ID] — initiate zero-point calibration. Module measures torque sensor output at centered wheel position and stores as zero reference. Routine typically completes in 3-5 seconds with positive response 71 01 [routine ID]."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "$22 [TORQUE_SENSOR_DID] — re-read torque sensor value after calibration. Should now read near zero (within +/-0.1 Nm of zero reference)."
+      },
+      {
+        "step": 7,
+        "type": "send_uds",
+        "description": "$14 FF FF FF — clear any residual EPS DTCs including C1511/C1512 calibration-required codes."
+      },
+      {
+        "step": 8,
+        "type": "verify",
+        "description": "Test drive — verify equal steering effort in both directions at low speed. No pulling. EPS warning light extinguished. Perform wheel alignment measurement after any rack or column replacement."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "EPS ECU at 0x75. Calibration routine $31 01 [TOYOEPS_CALIB] accessible via ELM on pre-2019. Torque sensor DID at EPS module. Common: EPS rack on Prius/Camry — calibration required after replacement. Toyota Techstream performs guided calibration. ELM accessible pre-2019.",
+      "Honda/Acura": "EPS module at 0x18 sub-function. $31 calibration accessible via ELM on most pre-2018. Accord/CR-V: rack replacement requires calibration. HDS performs calibration automatically on module initialization sequence. ELM viable on older platforms.",
+      "Nissan/Infiniti": "EPS ECU at 0x769. Steering angle sensor (SAS) and EPS are separate modules — calibrate both after rack replacement (reference sas_calibration.json for SAS procedure). ELM accessible on pre-2019. Power steering warning common after rack swap without calibration.",
+      "Ford": "EPAS (Electric Power Assisted Steering) module. Pre-2018 $31 calibration via ELM. F-150 EPAS at approximately 0x740 (varies by model year). 2018+ SGW requires FDRS. Mustang EPAS: torque sensor calibration common after rack replacement.",
+      "GM": "EPAS module varies by vehicle. $31 calibration routine via GDS2 or ELM on most pre-2020. Equinox/Malibu: steering column torque sensor — calibrate with wheel centered. Corvette C7/C8: magnetic ride steering requires additional calibration via GDS2.",
+      "BMW": "EPS at 0x65 (AFS function also at this address). ZGW blocks on F/G-series — ISTA required. BMW calibration procedure includes wheel alignment verification first. E-series ELM accessible. BMW EPS torque sensor calibration is sensitive to exact wheel centering — use alignment equipment to confirm straight-ahead before calibrating.",
+      "VW/Audi": "EPS at address 0x44. J533 gateway. Pre-SFD ELM accessible via $31 at 0x44. Audi MMI-guided calibration available. SFD 2019+ requires ODIS. Golf/A4 EPS: common rack replacement — calibration mandatory post-install. ODIS guided procedure includes straight-ahead confirmation step.",
+      "Stellantis": "EPS/EPAS module at approximately 0x762. Ram 1500 uses hydraulic assist with column-mounted EPAS on some trims. Jeep Wrangler EPS: calibration critical after lift kit installation (changes caster and steering geometry). wiTECH required 2018+. ELM pre-2018.",
+      "Hyundai/Kia": "MDPS (Motor-Driven Power Steering) at 0x57B. $31 calibration routine accessible via ELM pre-2019. Genesis GV80: MDPS calibration via GDS-Mobile. 2019+ gateway blocks write functions. Power steering warning common post-replacement without calibration. Calibration must be performed before test drive on Genesis/G80."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

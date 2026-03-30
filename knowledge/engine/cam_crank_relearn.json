@@ -1,0 +1,53 @@
+{
+  "service_type": "cam_crank_relearn",
+  "category": "engine",
+  "title": "Cam/Crank Reluctor Variation Relearn",
+  "description": "After engine work involving timing components, the ECU must relearn crankshaft and camshaft reluctor wheel variation to prevent misfire false positives. Critical on GM engines; other OEMs self-learn during drive cycle.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"GM","model":"Silverado","year":2016,"engine":"5.3L L83"},
+    {"make":"Ford","model":"F-150","year":2017,"engine":"5.0L Coyote"},
+    {"make":"VW","model":"Passat","year":2015,"engine":"2.0T EA888"},
+    {"make":"Toyota","model":"Tacoma","year":2017,"engine":"3.5L 2GR-FKS"}
+  ],
+  "common_symptoms": ["P0300 random misfire after timing belt/chain work","P0016/P0017 cam-crank correlation after cam sensor replacement","misfire DTCs that appear only at idle after engine work","rough idle with no compression or fuel cause"],
+  "physical_solution": "Perform relearn procedure specific to OEM. GM requires specific idle protocol at operating temperature. Ford uses PCM idle strategy. Most other OEMs self-learn during normal drive cycle.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl (relearn initiation on some OEMs)","Mode $01 misfire monitoring during relearn"],
+    "elm327_feasibility": "Partial — GM relearn can be monitored via Mode $01 misfire counts. $31 relearn initiation accessible on GM older platforms. Ford: PCM self-manages. BMW/Toyota: drive cycle self-learns. VW: ODIS Basic Settings for cam timing.",
+    "server_free": true,
+    "preconditions": [
+      "Engine at FULL operating temperature (coolant >85°C)",
+      "All timing components properly installed and timed",
+      "No active misfire DTCs from mechanical causes",
+      "Transmission in PARK or NEUTRAL",
+      "A/C OFF",
+      "All accessories OFF"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"DETERMINE IF RELEARN NEEDED: GM (required after any crankshaft, timing chain, or damper work), Ford (recommended after timing chain or PCM replacement), BMW (drive cycle only), Toyota (drive cycle only), VW/Audi (Basic Settings if cam timing adjusted)."},
+      {"step":2,"type":"instruct_mechanic","description":"GM RELEARN PROCEDURE (most critical): Engine fully warm (coolant 85°C+). Engine idling in Park. No electrical loads. Idle engine until cooling fan cycles on and off THREE times. PCM measures reluctor variation during this extended idle. GDS2 shows 'Crankshaft Position System Variation Learn' in progress."},
+      {"step":3,"type":"send_uds","description":"GM: $31 01 [CRANK_LEARN_ROUTINE] to PCM 0x7E0 — initiates relearn on older platforms. Monitor via $22 [CRANK_LEARN_STATUS_DID]. Status = complete when value changes from 'in progress' to 'learned'."},
+      {"step":4,"type":"instruct_mechanic","description":"GM RELEARN DRIVE CYCLE (alternative): If idle method fails, drive procedure: warm engine, drive at 55mph steady for 10 minutes, then decelerate WITHOUT braking from 55 to 0 (DFCO = deceleration fuel cut-off). PCM needs DFCO event to complete crank variation learn."},
+      {"step":5,"type":"instruct_mechanic","description":"FORD PCM IDLE RELEARN: After timing chain work, Ford PCM re-establishes idle strategy automatically. Procedure: warm idle 5 minutes, then 3 moderate accelerations to 45mph with normal deceleration. PCM records cam/crank correlation in first 10-20 engine starts."},
+      {"step":6,"type":"instruct_mechanic","description":"VW/AUDI BASIC SETTINGS: If cam timing adjustment made (dual VVT), perform ODIS/VCDS Basic Settings for 'Camshaft adjustment bank 1/2'. ELM327: drive cycle self-learns on most EA888/EA189 if timing is correct."},
+      {"step":7,"type":"verify","description":"After relearn: clear all DTCs, drive full cycle (idle → highway → idle). No P0016/P0017 or P0300 return. Monitor misfire counts via Mode $01 — should be zero after relearn. GM: read PCM to confirm 'Crank Position Variation Learned = YES'."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Cam/crank correlation self-learns within 2-3 drive cycles after timing work. No manual relearn needed. If P0016/P0017 persists: verify timing marks aligned correctly — relearn will not fix incorrect timing.",
+      "Honda/Acura": "Drive cycle self-learn only. No manual relearn procedure. K/J/R-series: self-learns in 1-2 starts if timing is correct.",
+      "Nissan/Infiniti": "Self-learns during normal driving. VQ/QR series: no manual procedure. If P0016 persists on VQ35: check cam sprocket for correct installation (single key slot).",
+      "Ford": "Idle relearn + DFCO similar to GM but less strict protocol. F-150 5.0L Coyote: timing chain replacement virtually always requires PCM idle period. No formal GDS2-style initiation needed.",
+      "GM": "MOST CRITICAL OEM for this procedure. Any crankshaft/damper/timing work: MANDATORY relearn. Without it: P0300 and P0316 misfire at idle. GDS2 'Crank Position Variation Learn' is standard post-repair step. Every GM tech knows this.",
+      "BMW": "Self-learns during normal driving. N52/N55/B48: no manual procedure. If cam/crank codes persist after timing work: verify VANOS sprocket installation and timing chain tension.",
+      "VW/Audi": "ODIS Basic Settings for cam timing verification/reset on dual-VVT engines. Simple drive cycle sufficient on most EA888/EA189. Ensure timing tool marks align before relearn attempt.",
+      "Stellantis": "Self-learns during normal driving on most. Hemi 5.7/6.4: extended idle after cam phaser work recommended. wiTECH for explicit PCM cam relearn on 2018+ if needed.",
+      "Hyundai/Kia": "Drive cycle self-learn. Theta II 2.0T: P0016 common after timing chain stretch — verify timing before relearn. GDS2 for cam timing verification on GDI engines."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,52 @@
+{
+  "service_type": "transfer_case_calibration",
+  "category": "transmission",
+  "title": "Transfer Case / 4WD System Calibration",
+  "description": "Calibrates the transfer case encoder motor after replacement to restore 4WD range selection (2H/4H/4L/N). Required on electric-shift transfer cases — motor must learn its range positions.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Ford","model":"F-150","year":2017,"engine":"5.0L Coyote"},
+    {"make":"GM","model":"Silverado","year":2016,"engine":"5.3L L83"},
+    {"make":"Toyota","model":"4Runner","year":2018,"engine":"4.0L 1GR-FE"},
+    {"make":"Nissan","model":"Pathfinder","year":2017,"engine":"3.5L VQ35DE"}
+  ],
+  "common_symptoms": ["4WD shift fault after transfer case replacement","grinding when engaging 4-Lo","4WD indicator blinking/flashing (searching for range)","TCCM fault code C0327/C0379","transfer case stuck between ranges"],
+  "physical_solution": "Park on level surface. Execute encoder motor calibration routine. Motor finds all range positions (2H, 4H, N, 4L). Verify all ranges engage without grinding.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl (encoder motor learn)","$22 ReadDataByIdentifier (encoder position)","$10 ExtendedDiagnosticSession"],
+    "elm327_feasibility": "Partial — $31 encoder learn routine accessible on older body-on-frame platforms (GM pre-2017, Ford pre-2018, Toyota ATC pre-2020). TCCM (Transfer Case Control Module) addresses: Ford 0x760, GM 0x7E3, Toyota 4WD ECU varies. Gateway restrictions on 2018+ Stellantis.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle on level surface",
+      "Transmission in PARK",
+      "Engine running",
+      "4WD selector in 2H (starting position)",
+      "No active TCCM DTCs from other causes",
+      "Driveshafts properly connected"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"Enter TCCM extended session: $10 03. Read current encoder position: $22 [ENCODER_POS_DID]. Position should correspond to current range. If position shows invalid/unknown: encoder motor calibration required."},
+      {"step":2,"type":"send_uds","description":"Execute encoder motor learn: $31 01 [ENCODER_LEARN_ROUTINE]. Routine commands motor to sweep through all positions, locating mechanical stops for each range. Duration: 30-90 seconds. Motor may be heard moving during routine."},
+      {"step":3,"type":"verify","description":"After routine: read encoder position again. All range positions should now have valid values. TCCM status should show calibration complete."},
+      {"step":4,"type":"instruct_mechanic","description":"RANGE TEST: With vehicle stationary, cycle through 2H → 4H → 4L → 4H → 2H. Each range should engage cleanly with indicator light solid (not blinking). 4-Lo: transmission must be in Neutral for shift on most OEMs."},
+      {"step":5,"type":"instruct_mechanic","description":"4-LO ENGAGEMENT TEST: Stop completely. Shift transmission to N. Shift 4WD to 4L (slow lever or button press). Feel/hear transfer case engage (light clunk). Shift back to D. Low range confirmed by RPM-to-speed ratio change."},
+      {"step":6,"type":"verify","description":"Clear TCCM DTCs. Road test in 4H: drive 0.5 miles. No 4WD indicator blinking. Shift back to 2H on dry pavement. Clear all 4WD related codes. Verify no C0327/C0379 return."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "ATC (Active Transfer Case) on 4Runner/Tacoma/Tundra. Techstream 'Active Transfer Case' calibration. ELM327 $31 accessible on pre-2020. 4Runner ATRAC system: separate rear differential coupling calibration also needed after rear diff work.",
+      "Honda/Acura": "VTM-4/AWD: not traditional transfer case — rear differential coupling. Honda SH-AWD (MDX/RDX): no user-accessible 4WD ranges. N/A for transfer case calibration.",
+      "Nissan/Infiniti": "ATTESA ET-S (4WD): electronic coupling, not traditional transfer case. CONSULT for ATTESA coupling zero-point calibration. Nissan Armada/Titan: traditional transfer case, CONSULT $31 accessible.",
+      "Ford": "TCCM (Transfer Case Control Module) on F-150/Super Duty/Explorer. IDS encoder motor learn on 2018+. ELM327 $31 accessible pre-2018. NV271/NV273/BorgWarner BW4419: common on F-150. Electronic shift — always needs encoder learn after replacement.",
+      "GM": "Electronically-shifted NV246/NVG263 on Silverado/Sierra/Tahoe/Suburban. TCCM encoder learn via GDS2. ELM327 $31 on older platforms (pre-2017). Actuator motor position DID readable for verification.",
+      "BMW": "xDrive all-wheel drive: transfer case is internal, no user range selection. Different calibration via ISTA for xDrive coupling. Not applicable for traditional 4WD transfer case procedure.",
+      "VW/Audi": "Haldex AWD: coupling unit in rear, no traditional transfer case. 4MOTION calibration via ODIS for coupling adaptation. Not applicable for traditional transfer case. Touareg: permanent AWD, no range selection.",
+      "Stellantis": "NV244 (Ram 1500), NV246/NV273 (Ram HD, Jeep Wrangler/Grand Cherokee). wiTECH 2018+. ELM327 $31 accessible pre-2018. All electric-shift Chrysler transfer cases require encoder learn after replacement.",
+      "Hyundai/Kia": "HTRAC AWD: electronic coupling, no traditional transfer case. No encoder motor calibration applicable. Terrain management modes (Snow/Sand) are ECU logic only."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

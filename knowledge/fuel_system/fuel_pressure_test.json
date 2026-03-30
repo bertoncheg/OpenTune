@@ -1,0 +1,102 @@
+{
+  "service_type": "fuel_pressure_test",
+  "category": "fuel_system",
+  "title": "Fuel Pressure Diagnostic",
+  "description": "Diagnoses P0087 and fuel delivery faults by comparing live fuel rail pressure against commanded target using OBD-II and OEM-specific PIDs. Covers both traditional port injection and modern GDI (Gasoline Direct Injection) high-pressure systems with their distinctly different pressure ranges.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "VW", "model": "Golf GTI", "year": 2019, "engine": "2.0T GDI EA888"},
+    {"make": "BMW", "model": "335i", "year": 2018, "engine": "B58 GDI"},
+    {"make": "Ford", "model": "F-150", "year": 2019, "engine": "2.7L EcoBoost"},
+    {"make": "GM", "model": "Equinox", "year": 2020, "engine": "1.5T GDI"},
+    {"make": "Toyota", "model": "Camry", "year": 2020, "engine": "2.5L GDI"},
+    {"make": "Honda", "model": "Accord", "year": 2020, "engine": "2.0T GDI"},
+    {"make": "Nissan", "model": "Altima", "year": 2019, "engine": "2.5L port injection"},
+    {"make": "Stellantis", "model": "Jeep Cherokee", "year": 2021, "engine": "2.0T GDI"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2021, "engine": "2.5L GDI"}
+  ],
+  "common_symptoms": [
+    "P0087 fuel rail pressure too low",
+    "hard start hot soak",
+    "engine stumble during acceleration",
+    "long crank before start",
+    "P008A low pressure circuit low",
+    "P00C6 low pressure fuel injector control",
+    "hesitation at wide open throttle"
+  ],
+  "physical_solution": "Connect scan tool and stream fuel rail pressure PIDs. Compare against commanded/target pressure. For port injection: target 40-60 psi at idle, drops at WOT indicate pump weakness. For GDI: low-pressure circuit 50-80 psi (LPFP), high-pressure circuit 1500-3000 psi (HPFP) at WOT. Install mechanical gauge at fuel rail Schrader valve for confirmation. For GDI: LP circuit testable with gauge, HP circuit dangerous — use scan tool only.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 01 DefaultSession",
+      "$01 0A OBD Fuel Pressure (absolute)",
+      "$22 ReadDataByIdentifier — OEM fuel rail pressure DID",
+      "$22 ReadDataByIdentifier — OEM fuel pressure target DID"
+    ],
+    "elm327_feasibility": "Partial — Mode $01 PID $0A (fuel rail pressure absolute, 3 kPa/bit, range 0-765 kPa) accessible via ELM but limited resolution for GDI systems. OEM-specific high-resolution fuel pressure DIDs ($22) accessible on pre-gateway vehicles. GDI HP pressure typically via OEM DID only. Target/actual comparison requires OEM DID — ELM Mode $01 gives actual only.",
+    "server_free": true,
+    "preconditions": [
+      "engine at operating temperature",
+      "fuel tank above 1/4 full",
+      "no active injector circuit DTCs",
+      "scan tool capable of streaming multiple PIDs simultaneously"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Stream Mode $01 PID $0A (01 0A) — fuel rail pressure. Calculation: A * 3 kPa. Convert: kPa * 0.145 = psi. Note: PID $0A is relative to vacuum (manifold referenced) for return-type systems."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Request OEM fuel rail pressure DID via $22 at ECM — Toyota DID 0x1201 (kPa), BMW DID 0x2F20 (low pressure) and 0x2F21 (high pressure), VW DID 0x0192 (injection pressure), Ford via enhanced PID. Compare actual vs DID commanded target value."
+      },
+      {
+        "step": 3,
+        "type": "instruct_mechanic",
+        "description": "Port injection test procedure — start engine cold, record pressure at idle (40-60 psi target). Turn key off — pressure should hold above 35 psi for 30+ minutes (pressure regulator check). If immediate drop: leaking injector or check valve."
+      },
+      {
+        "step": 4,
+        "type": "instruct_mechanic",
+        "description": "GDI low-pressure test — monitor LP fuel pressure DID at idle (target 50-80 psi). Blip throttle — LP should stay above 40 psi. If LP drops during blip: LPFP (in-tank) weak. P008A confirms LPFP issue."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "GDI high-pressure test — monitor HP rail pressure DID during WOT acceleration. Target: 1500-3000 psi (varies by OEM and RPM). HPFP output correlates with RPM — high pressure only achievable when cam-driven pump spinning fast enough."
+      },
+      {
+        "step": 6,
+        "type": "verify",
+        "description": "Compare fuel pressure at idle, part load, and WOT. If pressure below target at all conditions: check LPFP first. If LPFP OK but HPFP low: replace HPFP (reference high_pressure_fuel_pump.json). Clear DTCs and verify P0087 resolved."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "GDI system on 2AR-FXE/2GR-FXS/8AR-FTS. LP circuit target 60-70 psi. HP circuit 363-2175 psi (varies with RPM). DID 0x1201 at ECM 0x700 for fuel pressure. Port injection on older models: 44-50 psi. HPFP on 2AR-FXE: cam-lobe driven, known for ticking noise.",
+      "Honda/Acura": "GDI on 1.5T/2.0T/3.5L VTEC Turbo. LP: 60 psi. HP: 500-2900 psi depending on load. DID via HDS enhanced. Port injection on older models: 47-54 psi. HPFP on 2.0T: known for low-pressure fault at high altitude or with E10 fuel.",
+      "Nissan/Infiniti": "Direct injection on VR30DDTT (Infiniti), MR20DD, KR20DDET. Port injection on QR25DE, VQ35DE: 51 psi. DI systems: LP 50-80 psi, HP 1450-2900 psi. CONSULT PID for HP fuel pressure. VQ37VHR has port injection — check $0A via ELM.",
+      "Ford": "GDI on EcoBoost 1.5T/2.0T/2.7T/3.5T. Port+Direct injection (PFDI) on 5.0L Coyote Gen 3. LP: 50-65 psi. HP EcoBoost: 200-2175 psi. Enhanced PID [FORD_HPFP_DID] for HP pressure. P0087 on EcoBoost often HPFP cam follower wear.",
+      "GM": "GDI on 1.5T/2.0T Ecotec, 5.3L/6.2L LT1. Port on 5.3L L83 (AFM). LP: 55-65 psi. HP: 1450-2900 psi. Enhanced PID at ECM for HP pressure. P0087 on 2.0T common from high-pressure pump failure.",
+      "BMW": "B46/B48/B58 GDI. LP: 60-72 psi (supplied by in-tank LPFP). HP: DDE controls up to 3625 psi. DID 0x2F20 LP pressure, 0x2F21 HP pressure at ECM 0x12. N54/N55: HPFP 2900 psi max — known early failure pattern. ZGW blocks extended on F/G-series.",
+      "VW/Audi": "EA888 2.0T GDI. LP: 72 psi. HP: 580-2175 psi. DID 0x0192 fuel injection pressure at ECM 0x01. Known HPFP cam follower wear on early 2.0T TSI — follower inspection at 30k miles. J fuel pressure sensor DTC 17964/18665. Pre-SFD ELM accessible.",
+      "Stellantis": "GDI on 2.0T Hurricane, 2.4L MultiAir. Port injection on 5.7L/6.4L HEMI. HEMI: 46-58 psi at idle. Hurricane GDI LP: 65 psi, HP: up to 2175 psi. Enhanced PID via wiTECH for HP pressure. 2018+ SGW blocks extended.",
+      "Hyundai/Kia": "GDI on 2.0T Theta II, 2.5L Smartstream, 3.3T Lambda. LP: 65 psi. HP: 725-2175 psi. DID [HKG_FUEL_PRES_DID] at ECM. Theta II 2.0T/2.4T: known LSPI (Low Speed Pre-Ignition) concern at high HP fuel pressure — check for oil dilution."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

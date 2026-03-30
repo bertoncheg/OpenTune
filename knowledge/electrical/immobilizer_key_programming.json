@@ -1,0 +1,50 @@
+{
+  "service_type": "immobilizer_key_programming",
+  "category": "electrical",
+  "title": "Immobilizer / Transponder Key Programming",
+  "description": "Adds new keys or resyncs a lost transponder after replacement. ELM327 accessibility is LIMITED on most modern OEMs — this procedure clearly maps what is vs is not possible without an OEM tool.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2016,"engine":"2.5L 2AR-FXE"},
+    {"make":"Ford","model":"F-150","year":2016,"engine":"5.0L Coyote"},
+    {"make":"BMW","model":"3 Series","year":2015,"engine":"2.0L N20"},
+    {"make":"VW","model":"Jetta","year":2015,"engine":"1.8L TSI"}
+  ],
+  "common_symptoms": ["new key fob not starting vehicle","transponder lost key all-keys-lost situation","PATS/immobilizer fault after BCM replacement","security light flashing when trying to start"],
+  "physical_solution": "Use OEM or authorized aftermarket tool to program new key transponder to ECU. Key programming is OEM-specific and mostly requires crypto authentication that ELM327 alone cannot provide.",
+  "technical_solution": {
+    "uds_services": ["$27 SecurityAccess (seed-key exchange)","$2E WriteDataByIdentifier (key slot write)","$10 ProgrammingSession"],
+    "elm327_feasibility": "Limited — most key programming requires OEM-level security seed-key algorithms that ELM327 cannot compute. ELM327 can DETECT immobilizer faults and read key slot status on some OEMs. Actual programming requires AUTEL IM608, LAUNCH X431, or OEM tool with the correct PIN/crypto module.",
+    "server_free": false,
+    "preconditions": [
+      "Vehicle VIN and PIN (dealer PIN or locksmith service)",
+      "OEM-authorized programming tool with immobilizer function",
+      "All existing keys present if adding a spare (some OEMs require all keys during programming)",
+      "Battery fully charged (key programming fails on low voltage)"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"ASSESS SITUATION: (A) Adding spare key = easier, existing working key usually required as seed. (B) All-keys-lost = hardest, requires OEM tool + PIN. (C) BCM/ECU replacement = PIN from old module needed."},
+      {"step":2,"type":"send_uds","description":"Read immobilizer status: $19 02 FF to immobilizer/BCM module. Read U-codes and B-codes for immo fault. $22 [KEY_SLOT_DID] to read how many keys are programmed. This read is accessible via ELM327 on most OEMs."},
+      {"step":3,"type":"instruct_mechanic","description":"TOOL REQUIREMENTS by OEM: Toyota/Lexus: Techstream or Autel IM608 with Toyota immo adapter. Honda: HDS or Autel with Honda immo. Ford: FDRS or IDS for PATS programming. GM: Tech2/MDI + SPS subscription. BMW: ISTA + BMW credentials OR Autel IM608 with CAS/FEM module. VW/Audi: ODIS + dealer SKC (secret key code). Stellantis: wiTECH. Hyundai/Kia: GDS2 or Autel."},
+      {"step":4,"type":"send_uds","description":"For platforms where ELM327 works (Toyota older/Honda older): $10 02 to enter programming session, $27 01 to request seed, compute key per OEM algorithm, $27 02 [COMPUTED_KEY], then $2E [KEY_SLOT_DID] [KEY_DATA]. Toyota 4D chip: 8-byte seed/key. Honda: 8-byte challenge."},
+      {"step":5,"type":"instruct_mechanic","description":"AFTER PROGRAMMING: Test ALL keys before closing hood. Some systems program only the last key and de-authorize others. Verify each key starts vehicle. Verify remote functions (lock/unlock) if applicable."},
+      {"step":6,"type":"verify","description":"Confirm: vehicle starts with all programmed keys. No security light flashing at key-on. Read key slot DID to confirm correct number of keys registered. Road test — verify no unexpected security lockout during drive."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Smart key system (RFID transponder). Immo ECU at 0x780. Pre-2010: relatively open, 4D chip clone possible with basic tools. 2010+: 128-bit AES encryption. All-keys-lost requires Techstream + Toyota dealer PIN. Spare key with existing key: Autel IM608 accessible.",
+      "Honda/Acura": "Honda immobilizer unit in PCM on older, standalone on newer. Pre-2012: relatively accessible. 2012+: Honda immo requires HDS or authorized Autel. Civic/Accord: key-learning via existing key self-programming on some models (sequence in owner's manual).",
+      "Nissan/Infiniti": "NATS (Nissan Anti-Theft System). Pin code required for all-keys-lost. CONSULT III+ or Autel IM608 with Nissan module. Intelligent key (smart key) on 2004+: more complex. Pre-2004: simpler 4D transponder.",
+      "Ford": "PATS (Passive Anti-Theft System). Requires IDS or FDRS for proper programming. ELM327 cannot compute PATS key-code. Autel IM608 with Ford module works for most applications. FDRS cloud-authorization for 2020+.",
+      "GM": "Passlock I/II/III and GM VATS: older systems, relatively accessible. PKE (passive keyless entry) 2006+: Tech2/MDI + SPS (Service Programming System) subscription required. VIN-based authorization. Autel works on most.",
+      "BMW": "CAS (Car Access System) on E-series, FEM/BDC on F/G-series. Most secure system of all OEMs. BMW requires ISTA + dealer credentials for genuine key programming. Aftermarket (Autel IM608 with CAS adapter): works for E/F-series. All-keys-lost on G-series: nearly impossible without BMW dealer.",
+      "VW/Audi": "Immobilizer integrated in instrument cluster (older) or separate (newer). Requires SKC (Secret Key Code) from VW dealer (via VIN, with proof of ownership). ODIS with SKC for programming. VCDS: can do basic key adaptation if one working key exists. 2019+: requires additional SFD token.",
+      "Stellantis": "SKIM (Sentry Key Immobilizer Module). wiTECH 2.0 required. PIN/SKIMcode from Chrysler dealer. Pre-2010: accessible with older tools. 2010+: wiTECH subscription required.",
+      "Hyundai/Kia": "IMMO ECU in BCM/cluster. GDS2 or Autel for programming. PIN from dealer for all-keys-lost. Relatively accessible compared to BMW/VW. Smart key 2015+: more complex but Autel IM608 covers most."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

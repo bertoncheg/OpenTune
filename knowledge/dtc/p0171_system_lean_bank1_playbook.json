@@ -1,0 +1,48 @@
+{
+  "service_type": "p0171_system_lean_bank1_playbook",
+  "category": "dtc",
+  "title": "P0171 System Too Lean Bank 1 — Diagnostic Playbook",
+  "description": "Step-by-step diagnostic decision tree for P0171 (system too lean, bank 1). Guides ProcedureEngineer from first code read through root cause identification using live data. Most common check engine light code in the field.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"Toyota","model":"Camry","year":2017,"engine":"2.5L 2AR-FKS"},
+    {"make":"Ford","model":"F-150","year":2016,"engine":"5.0L Coyote"},
+    {"make":"Honda","model":"Accord","year":2017,"engine":"2.4L K24W"},
+    {"make":"GM","model":"Silverado","year":2015,"engine":"5.3L L83"}
+  ],
+  "common_symptoms": ["check engine light","P0171 stored","possible P0174 if V6/V8 (bank 2 also lean)","possibly P0101 or P0102 (MAF issue)","rough idle in some cases","good fuel economy or slightly poor"],
+  "physical_solution": "Follow the lean diagnosis tree: vacuum leak → MAF → fuel pressure → injectors → O2 sensor. Most P0171 cases are vacuum leaks or dirty MAF. Fix root cause, clear code, verify drive cycle.",
+  "technical_solution": {
+    "uds_services": ["Mode $01 PID $06/$07 (STFT/LTFT B1)","Mode $01 PID $10 (MAF g/s)","Mode $01 PID $11 (throttle position)","Mode $01 PID $0C (RPM)","Mode $02 (freeze frame)"],
+    "elm327_feasibility": "Full — entire diagnosis tree uses Mode $01 and Mode $02. No OEM tool required for diagnosis. ELM327 is fully sufficient.",
+    "server_free": true,
+    "preconditions": ["Engine at full operating temperature","Record STFT/LTFT at idle AND at 2500 RPM no-load","Read freeze frame before clearing code"],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"READ FREEZE FRAME FIRST: Mode $02 — note RPM, load, coolant temp, STFT B1, LTFT B1, VSS when code set. This tells you the condition when fault occurred."},
+      {"step":2,"type":"send_uds","description":"Read live LTFT B1: Mode $01 PID $07. DECISION POINT: LTFT > +15% = lean correction is significant. LTFT +5% to +15% = mild lean. LTFT near 0% = intermittent issue, check freeze frame."},
+      {"step":3,"type":"instruct_mechanic","description":"IDLE vs LOAD TEST: Read STFT at idle (PID $06) and at 2500 RPM (same PID). If STFT WORSE at idle but normalizes at 2500 RPM = VACUUM LEAK (idle is more sensitive to air leaks). If lean at ALL RPMs = MAF, fuel pressure, or injectors."},
+      {"step":4,"type":"instruct_mechanic","description":"STEP A — VACUUM LEAK TEST (if idle-worse pattern): With engine warm, spray carburetor cleaner around: intake manifold gaskets, throttle body base, brake booster vacuum line, PCV hose, any vacuum line. If idle quality changes (RPM rises or STFT drops) = found the leak. Fix it first."},
+      {"step":5,"type":"send_uds","description":"STEP B — MAF PLAUSIBILITY: Read MAF rate: Mode $01 PID $10. At idle: expect 2-5 g/s per liter of displacement. 2.5L engine = 5-12.5 g/s idle. Below this range = dirty/failing MAF. Unplug MAF: if engine idles smoother without it, MAF is reading incorrectly."},
+      {"step":6,"type":"send_uds","description":"STEP C — FUEL PRESSURE (if both idle and cruise lean): Read Mode $01 PID $0A (fuel pressure gauge). Normal: 270-410 kPa. Low pressure = in-tank pump or filter. If fuel pressure OK but lean persists = injector or O2 sensor."},
+      {"step":7,"type":"instruct_mechanic","description":"STEP D — O2 SENSOR CHECK: A lazy or stuck-lean O2 sensor causes ECU to add fuel unnecessarily (false lean signal). With engine warm at idle, O2 sensor voltage should switch rapidly 0.1-0.9V. Slow switching or stuck low = sensor fault, not true lean condition."},
+      {"step":8,"type":"instruct_mechanic","description":"STEP E — BANK SELECTIVE (V6/V8): If only P0171 (not P0174), fault is BANK 1 specific. Eliminates: MAF (affects both banks), fuel pump (both banks). Points to: bank 1 injector, bank 1 O2 sensor, bank 1 side vacuum leak."},
+      {"step":9,"type":"verify","description":"After repair: clear P0171. Drive cycle: idle 5 min, moderate acceleration to 55mph, cruise 10 min, idle 2 min. Re-read LTFT — should be within ±5%. Confirm P0171 does not return after 2 complete drive cycles."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Most common causes: PCV hose crack (2ZR/2AR), intake manifold gasket leak (2GR V6), dirty MAF. Toyota LTFT very stable when healthy — any LTFT >+7% is significant. Check OCV/VVT-i as secondary cause on 2AR engines.",
+      "Honda/Acura": "Most common: intake manifold gasket (K-series), IACV carbon buildup, cracked brake booster hose. Honda runs LTFT very close to 0 normally — +10% is alarming. VTEC solenoid oil leak can cause crankcase vapor lean condition.",
+      "Nissan/Infiniti": "Most common: upper intake manifold gaskets (VQ35), cracked IACV hose. VQ35 3.5L: known upper/lower intake gasket failure. ELM327 Mode $01 fully reliable on Nissan.",
+      "Ford": "Most common: EcoBoost boost leak (intercooler pipe pops off), PCV separator plate failure. 5.0L Coyote: check IMRC manifold runner gaskets. ELM327 Mode $01 fully reliable.",
+      "GM": "Most common: cracked upper intake manifold (plastic manifold on 3.6L), AFM cylinder deactivation O-ring leaks. 5.3L: check all 8 AFM solenoid O-rings when lean + misfire both present.",
+      "BMW": "Most common: Valvetronic eccentric shaft sensor failure, N54/N55 charge pipe (intercooler inlet) cracking. BMW LTFT stable normally — any significant lean points to Valvetronic or boost leak.",
+      "VW/Audi": "Most common: PCV diaphragm rupture (EA888 valve cover), cracked charge pipe (EcoBoost equivalent). PCV failure causes massive lean trim and oil consumption. Check PCV hose on valve cover rear.",
+      "Stellantis": "Most common: Hemi 5.7 MDS solenoid O-ring failures, 2.4 Tigershark PCV issues. Check all 8 cylinder head gaskets on high-mileage Hemi for compression contribution to lean.",
+      "Hyundai/Kia": "Most common: Theta II GDI carbon buildup on intake valves causing lean at idle (see vw_audi_ea888_carbon_buildup.json for comparable diagnosis). Also: FTPS sensor failure giving false lean indication."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

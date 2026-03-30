@@ -1,0 +1,45 @@
+{
+  "service_type": "tpms_service_positions",
+  "category": "tpms",
+  "title": "TPMS Service Positions and Rotation Relearn",
+  "description": "Ensures TPMS sensor position IDs are correctly mapped after tire rotation. Some OEMs auto-relearn positions while driving; others require stationary tool or scan-tool relearn to update the TPMS ECU's position map.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["TPMS light after tire rotation","wrong tire showing low pressure warning","pressure warning on wrong corner after rotation","TPMS fault after seasonal tire swap"],
+  "physical_solution": "After rotation: perform correct relearn for OEM (auto-drive, stationary magnet, or scan-tool). System updates position-to-sensor-ID mapping so warnings display correct corner.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl (relearn initiation)","$22 ReadDataByIdentifier (current sensor ID positions)"],
+    "elm327_feasibility": "Partial — $31 relearn initiation accessible on most OEMs pre-2019 with correct routine ID. Auto-relearn OEMs (Toyota/Stellantis) need no scan tool. GM/Honda: stationary or drive relearn, ELM327 $31 trigger accessible.",
+    "server_free": true,
+    "preconditions": [
+      "All tires mounted and inflated to correct pressure",
+      "All 4 sensors transmitting (verify before starting relearn)",
+      "Vehicle on level surface for stationary relearn",
+      "All doors closed"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"BEFORE ROTATION: Record current sensor IDs by position (FL/FR/RL/RR) via scan tool or TPMS tool. This is the map you're updating after rotation."},
+      {"step":2,"type":"instruct_mechanic","description":"Rotate tires per vehicle rotation pattern. Install at correct positions. Inflate to spec."},
+      {"step":3,"type":"send_uds","description":"For scan-tool relearn path: Enter TPMS ECU extended session $10 03. Initiate relearn mode: $31 01 [TPMS_RELEARN_ROUTINE]. TPMS ECU begins listening for sensor RF signals."},
+      {"step":4,"type":"instruct_mechanic","description":"STATIONARY RELEARN (GM/Honda): Use low-frequency TPMS activation tool at each tire in sequence (FL → FR → RR → RL or per OEM). Each sensor responds to LF trigger, TPMS ECU records position. Confirm each position with horn honk or DIC message."},
+      {"step":5,"type":"instruct_mechanic","description":"DRIVE RELEARN (Toyota/Stellantis auto): After initiating relearn mode, drive vehicle 10+ minutes at 15+ mph. TPMS ECU correlates sensor IDs to position via wheel speed sensor data. Light extinguishes when complete."},
+      {"step":6,"type":"verify","description":"Verify relearn complete: TPMS light extinguished (or after 10-minute drive cycle for auto-relearn). Read sensor positions via scan tool — confirm each position shows correct sensor ID. Reduce one tire by 5 psi: warning should show correct corner."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "AUTO-RELEARN: drive 10 minutes at 15+ mph after any tire rotation or sensor change. No tool required. TPMS ECU learns positions via wheel speed correlation. Lexus: same. Confirm light extinguishes within 10 minutes of driving.",
+      "Honda/Acura": "STATIONARY RELEARN: deflate each tire 3 psi (FL, FR, RR, RL sequence) to trigger each sensor. Or use TPMS reset button (some models have button in glove box or instrument cluster). HDS scan-tool relearn also available.",
+      "Nissan/Infiniti": "DRIVE RELEARN: most Nissan models auto-relearn after driving. Some older models: stationary relearn with TPMS trigger tool in sequence (FL → FR → RR → RL). CONSULT III+ for initiation trigger on newer.",
+      "Ford": "FORD TPMS TRAINING TOOL required on most F-150/Explorer/Edge: use Motorcraft tool at each tire sequentially. Horn chirp confirms each position. FDRS for scan-tool relearn on 2018+. 2020+ F-150: app-based TPMS reset available.",
+      "GM": "STATIONARY RELEARN: turn ignition ON, press TPMS reset button to enter relearn mode (DIC shows message), use TPMS trigger tool at each tire (FL → FR → RR → RL). Horn chirp confirms each. GDS2 also initiates relearn mode via $31.",
+      "BMW": "BMW RDC RESET required after any rotation. iDrive menu: Vehicle → Tire Pressure Monitor → Reset. Or via ISTA scan tool. BMW sensors include position logic — system doesn't auto-learn positions, must reset reference pressures after rotation.",
+      "VW/Audi": "TPMS RESET via MMI menu: Favorites → TYRE PRESSURE → Store. Or ODIS/VCDS: Tyre Pressure Monitoring → Adapt → confirm current pressures as new reference. ELM327 $31 relearn accessible pre-2019.",
+      "Stellantis": "AUTO-RELEARN: after rotation, drive 20+ minutes at 15+ mph. Takes longest of all OEMs to auto-learn. wiTECH for accelerated relearn on 2018+. jeep/Dodge/Ram: horn chirp relearn available on most models via ignition sequence.",
+      "Hyundai/Kia": "AUTO or SERVICE MODE: most models auto-relearn within 10 minutes of driving. Service mode relearn: turn ignition ON, press TPMS button (if equipped) 3x rapidly, then drive. GDS2 for $31 initiation on 2019+. ELM327 accessible pre-2019."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

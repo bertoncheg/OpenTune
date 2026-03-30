@@ -1,0 +1,108 @@
+{
+  "service_type": "egr_system_test",
+  "category": "engine",
+  "title": "EGR System Test and Cleaning Reference",
+  "description": "Diagnoses P0400-P0408 EGR system codes using live data comparison of commanded vs actual EGR position and valve response testing via RoutineControl. Heavy carbon buildup in EGR valves and passages is a common mechanical failure requiring physical cleaning, especially on diesel engines.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "VW", "model": "Golf TDI", "year": 2019, "engine": "2.0L TDI EA288"},
+    {"make": "BMW", "model": "330d", "year": 2020, "engine": "B57 3.0L diesel"},
+    {"make": "Ford", "model": "F-250", "year": 2021, "engine": "6.7L Powerstroke"},
+    {"make": "GM", "model": "Silverado 2500", "year": 2021, "engine": "6.6L Duramax L5P"},
+    {"make": "Toyota", "model": "Camry", "year": 2019, "engine": "2.5L 2AR-FE"},
+    {"make": "Honda", "model": "Accord", "year": 2020, "engine": "2.0T K20C4"},
+    {"make": "Nissan", "model": "Frontier", "year": 2020, "engine": "2.5L QR25DE"},
+    {"make": "Ram", "model": "1500 EcoDiesel", "year": 2021, "engine": "3.0L VM Motori diesel"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2020, "engine": "2.5L Smartstream G2.5"}
+  ],
+  "common_symptoms": [
+    "P0400/P0401/P0402/P0403/P0404/P0405/P0406/P0407/P0408 codes active",
+    "Rough idle after warm-up indicating EGR stuck open",
+    "Engine surge on deceleration with EGR fault present",
+    "Heavy carbon deposits visible in intake manifold",
+    "Diesel knock or excessive smoke with EGR system faults",
+    "Emissions test failure due to EGR flow insufficient code"
+  ],
+  "physical_solution": "Read live data for EGR position commanded vs actual. If large deviation exists: EGR valve stuck or position sensor faulty. Remove EGR valve and inspect — carbon build-up is common on diesel and GDI engines. Clean valve body and pintle with throttle body cleaner or replace valve. EGR cooler: check for coolant in intake (white smoke, coolant loss) indicating cooler internal failure. For gas engines: less carbon accumulation but valve can stick with carbon deposits at high mileage.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$22 ReadDataByIdentifier — EGR actual position DID",
+      "$22 ReadDataByIdentifier — EGR commanded position DID",
+      "$31 01 RoutineControl — EGR valve full sweep actuator test",
+      "$2F InputOutputControlByIdentifier — EGR position override",
+      "$19 02 ReadDTCByStatusMask"
+    ],
+    "elm327_feasibility": "Partial — EGR commanded position readable via Mode $01 PID $2C (EGR commanded %) and PID $2D (EGR error). OEM-specific actual position DIDs via $22 on pre-gateway vehicles. $31 EGR valve sweep test accessible on pre-gateway platforms. $2F EGR override limited via ELM327. BMW N47/N57 EGR DID via $22 at ECM 0x12 pre-F-series accessible. VW EGR $31 accessible pre-SFD (pre-2019).",
+    "server_free": false,
+    "preconditions": [
+      "Engine at operating temperature — coolant above 160°F (71°C)",
+      "No active fuel delivery or injector DTCs",
+      "EGR valve physically accessible for inspection",
+      "Smoke machine available for EGR cooler leak test on diesel"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "Read all DTCs: send $19 02 FF at ECM address. Note P0400-P0408 codes specifically. P0401 indicates insufficient EGR flow (stuck closed or clogged passage). P0402 indicates excessive flow (stuck open). P0403 is circuit fault. P0404/P0405/P0406 indicate position sensor range or rationality issues."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Read actual EGR position at idle: send $22 [EGR_POSITION_DID]. Should read 0% or fully closed at idle. Also read commanded EGR position DID. Compare values — if commanded 0% but actual shows non-zero percentage, valve is stuck open. If commanded 30% but actual stays 0%, valve stuck closed."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Enter extended session: send $10 03 to ECM. Then send $31 01 [EGR_SWEEP_ROUTINE_ID] 00 to command EGR valve full sweep from 0 to 100%. Monitor actual position response in real time. Sluggish response, sticking at mid-range, or no response indicates carbon binding or actuator failure."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "IO control EGR to 50% open: send $2F [EGR_POSITION_DID] 03 [position_bytes_for_50_pct]. Monitor MAF reading simultaneously — MAF g/s value should drop measurably when EGR opens (EGR dilutes fresh air charge). If MAF reading unchanged during commanded 50% EGR open, EGR flow passage is blocked upstream of valve."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Physical inspection — remove EGR valve. Inspect for carbon accumulation on valve pintle and seat. Clean valve body and pintle with carburetor cleaner and brass brush. Check EGR cooler passages for restriction. On diesel: inspect EGR cooler for coolant contamination — white residue or oily coolant sludge pattern in intake indicates cooler internal failure."
+      },
+      {
+        "step": 6,
+        "type": "instruct_mechanic",
+        "description": "For EGR cooler failure diagnosis: pressure test coolant system to 15 psi, smoke test intake manifold with EGR port accessible. Smoke escaping from coolant fill cap or expansion tank indicates combustion gases entering cooling system via cooler. Requires complete EGR cooler replacement — cleaning not effective for internal failure."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "After cleaning or replacement: re-run $31 sweep test and verify smooth full-range movement with actual position tracking commanded position within 5%. Clear all DTCs with $14 FF FF FF FF. Run warm-up drive cycle including moderate load conditions for EGR to activate. Verify P0400 series codes do not return after two complete drive cycles."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Gas engines have EGR on 2AR-FE 2.5L and some older V6 platforms. 2GR-FE 3.5L has no EGR on most markets. EGR DID at ECM 0x700. Lexus diesel (Europe only): EGR critical maintenance item at 60k mile intervals. Physical EGR valve cleaning common at 80k miles on high-mileage gas engines in high-EGR-rate markets.",
+      "Honda/Acura": "EGR on 2.4L K24 and some 3.5L J35 engines. Lift-type EGR valve with separate position sensor. P0401 common from carbon deposits on high-mileage K24 — cleaning with throttle body cleaner restores flow without replacement. EGR temperature sensor failure (P0412) also documented. ELM accessible for EGR commanded PID.",
+      "Nissan/Infiniti": "EGR on 2.5L QR25DE and older VQ-series engines. EGR valve position feedback sensor integral to valve assembly. P0400 common from deposits on higher mileage. EGR delete is common aftermarket modification (legal only for off-road or non-emissions-test jurisdictions). ELM $31 accessible on pre-gateway platforms.",
+      "Ford": "6.7L Powerstroke diesel: dual-circuit EGR with separate high-pressure and low-pressure EGR coolers — critical maintenance interval. P0401 common from cooler restrictions requiring cooler cleaning or replacement. Gas engines (2.0L EcoBoost, 5.0L Coyote): EGR present but less carbon-prone than diesel. Pre-2018 ELM accessible. 2018+ SGW requires FDRS.",
+      "GM": "6.6L Duramax LML and L5P: EGR system critical maintenance item — known EGR cooler failure pattern causing coolant in intake. Gas engines (5.3L L83/L84, 6.2L L86): EGR present and generally reliable. P0401 on Duramax often EGR cooler restricted rather than valve fault. ELM $31 accessible on most GM platforms.",
+      "BMW": "N47/N57 diesel: EGR cooler failure pattern causing coolant entry into intake manifold — critical repair requiring cooler replacement. B47/B57 generation improved cooler design but monitoring still recommended. EGR position DID via $22 at ECM 0x12. Gas engines (B46/B48/B58): EGR present on all markets. ZGW blocks $31 and $2F on F-series and G-series platforms.",
+      "VW/Audi": "2.0 TDI EA288: High-pressure EGR (HP-EGR) valve (V338) and Low-pressure EGR (LP-EGR) valve (N18). HP-EGR cooler failure common on older EA189 engine. LP-EGR valve position via $22 G628 sensor DID at ECM 0x01. N18 low-pressure EGR cooler bypass flap controlled via $2F. SFD gateway blocks on 2019+ — ODIS required. Pre-2019 ELM accessible.",
+      "Stellantis": "3.0L EcoDiesel Ram 1500: EGR system critical — EGR cooler failures documented on early build 2014-2016 models. 6.7L Cummins in Ram 2500/3500: EGR cooler cleaning at 150k mile interval recommended by OEM. 2018+ SGW blocks $31 and $2F — wiTECH required. Gas engines: EGR present on 3.6L Pentastar and 5.7L HEMI platforms.",
+      "Hyundai/Kia": "2.0L and 2.4L Theta II, 3.3L Lambda II engines: EGR present. Hyundai diesel (not sold in USA): EGR critical maintenance. P0401 from carbon deposits on higher-mileage gas engines — K24-equivalent cleaning procedure effective. 2019+ gateway blocks $31 write commands. ELM Mode $01 PID $2C accessible on all years."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

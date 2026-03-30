@@ -1,0 +1,47 @@
+{
+  "service_type": "elm327_capability_matrix",
+  "category": "reference",
+  "title": "ELM327 Capability Matrix by OEM",
+  "description": "Definitive reference for what a standard ELM327 OBD-II adapter can and cannot do on each OEM. Used by ProcedureEngineer to set user expectations and route procedures to correct execution path.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["user asks what tool is needed","procedure requires capability check","ProcedureEngineer routing decision"],
+  "physical_solution": "Reference only — no physical procedure. Use this matrix to inform user of tool limitations before starting a procedure.",
+  "technical_solution": {
+    "uds_services": ["Mode $01-$09 (OBD-II standard)","$10 DiagnosticSessionControl","$19 ReadDTCInformation","$14 ClearDTC","$31 RoutineControl","$2E WriteDataByIdentifier"],
+    "elm327_feasibility": "Full — this document IS the capability reference.",
+    "server_free": true,
+    "preconditions": ["ELM327 adapter connected to OBD-II port (pins 4/5/6/14/16)"],
+    "procedure_steps": [
+      {"step":1,"type":"reference","description":"TOYOTA/LEXUS: Powertrain reads=FULL | Body reads=PARTIAL (most modules accessible) | Powertrain DTCs clear=FULL | Body DTCs clear=PARTIAL | RoutineControl $31=FULL pre-2022 | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=NO for most | Alternative adapter needed=NO | Verdict: BEST ELM327 compatibility of all OEMs."},
+      {"step":2,"type":"reference","description":"HONDA/ACURA: Powertrain reads=FULL | Body reads=PARTIAL (F-CAN accessible, B-CAN limited) | Powertrain DTCs clear=FULL | Body DTCs clear=PARTIAL | RoutineControl $31=FULL on main CAN | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=NO for powertrain | Alternative adapter needed=NO | Verdict: VERY GOOD ELM327 compatibility. B-CAN body modules need HDS."},
+      {"step":3,"type":"reference","description":"NISSAN/INFINITI: Powertrain reads=FULL | Body reads=PARTIAL (CAN-C accessible, CAN-B limited) | Powertrain DTCs clear=FULL | Body DTCs clear=PARTIAL | RoutineControl $31=FULL on main CAN | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=NO for powertrain | Alternative adapter needed=NO | Verdict: GOOD compatibility. CAN-B body modules need CONSULT."},
+      {"step":4,"type":"reference","description":"FORD: Powertrain reads=FULL (HS-CAN) | Body reads=BLOCKED on MS-CAN modules (body on pins 3/11) | Powertrain DTCs clear=FULL | Body DTCs clear=BLOCKED | RoutineControl $31=FULL on HS-CAN | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=YES for MS-CAN body | Alternative adapter needed=MS-CAN capable adapter for body | Verdict: GOOD for powertrain, BLOCKED for body. Standard ELM327 misses all MS-CAN modules."},
+      {"step":5,"type":"reference","description":"GM: Powertrain reads=FULL (HS-CAN) | Body reads=BLOCKED on SW-CAN (pin 1) | Powertrain DTCs clear=FULL | Body DTCs clear=BLOCKED | RoutineControl $31=FULL on HS-CAN | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=YES for SW-CAN | Alternative adapter needed=SW-CAN capable adapter | Verdict: GOOD for powertrain, BLOCKED for body/interior on SW-CAN. Standard ELM327 misses SW-CAN modules."},
+      {"step":6,"type":"reference","description":"BMW F-SERIES (2012-2018): Powertrain reads=FULL | Body reads=PARTIAL (ZGW permits most reads) | Powertrain DTCs clear=FULL | Body DTCs clear=PARTIAL | RoutineControl $31=PARTIAL (most work) | WriteDataByIdentifier $2E=PARTIAL | Gateway bypass needed=PARTIAL | Alternative adapter needed=NO for most | Verdict: GOOD on F-series. ZGW present but permissive for most diagnostic operations."},
+      {"step":7,"type":"reference","description":"BMW G-SERIES (2019+): Powertrain reads=FULL | Body reads=PARTIAL | Powertrain DTCs clear=FULL | Body DTCs clear=LIMITED | RoutineControl $31=LIMITED | WriteDataByIdentifier $2E=BLOCKED on most | Gateway bypass needed=YES for writes | Alternative adapter needed=ISTA or ENET cable for coding | Verdict: DEGRADED on G-series. ZGW significantly restricts write operations. Reads still work."},
+      {"step":8,"type":"reference","description":"VW/AUDI PRE-2019: Powertrain reads=FULL | Body reads=FULL (J533 routes all) | Powertrain DTCs clear=FULL | Body DTCs clear=FULL | RoutineControl $31=FULL | WriteDataByIdentifier $2E=FULL | Gateway bypass needed=NO | Alternative adapter needed=NO | Verdict: EXCELLENT pre-2019. J533 transparent to ELM327 for all operations."},
+      {"step":9,"type":"reference","description":"VW/AUDI 2019+ SFD: Powertrain reads=FULL | Body reads=FULL | Powertrain DTCs clear=FULL | Body DTCs clear=FULL | RoutineControl $31=READS ONLY | WriteDataByIdentifier $2E=BLOCKED | Gateway bypass needed=YES for writes | Alternative adapter needed=ODIS with SFD token for coding | Verdict: READS GREAT, WRITES BLOCKED. SFD protection added 2019+ locks adaptation/coding writes."},
+      {"step":10,"type":"reference","description":"STELLANTIS PRE-2018: Powertrain reads=FULL | Body reads=FULL (CAN-C) | Powertrain DTCs clear=FULL | Body DTCs clear=FULL | RoutineControl $31=FULL | WriteDataByIdentifier $2E=FULL | Gateway bypass needed=NO | Verdict: EXCELLENT pre-2018. Very ELM327-friendly."},
+      {"step":11,"type":"reference","description":"STELLANTIS 2018+ SGW: Powertrain reads=FULL | Body reads=LIMITED (CAN-IHS on pins 3/11 blocked) | Powertrain DTCs clear=FULL | Body DTCs clear=BLOCKED | RoutineControl $31=BLOCKED | WriteDataByIdentifier $2E=BLOCKED | Gateway bypass needed=YES | Alternative adapter needed=wiTECH or SGW bypass module | Verdict: READS OK, WRITES BLOCKED. SGW most restrictive gateway after 2018."},
+      {"step":12,"type":"reference","description":"HYUNDAI/KIA PRE-2019: Powertrain reads=FULL | Body reads=FULL | Powertrain DTCs clear=FULL | Body DTCs clear=FULL | RoutineControl $31=FULL | WriteDataByIdentifier $2E=FULL | Gateway bypass needed=NO | Verdict: EXCELLENT pre-2019."},
+      {"step":13,"type":"reference","description":"HYUNDAI/KIA 2019+: Powertrain reads=FULL | Body reads=FULL | Powertrain DTCs clear=FULL | Body DTCs clear=FULL | RoutineControl $31=READ TRIGGER OK | WriteDataByIdentifier $2E=BLOCKED on most | Gateway bypass needed=YES for adaptation writes | Alternative adapter needed=GDS2 for coding | Verdict: READS EXCELLENT. Writes blocked 2019+. Read-heavy procedures fully accessible."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Best overall ELM327 compatibility. Most procedures executable without OEM tool pre-2022. Recommend OEM tool for: immobilizer programming, smart key all-keys-lost.",
+      "Honda/Acura": "Very good compatibility. Recommend OEM tool for: B-CAN body module work, immobilizer, transmission programming.",
+      "Nissan/Infiniti": "Good compatibility. Recommend CONSULT for: CVT programming, ATTESA calibration, full body scan.",
+      "Ford": "Good for engine/transmission. MS-CAN adapter required for: BCM, PATS, body module work. FDRS required 2018+ for many operations.",
+      "GM": "Good for engine/transmission. SW-CAN adapter required for: BCM, PEPS, body module work.",
+      "BMW": "F-series: good compatibility. G-series: reads only, ISTA for writes. Never rely on ELM327 alone for BMW coding.",
+      "VW/Audi": "Pre-2019: best-in-class ELM327 support. 2019+: reads only. ODIS required for coding/adaptation.",
+      "Stellantis": "Pre-2018: excellent. 2018+: reads only, wiTECH required for all service procedures that involve writes.",
+      "Hyundai/Kia": "Pre-2019: excellent. 2019+: reads excellent, writes require GDS2. Good news: most diagnostic procedures are read-heavy."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,43 @@
+{
+  "service_type": "gm_dod_afm_lifter_diagnosis",
+  "category": "oem_specific",
+  "title": "GM DOD/AFM Cylinder Deactivation Lifter Diagnosis",
+  "description": "Diagnoses GM Active Fuel Management (AFM) / Dynamic Fuel Management (DFM) collapsed lifter failures common on 5.3L and 6.2L V8 trucks/SUVs. Covers P3400/P3425/P3441/P3456 codes, lifter failure detection, and AFM disable procedure.",
+  "oem_coverage": ["GM"],
+  "vehicles_seen": [
+    {"make":"GM","model":"Silverado 1500","year":2015,"engine":"5.3L L83 AFM"},
+    {"make":"GM","model":"Tahoe","year":2017,"engine":"5.3L L83 AFM"},
+    {"make":"GM","model":"Sierra 1500","year":2016,"engine":"5.3L L83 AFM"},
+    {"make":"GM","model":"Suburban","year":2018,"engine":"5.3L L83 AFM"},
+    {"make":"GM","model":"Yukon","year":2016,"engine":"6.2L L86 AFM"}
+  ],
+  "common_symptoms": ["P3400 cylinder deactivation system bank 1","P3425/P3441/P3456 individual cylinder lifter codes","lifter tick / valve train noise","misfire on deactivation cylinders (1/4/6/7 on 5.3L)","oil consumption","check engine light with misfire"],
+  "physical_solution": "Confirm collapsed lifter via valve train noise and cylinder contribution test. Disable AFM via tune or range technology to stop failure progression. Repair requires engine removal and lifter replacement (cam/lifter set).",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (AFM status, lifter position)","$31 RoutineControl (cylinder contribution)","Mode $01 PID $4C-$53 (misfire per cylinder)"],
+    "elm327_feasibility": "Partial — Cylinder-specific misfire counts via Mode $01 on 2010+ accessible. AFM status monitoring via OEM PID to PCM 0x7E0. GDS2 for full AFM lifter position diagnostics. ELM327 can confirm affected cylinders via misfire counts and contribution test.",
+    "server_free": true,
+    "preconditions": [
+      "Engine warmed to operating temperature",
+      "Oil level and condition checked (AFM highly sensitive to oil quality)",
+      "Note: listen for valve train tick at idle — AFM lifter tick is distinct metallic tapping"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"IDENTIFY AFM CYLINDERS: On 5.3L (Gen IV/V): AFM deactivates cylinders 1, 4, 6, 7. On 6.2L L86: cylinders 1, 4, 6, 7 (same). On 6.0L/4.3L (some): different cylinder sets. Check TSB list for specific engine."},
+      {"step":2,"type":"send_uds","description":"Read cylinder-specific misfire counts: Mode $01 PID $4C (cylinder 1 misfire) through $53 (cylinder 8). High misfire counts ONLY on AFM cylinders (1, 4, 6, 7) = AFM lifter failure pattern."},
+      {"step":3,"type":"send_uds","description":"Run cylinder contribution test: $31 01 [CONTRIB_ROUTINE] to PCM 0x7E0. AFM cylinder(s) with collapsed lifter show zero or minimal RPM drop when disabled — cam lobe not moving valve = zero cylinder contribution."},
+      {"step":4,"type":"instruct_mechanic","description":"PHYSICAL CONFIRMATION: Remove valve cover on affected bank. Inspect AFM lifter retraction solenoid (LOMA valve). Collapsed lifter will have no visible rocker arm movement when engine cranked. Look for metal debris in oil (use oil drain plug with magnet)."},
+      {"step":5,"type":"instruct_mechanic","description":"AFM DISABLE (STOP GAP BEFORE REPAIR): Install Range Technology AFM Disabler (OBD-II plug-in, $65) or program PCM via HP Tuners to disable AFM. This stops the failure from spreading to adjacent cylinders. Engine runs on all 8 cylinders — slight fuel economy reduction acceptable."},
+      {"step":6,"type":"instruct_mechanic","description":"REPAIR SCOPE: Lifter replacement requires removing intake manifold, valve covers, pushrods, rocker arms. Access to lifter bores. Replace ENTIRE AFM lifter set (all 16 AFM lifters) — never replace just failed units. Replace AFM oil pressure solenoids (LOMA valves). Consider camshaft replacement if cam lobes show wear."},
+      {"step":7,"type":"verify","description":"After repair + AFM disable: verify no P3400/P3425/P3441/P3456 codes. No valve train noise. Contribution test shows equal cylinder participation (all AFM cylinders contributing). Oil consumption resolved."}
+    ],
+    "oem_notes": {
+      "GM": "5.3L L83/L84/LM7/LC9/LY5: extremely high failure rate. GM extended warranty coverage on some VINs. Affected model years: 2007-2021 (various). Root cause: inadequate oil pressure to AFM lifter passages at partial throttle highway speeds. Fix: upgraded Delphi AFM lifter set + DOD delete kit. DOD Delete kit replaces LOMA valves with blanking plates. Always replace timing chain tensioners during repair. Use Dexron HP fluid after repair. Program PCM to disable AFM if no delete kit. AFM lifter failure rate approximately 30-40% of vehicles at 80k-120k miles."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

@@ -1,0 +1,43 @@
+{
+  "service_type": "ford_6r80_tcc_shudder",
+  "category": "oem_specific",
+  "title": "Ford 6R80 Torque Converter Clutch Shudder Diagnosis",
+  "description": "The Ford 6R80 6-speed automatic is the most common transmission in F-150/Mustang/Explorer. TCC shudder at 40-55mph is the #1 complaint and is directly linked to Mercon V contamination. Covers diagnosis, fluid fix, and P0741 resolution.",
+  "oem_coverage": ["Ford"],
+  "vehicles_seen": [
+    {"make":"Ford","model":"F-150","year":2015,"engine":"5.0L Coyote","transmission":"6R80"},
+    {"make":"Ford","model":"Mustang GT","year":2016,"engine":"5.0L Coyote","transmission":"6R80"},
+    {"make":"Ford","model":"Explorer","year":2016,"engine":"3.5L EcoBoost","transmission":"6R80"},
+    {"make":"Ford","model":"Expedition","year":2017,"engine":"3.5L EcoBoost","transmission":"6R80"},
+    {"make":"Ford","model":"F-150","year":2018,"engine":"3.5L EcoBoost","transmission":"6R80"}
+  ],
+  "common_symptoms": ["shudder/vibration at 40-55mph during light throttle","P0741 TCC performance or stuck OFF","shudder disappears at WOT or above 60mph","shudder worse when transmission hot","P0741 set intermittently with shudder events"],
+  "physical_solution": "Drain and fill with Motorcraft Mercon LV (NOT Mercon V). Mercon V is incompatible with 6R80 TCC friction material and is the root cause of shudder. Complete drain-fill often resolves without any scan-tool procedure.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (TCC slip RPM, TCC duty cycle)","Mode $01 for RPM/VSS indirect monitoring","$14 ClearDiagnosticInformation (P0741 clear after fluid fix)"],
+    "elm327_feasibility": "Partial — P0741 readable via Mode $03. TCC slip RPM via OEM enhanced $22 to TCM. Mode $01 RPM + VSS for indirect TCC lock verification. IDS for full TCC duty cycle monitoring.",
+    "server_free": true,
+    "preconditions": [
+      "CRITICAL: Verify current fluid type — Mercon V in a 6R80 = root cause",
+      "Transmission at operating temperature for diagnosis",
+      "Test shudder at 45-50mph light throttle to confirm pattern"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"FLUID CHECK FIRST: The 6R80 requires Mercon LV (Low Viscosity). If Mercon V, Dexron III, or any non-LV fluid is present, it causes TCC friction surface glazing and P0741. Mercon LV is amber-colored and thinner than Mercon V."},
+      {"step":2,"type":"instruct_mechanic","description":"CONFIRM SHUDDER PATTERN: Drive at exactly 45-50mph with light throttle (1/4 pedal). If vehicle vibrates/shudders rhythmically, that's TCC shudder. Apply brakes lightly to 35mph — shudder stops immediately. Accelerate back to 45mph — shudder returns. This is definitive TCC shudder confirmation."},
+      {"step":3,"type":"send_uds","description":"Read P0741 freeze frame: Mode $02. Note: TFT (transmission fluid temp) at fault event. If fault sets at high temps (>110°C TFT) = fluid breakdown accelerating glazing. If fault sets at moderate temps: pure fluid incompatibility."},
+      {"step":4,"type":"instruct_mechanic","description":"FLUID SERVICE: Drain pan (4-5 quarts accessible). Replace filter and gasket. Refill with Motorcraft Mercon LV ONLY. DO NOT use Honda, Toyota, or aftermarket 'multi-vehicle' fluid. Ford part: XT-10-QLVC Mercon LV. Capacity: 13-14 quarts total (pan drop = 4-5 quarts)."},
+      {"step":5,"type":"instruct_mechanic","description":"FLUSH DECISION: If shudder severe or P0741 chronic: perform complete flush (exchange 13-14 quarts) not just pan drop. Fresh Mercon LV throughout is more effective. Use transmission flush machine or multiple drain-fill cycles."},
+      {"step":6,"type":"send_uds","description":"Clear P0741: $14 FF FF FF. No adaptation reset required — Ford 6R80 relearns TCC engagement parameters automatically within 2-3 drive cycles with correct fluid."},
+      {"step":7,"type":"verify","description":"Test drive after fluid service: 45-50mph light throttle. Shudder should be eliminated or significantly reduced after first drive. Full resolution within 50-100 miles as TCC friction material conditions with clean Mercon LV. If shudder persists after complete flush: torque converter replacement required."}
+    ],
+    "oem_notes": {
+      "Ford": "6R80 production: 2009-present. F-150, Mustang, Explorer, Expedition, Navigator. Ford TSB 12-3-6 (and multiple subsequent) specifically address TCC shudder with Mercon LV fix. Ford has paid for fluid service under warranty on this issue repeatedly. Mercon LV-compatible converters introduced 2009 — if vehicle was serviced with Mercon V and shudder is severe, converter clutch pack may be glazed beyond recovery. Converter replacement cost: $800-$1500 part only. Prevention: use ONLY Mercon LV at every service. Note: 10R80 (2017+ F-150/Mustang) has different fluid spec — verify before service."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

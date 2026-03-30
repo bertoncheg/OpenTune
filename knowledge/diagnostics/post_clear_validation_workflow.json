@@ -1,0 +1,42 @@
+{
+  "service_type": "post_clear_validation_workflow",
+  "category": "diagnostics",
+  "title": "Post-Repair DTC Clear and Validation Workflow",
+  "description": "Standard procedure for clearing DTCs after repair and validating the fix. Includes drive cycle requirements, monitor completion check, and comeback risk assessment. Prevents sending vehicle back to customer before confirming repair success.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [],
+  "common_symptoms": ["any repair requiring DTC clearance and validation","pre-customer delivery check","emission test preparation","comeback prevention"],
+  "physical_solution": "After repair: clear codes, run appropriate drive cycle to set readiness monitors, confirm no codes return, and document outcome for knowledge base.",
+  "technical_solution": {
+    "uds_services": ["$14 ClearDiagnosticInformation","Mode $04 (OBD-II DTC clear)","Mode $01 PID $01/$41 (monitor readiness)","$19 ReadDTCInformation"],
+    "elm327_feasibility": "Full — Mode $04 clear and Mode $01 monitor status are universal on all OBD-II.",
+    "server_free": true,
+    "preconditions": ["Physical repair confirmed complete","No active system faults from unrelated issues","Battery fully charged"],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"BEFORE CLEARING: Document all DTCs present (stored + pending). Photograph scan results. This creates a repair record and baseline for comeback diagnosis if needed."},
+      {"step":2,"type":"send_uds","description":"Clear all DTCs: Mode $04 (OBD-II standard) or $14 FF FF FF (UDS). Confirm positive response. Note: clearing resets all readiness monitors to NOT READY."},
+      {"step":3,"type":"send_uds","description":"Immediately after clear: read DTCs again via $19 02 FF. Any code that immediately returns (without driving) = active fault still present — repair is not complete. Do NOT deliver vehicle."},
+      {"step":4,"type":"instruct_mechanic","description":"DRIVE CYCLE — MINIMUM: Cold start if possible. Drive 15-20 minutes with at least: 5 min city driving (idle + 0-40mph), 5 min highway (55-65mph steady), deceleration without braking, idle 2 minutes. This sets most monitors."},
+      {"step":5,"type":"send_uds","description":"After drive cycle: read monitor status Mode $01 PID $01 and $41. For customer delivery: all continuous monitors (misfire, fuel system, comprehensive component) must be READY. At minimum 5 of 8 non-continuous monitors READY."},
+      {"step":6,"type":"instruct_mechanic","description":"COMEBACK RISK ASSESSMENT: If original DTC was EVAP, catalyst, or O2 monitor — these are the hardest to set in one drive cycle. If customer needs emission test immediately, advise them to drive normally 1-2 days before testing."},
+      {"step":7,"type":"send_uds","description":"FINAL READ: $19 02 FF — confirm zero stored DTCs. $19 0E — confirm no most-recent test failures. Only deliver vehicle when both checks are clean."},
+      {"step":8,"type":"instruct_mechanic","description":"LOG THE OUTCOME: Record: vehicle (VIN), code(s) repaired, root cause found, repair performed, miles at service. This feeds OpenTune's outcome database and improves future diagnosis accuracy for similar vehicles."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Toyota EVAP monitor very strict — requires specific ambient temp and fuel level. If EVAP code was repaired, advise customer to drive normally 24 hours before emission test.",
+      "Honda/Acura": "Honda catalyst monitor requires extended highway cruise. Clear and drive minimum 20 min highway before checking catalyst monitor status.",
+      "Nissan/Infiniti": "Nissan monitors generally set within 1-2 normal drive cycles. CVT-equipped: confirm no P17F0 return after 50 miles of gentle driving.",
+      "Ford": "Ford readiness monitors: KOEO and KOER self-tests available via Mode $01. Some Ford monitors require specific ambient temp window.",
+      "GM": "GM monitors generally set efficiently. AFM-related repairs: confirm contribution test passes before delivery. Check MIL status after 3 drive cycles.",
+      "BMW": "BMW: after major repairs, complete CBS (Condition Based Service) reset if applicable. DME adaptations may need drive time to settle — fuel trims should be within ±5% by end of test drive.",
+      "VW/Audi": "Post-repair adaptation resets (after MAF, IMA, etc.) require drive cycle to stabilize. Verify adaptation values via $22 if available before delivery.",
+      "Stellantis": "Post-SGW repair: verify all write operations completed correctly by reading back the written DIDs. TIPM-related: verify all electrical loads function after replacement.",
+      "Hyundai/Kia": "Hyundai EVAP monitor requires long cold soak. If P0456/P0442 was repaired: advise customer to park overnight then drive normally — EVAP monitor runs during first startup after long soak."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_WAVE2_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

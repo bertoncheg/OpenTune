@@ -1,0 +1,106 @@
+{
+  "service_type": "maf_adaptation_reset",
+  "category": "engine",
+  "title": "MAF Sensor Adaptation Reset",
+  "description": "After MAF sensor replacement, the ECU's learned adaptation values for fuel trim correction at the old sensor's output curve must be cleared so the ECU recalibrates to the new sensor baseline. Failure to reset adaptations causes incorrect fuel trim and potential drivability concerns for several drive cycles.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "VW", "model": "Golf", "year": 2019, "engine": "2.0T EA888 Gen3"},
+    {"make": "BMW", "model": "3 Series", "year": 2018, "engine": "B46 2.0T"},
+    {"make": "Ford", "model": "F-150", "year": 2019, "engine": "5.0L Coyote"},
+    {"make": "Toyota", "model": "Camry", "year": 2020, "engine": "2.5L 2AR-FE"},
+    {"make": "Honda", "model": "Accord", "year": 2020, "engine": "2.0T K20C4"},
+    {"make": "GM", "model": "Silverado", "year": 2019, "engine": "5.3L L83"},
+    {"make": "Nissan", "model": "Altima", "year": 2019, "engine": "2.5L QR25DE"},
+    {"make": "Dodge", "model": "Charger", "year": 2021, "engine": "3.6L Pentastar"},
+    {"make": "Hyundai", "model": "Sonata", "year": 2020, "engine": "2.5L Smartstream G2.5"}
+  ],
+  "common_symptoms": [
+    "P0100/P0101/P0102/P0103/P0104 MAF sensor codes after replacement",
+    "Check engine light returning shortly after new MAF installation",
+    "Long-term fuel trim stuck significantly high or low after sensor swap",
+    "Rough idle or hesitation during adaptation period with new sensor",
+    "Fuel trim not returning to normal range after multiple drive cycles"
+  ],
+  "physical_solution": "After installing new MAF sensor, connect scan tool. Perform adaptation reset routine to clear stored air mass learning tables. After reset, perform re-adaptation drive cycle: warm engine fully, idle 5 minutes, then gentle acceleration from 0-40 mph several times, steady cruise at 40 mph for 5 minutes, allow self-correction. Monitor STFT and LTFT normalizing toward zero over 2-3 trips.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — MAF and fuel adaptation reset",
+      "$2E WriteDataByIdentifier — zero adaptation channels",
+      "$22 ReadDataByIdentifier — adaptation value read and verify",
+      "$14 ClearDiagnosticInformation"
+    ],
+    "elm327_feasibility": "Partial — DTC clear ($14) fully accessible via ELM327. $22 read of adaptation values accessible on pre-gateway vehicles. $31 adaptation reset routine accessible on Toyota, Honda, Nissan, pre-2018 Ford, and pre-2021 GM via ELM327. BMW requires extended session plus security access — ELM limited on F-series and G-series. VW $31 adaptation accessible pre-SFD (pre-2019). Gateway blocks $31 write on 2018+ Ford (SGW) and 2019+ VW (SFD).",
+    "server_free": false,
+    "preconditions": [
+      "New MAF sensor installed with connector fully seated and latched",
+      "No air leaks between MAF sensor and throttle body",
+      "Engine at operating temperature before adaptation reset",
+      "No active misfire DTCs present"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "instruct_mechanic",
+        "description": "Verify new MAF installed correctly — sensor directional orientation matches airflow arrow on housing, connector fully latched with audible click, no air leaks in intake between MAF sensor and throttle body. Check all hose clamps are tight. Any air leak post-MAF will cause persistent lean condition."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "Enter extended diagnostic session: send $10 03 to ECM address. Required for $31 RoutineControl and $22/$2E data operations. BMW DME: 0x12. VW/Audi ECM: 0x01. Toyota ECM: 0x700. All others: 0x7E0."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "Read current adaptation values before reset: send $22 [MAF_ADAPT_DID]. BMW: DID 0x2B10 (air mass adaptation at idle), 0x2B11 (at part load), 0x2B12 (at full load). VW: Group 032 adaptation channel via $22 or VCDS measuring block. Document baseline values for reference."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "Execute adaptation reset: send $31 01 [ADAPTATION_RESET_ROUTINE_ID] 00. See OEM notes for routine IDs. For OEMs using $2E: send $2E [ADAPT_DID] [zero bytes] to write zeros to adaptation channels directly. Confirm positive response $71 01 [ID] or $6E [DID]."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Perform adaptation drive cycle after reset: cold start if possible, warm up at idle 3-5 minutes, gentle acceleration to 40 mph, hold steady cruise at 40 mph for 5 minutes, light deceleration to idle, idle 2 minutes. Repeat full cycle 2-3 times. This allows ECU to build new adaptation baseline across multiple load points."
+      },
+      {
+        "step": 6,
+        "type": "send_uds",
+        "description": "Monitor fuel trim normalization: read Mode $01 PID $06 (STFT Bank 1) and $07 (LTFT Bank 1) continuously. Values should trend toward -5% to +5% range within 2-3 drive cycles. If LTFT remains greater than +15% after 3 completed trips, suspect remaining intake air leak rather than adaptation issue."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "After 2-3 drive cycles: send $22 [MAF_ADAPT_DID] again and verify adaptation values are within normal operating range for the OEM. Clear any residual P0100-P0104 codes with $14 FF FF FF FF. Confirm LTFT within plus or minus 5% at idle and cruise. If codes return, verify MAF part number matches OEM specification."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "ECM learns MAF output automatically within 1-2 drive cycles without explicit reset typically needed. If LTFT concerns persist beyond 3 trips, $31 routine $C110 at ECM 0x700 clears all fuel trim adaptations. Toyota recommends clearing codes and driving before condemning new MAF as defective. ELM327 accessible on pre-2019 models.",
+      "Honda/Acura": "ECM self-adapts quickly within 1-2 trips. Idle learn procedure after reset: idle for 10 minutes with all electrical loads off including AC and headlights. P0101 flow range fault common on K24 with dirty MAF element — clean with MAF cleaner spray before replacing. ELM $31 accessible on pre-2018. Honda ECM address 0x18.",
+      "Nissan/Infiniti": "ECM adaptation resets automatically after DTC clear via $14 on most platforms. Drive 2-3 warm cycles for LTFT normalization. VQ-series engines: MAF hot-wire element — compressed air clean first, replace only if cleaning ineffective. ELM327 accessible on most years. ECM 0x7E0.",
+      "Ford": "PCM fuel trim adaptive learning clears with $14 DTC clear on most platforms. $31 adaptive fuel reset routine on F-150 and Mustang PCM accessible pre-2018 via ELM327. 2018+ FDRS required for explicit adaptation reset command. PCM relearns automatically within a few drive trips after DTC clear without explicit routine on most years.",
+      "GM": "ECM adaptive fuel learn tables clear with $14 DTC clear. $31 routine for explicit reset on LS-series engines available via ELM327. Silverado and Sierra: MAF hot-film sensor — ensure no oil contamination from over-saturated air filter before condemning MAF. LTFT normalization monitoring via Mode $01 ELM access on all years.",
+      "BMW": "DME stores air mass adaptation maps at multiple load points — most critical OEM for explicit reset. DID 0x2B10 (idle adaptation), 0x2B11 (part load), 0x2B12 (full load) at ECM 0x12. $31 adaptation reset routine requires security access $27 unlocked first. ZGW gateway blocks on F-series and G-series — ISTA recommended. E-series (pre-2012) ELM accessible for $31 with $27.",
+      "VW/Audi": "Adaptation channels at Group 032 (idle speed control adaptation) and Group 033 (fuel mixture adaptation). Reset via $31 at ECM 0x01 or via VCDS adaptation channel write. Pre-SFD ELM accessible for both read and write. SFD 2019+ blocks all write operations — ODIS required. 2.0T EA888: ensure intake resonator hose not cracked — common cause of persistent adaptation deviation.",
+      "Stellantis": "PCM fuel trim adaptations clear automatically after $14 DTC clear on all platforms. $31 idle and fuel adaptation reset available on pre-2018 via ELM327. 3.6L Pentastar MAF: known contamination from oil catch can system installations — inspect MAF element for oil film before replacing. 2018+ SGW blocks $31 write commands.",
+      "Hyundai/Kia": "ECM adapts within 2-3 trips after DTC clear. $31 idle adaptation routine at ECM 0x7E0 accessible via ELM327 on pre-2019 models. 2019+ security gateway blocks $31 write commands — GDS2 required for explicit reset. 2.5L Smartstream and 2.0T Theta II MAF: clean with MAF-specific cleaner spray before replacing — sensor element is delicate hot-wire type."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

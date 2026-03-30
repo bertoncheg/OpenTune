@@ -1,0 +1,106 @@
+{
+  "service_type": "injector_balance_test",
+  "category": "fuel_system",
+  "title": "Fuel Injector Balance and Contribution Test",
+  "description": "Activates individual fuel injectors via RoutineControl to measure per-cylinder fuel contribution delta, identifying clogged, stuck, or leaking injectors that cause misfire codes without external flow bench testing. Complements misfire DTCs to pinpoint which injector needs service.",
+  "oem_coverage": [
+    "Toyota/Lexus",
+    "Honda/Acura",
+    "Nissan/Infiniti",
+    "Ford",
+    "GM",
+    "BMW",
+    "VW/Audi",
+    "Stellantis",
+    "Hyundai/Kia"
+  ],
+  "vehicles_seen": [
+    {"make": "GM", "model": "Silverado", "year": 2019, "engine": "5.3L V8"},
+    {"make": "Ford", "model": "F-150", "year": 2020, "engine": "5.0L Coyote"},
+    {"make": "BMW", "model": "535i", "year": 2018, "engine": "N55"},
+    {"make": "VW", "model": "Jetta", "year": 2019, "engine": "1.4T TSI"},
+    {"make": "Toyota", "model": "Camry", "year": 2018, "engine": "3.5L 2GR-FE"},
+    {"make": "Honda", "model": "Accord", "year": 2019, "engine": "3.5L J35"},
+    {"make": "Nissan", "model": "Maxima", "year": 2019, "engine": "3.5L VQ35DE"},
+    {"make": "Stellantis", "model": "Charger", "year": 2020, "engine": "5.7L HEMI"},
+    {"make": "Hyundai", "model": "Genesis G80", "year": 2019, "engine": "3.3T Lambda"}
+  ],
+  "common_symptoms": [
+    "P0301-P0308 cylinder-specific misfire codes",
+    "rough idle with specific cylinder contribution drop",
+    "P0300 random misfire confirmed to specific cylinder via contribution test",
+    "uneven idle on V6/V8 engines",
+    "fuel injector noise difference between cylinders"
+  ],
+  "physical_solution": "Using scan tool, activate individual injector kill test (disable one injector at a time while monitoring RPM drop or misfire rate). Good injector: RPM drops noticeably when disabled. Bad injector: minimal RPM drop when disabled (already not contributing). Also: activate injector ON via $2F to pulse it and listen for spray pattern on running engine.",
+  "technical_solution": {
+    "uds_services": [
+      "$10 03 ExtendedDiagnosticSession",
+      "$31 01 RoutineControl — per-cylinder injector contribution",
+      "$2F InputOutputControlByIdentifier — injector cylinder disable",
+      "$22 ReadDataByIdentifier — injector adaptation map",
+      "$27 SecurityAccess — required on some OEMs for $2F"
+    ],
+    "elm327_feasibility": "Partial — $31 per-cylinder contribution test accessible via ELM on older GM (routine IDs $B004-$B010 per cylinder), pre-2018 Ford. $2F individual injector control requires extended session + security access — limited on gateway vehicles. BMW injector KFUVS adaptation map via $22 at ECM 0x12 accessible pre-ZGW. VW injector quantity adaptation via measuring blocks accessible pre-SFD.",
+    "server_free": false,
+    "preconditions": [
+      "engine at operating temperature",
+      "no lean misfire conditions active",
+      "scan tool capable of $31/$2F routines",
+      "engine idling stably before test"
+    ],
+    "procedure_steps": [
+      {
+        "step": 1,
+        "type": "send_uds",
+        "description": "$10 03 — enter ExtendedDiagnosticSession at ECM address."
+      },
+      {
+        "step": 2,
+        "type": "send_uds",
+        "description": "$22 [INJECTOR_ADAPTATION_DID] — read current per-cylinder injector adaptation values. BMW: KFUVS map at DID 0x4942. VW/Audi: injector quantity correction adaptation (Group 015 in older, DID via measuring block). Normal range: +/-2 mg/stroke. Values >+3 mg: injector under-delivering (clogged). Values <-3 mg: injector over-delivering (leaking)."
+      },
+      {
+        "step": 3,
+        "type": "send_uds",
+        "description": "$31 01 [CYLINDER_CONTRIBUTION_ROUTINE] — for GM specifically: routine $B001 initiates contribution test mode. Each cylinder disabled sequentially. ECM reports RPM change per cylinder."
+      },
+      {
+        "step": 4,
+        "type": "send_uds",
+        "description": "$2F [INJECTOR_CYL1_DID] 03 00 — disable cylinder 1 injector (IO control to 0). Monitor idle RPM and STFT. RPM drop >50 RPM: injector was contributing. RPM drop <20 RPM: injector not contributing (clogged or failed). Restore with $2F [DID] 04 00 (return to ECU control)."
+      },
+      {
+        "step": 5,
+        "type": "instruct_mechanic",
+        "description": "Repeat disable test for each cylinder sequentially. Note RPM drop magnitude per cylinder. Consistency check — all cylinders should show similar RPM drop. Identify outlier cylinder with lowest RPM drop."
+      },
+      {
+        "step": 6,
+        "type": "instruct_mechanic",
+        "description": "For identified injector — remove and send for ultrasonic cleaning or replace. On GDI engines: injector removal requires fuel rail pressure relief and return line precautions. GDI injectors have copper washer seals — always replace on reinstall."
+      },
+      {
+        "step": 7,
+        "type": "verify",
+        "description": "After cleaning/replacement, re-run contribution test. All cylinders should show similar RPM drop. Clear misfire DTCs and road test. Re-read injector adaptation map — values should trend toward zero after 2-3 drive cycles."
+      }
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Injector activation via $31 at ECM 0x700. Routine ID varies by model year. 2GR-FE V6: injector contribution accessible via Techstream but ELM limited. Injector correction values via $22 DID [TOYOTA_INJ_CORR_DID]. Common: GDI carbon deposits causing lean misfire — injector cleaning service at 60k miles.",
+      "Honda/Acura": "$2F injector disable accessible on pre-2018 via ELM. J35 V6: injector contribution via HDS. 1.5T/2.0T GDI: injector quantity correction via enhanced data. Injector carbon walnut blast recommended at 60k miles on GDI. ELM limited for $2F on newer models.",
+      "Nissan/Infiniti": "CONSULT injector contribution test. $31 accessible via ELM on pre-2019. VQ35DE: known injector O-ring failure causing rich/oil-fouled plugs. Cylinders 2 and 5 common failure pattern on VQ35HR. ELM accessible on most years.",
+      "Ford": "Injector contribution test via PCM $31 pre-2018. 2018+ requires FDRS. 5.0L Coyote: injector adaptation via IDS KOEO injector test. 3.5L EcoBoost: injector carbon buildup on port side common (dual injection). ELM $31 accessible pre-2018.",
+      "GM": "MOST ACCESSIBLE via ELM — $31 01 B001-B008 per-cylinder test on most Gen III/IV/V engines. Silverado 5.3L: disable AFM before contribution test to avoid false cylinder readings. GDS2 shows graphical contribution chart. ELM $31 accessible on most GM year ranges.",
+      "BMW": "KFUVS (Kraftstoff Verbrauch pro Umsatz Sequenz) injector adaptation map at DID 0x4942 (varies by DME). Values in mg/stroke. $31 injector test routine at ECM 0x12. ZGW blocks on F/G-series — ISTA required. N54/N55: injector replacement common at 80k miles. Injector coding required after replacement (reference injector_coding.json).",
+      "VW/Audi": "Injector quantity adaptation at Group 015 (measuring block) or DID via $22. $31 injector activation test at ECM 0x01. SFD blocks on 2019+. HPFP cam follower wear creates injector quantity compensation — check follower if all cylinders showing negative correction. ODIS required for 2019+ tests.",
+      "Stellantis": "5.7L HEMI: injector contribution via $31 at PCM. MDS cylinders 2/3/5/8 — disable MDS first for accurate contribution readings. wiTECH 2018+. ELM pre-2018. 3.6L Pentastar: injector adaptation via $22. GDI Hurricane 2.0T: $31 accessible.",
+      "Hyundai/Kia": "Injector contribution via GDS-Mobile $31 at ECM 0x7E0. Theta II 2.4L: injector failure known issue — P0300 random misfire. Lambda 3.3T: injector adaptation via $22 DID. 2019+ gateway blocks $31. Pre-2019 ELM accessible. Injector coding required after replacement on GDI-equipped models."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

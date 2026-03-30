@@ -1,0 +1,44 @@
+{
+  "service_type": "vw_audi_ea888_carbon_buildup",
+  "category": "oem_specific",
+  "title": "VW/Audi EA888 2.0T Intake Valve Carbon Buildup Diagnosis and Service",
+  "description": "The EA888 Gen1/Gen2 2.0T is GDI-only (no port injection wash), causing severe carbon deposits on intake valves at 60-80k miles. Covers diagnosis via fuel trim and misfire patterns, walnut blasting procedure, and IMA injector adaptation reset.",
+  "oem_coverage": ["VW/Audi"],
+  "vehicles_seen": [
+    {"make":"VW","model":"GTI","year":2014,"engine":"2.0T EA888 Gen3"},
+    {"make":"Audi","model":"A4","year":2013,"engine":"2.0T EA888 Gen2"},
+    {"make":"VW","model":"Passat","year":2015,"engine":"2.0T EA888"},
+    {"make":"Audi","model":"Q5","year":2014,"engine":"2.0T EA888"},
+    {"make":"VW","model":"Tiguan","year":2016,"engine":"2.0T EA888"}
+  ],
+  "common_symptoms": ["rough idle with no vacuum leaks","lean misfire at idle (P0300/P0301-P0304)","LTFT lean +10% or more","cold start rough for first 60 seconds","reduced power on cold start","reduced compression on affected cylinders"],
+  "physical_solution": "Remove intake manifold. Walnut blast intake ports and valve faces with media blaster. Clean manifold passages. Reinstall. Reset IMA injector adaptations to baseline. Drive cycle to relearn.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (IMA injector corrections, misfire per cylinder)","$31 RoutineControl (adaptation reset)","Mode $01 PID $06/$07 (STFT/LTFT for diagnosis)"],
+    "elm327_feasibility": "Partial — Diagnosis via Mode $01 fuel trims and misfire counts fully accessible via ELM327. IMA injector correction values via $22 with enhanced addressing (pre-2019 VW). Adaptation reset via ODIS or VCDS.",
+    "server_free": true,
+    "preconditions": [
+      "Symptoms: rough idle, lean fuel trims, intermittent misfires",
+      "Vehicle at operating temperature before fuel trim readings",
+      "Intake manifold removal capability confirmed (shop procedure)"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"send_uds","description":"DIAGNOSIS FIRST: Read LTFT Bank 1: Mode $01 PID $07. Carbon buildup pattern: LTFT lean (+10% to +25%) at IDLE, normalizes at cruise. Opposite of vacuum leak (which also affects cruise). Pure carbon: LTFT lean at idle, STFT correcting up, normal at 3000 RPM steady state."},
+      {"step":2,"type":"send_uds","description":"Read IMA injector corrections: $22 [IMA_DID] via J533 to engine ECU (pre-2019). Per-cylinder correction values >+2 mg/stroke = that cylinder starved for fuel (carbon restricting airflow or valve not sealing). Uniform IMA corrections = global issue (all cylinders blocked equally)."},
+      {"step":3,"type":"instruct_mechanic","description":"SCOPE INSPECTION: Before walnut blasting, use borescope through intake ports (with manifold still on). Visible carbon cake on valve stems and valve faces. Heavy deposits look like volcanic rock coating. Confirm extent before removing manifold."},
+      {"step":4,"type":"instruct_mechanic","description":"INTAKE MANIFOLD REMOVAL: Disconnect intake, PCV hoses, injector rail, throttle body. Remove manifold (8-10 bolts typically). Expose all 4 intake ports. Cover each port with tape when not actively blasting."},
+      {"step":5,"type":"instruct_mechanic","description":"WALNUT BLASTING: Use walnut shell media blaster (not bead blast - too aggressive). Blast each intake port with valves CLOSED (crank engine to close target valves). Move media wand in circular pattern 4-6 inches from valve face. 3-5 minutes per cylinder. Vacuum out spent media COMPLETELY before moving to next cylinder."},
+      {"step":6,"type":"instruct_mechanic","description":"MEDIA REMOVAL: This is critical. Walnut media left in cylinder causes engine damage. Use shop vacuum + compressed air + fiber optic light to verify all media removed from each port. Rotate crankshaft to open/close valves and vacuum again."},
+      {"step":7,"type":"send_uds","description":"After reinstall: reset IMA injector adaptations via ODIS/VCDS. Without reset, old high-correction values persist against now-clean valves causing rich condition. $31 01 [IMA_RESET_ROUTINE] or VCDS: Engine → Adaptation → Reset."},
+      {"step":8,"type":"verify","description":"After adaptation reset: drive cycle 20+ miles with varied throttle. Monitor LTFT: should drop from +15% down to ±5% as ECU relearns with clean valves. Verify no misfires. Cold start should be smooth within 10 seconds."}
+    ],
+    "oem_notes": {
+      "VW/Audi": "EA888 Gen1 (2008-2012): worst carbon accumulation rate. GDI-only, no port spray. Gen2 (2012-2015): same issue. Gen3 (2015+): some markets got port + direct injection (AQ250) which reduces carbon — check if vehicle has dual injection before walnut blasting. Service interval: every 40k miles prevention, 60-80k miles intervention. HPFP cam follower wear (separate issue) often occurs simultaneously — inspect while manifold is off. Prevention: catch cans for PCV oil vapor."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

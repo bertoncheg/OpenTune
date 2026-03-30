@@ -1,0 +1,45 @@
+{
+  "service_type": "nissan_jatco_cvt_p17f0",
+  "category": "oem_specific",
+  "title": "Nissan Jatco CVT P17F0 Diagnosis and Line Pressure Recovery",
+  "description": "P17F0 (CVT line pressure low) is the most common Nissan Jatco CVT fault code, especially after fluid service or on high-mileage units. Covers diagnosis, fluid pressure recovery procedure, and when to recommend replacement.",
+  "oem_coverage": ["Nissan/Infiniti"],
+  "vehicles_seen": [
+    {"make":"Nissan","model":"Altima","year":2016,"engine":"2.5L QR25DE","transmission":"Jatco JF011E"},
+    {"make":"Nissan","model":"Rogue","year":2017,"engine":"2.5L QR25DE","transmission":"Jatco JF016E"},
+    {"make":"Nissan","model":"Sentra","year":2018,"engine":"1.8L MRA8DE","transmission":"Jatco JF015E"},
+    {"make":"Nissan","model":"Murano","year":2016,"engine":"3.5L VQ35DE","transmission":"Jatco JF010E"},
+    {"make":"Infiniti","model":"QX60","year":2017,"engine":"3.5L VQ35DE","transmission":"Jatco JF016E"}
+  ],
+  "common_symptoms": ["P17F0 CVT fluid line pressure low","P0868 transmission fluid pressure low","CVT shudder on acceleration","delayed engagement on cold start","belt slip felt as sudden RPM flare without speed increase","OBD limp mode at 25 mph"],
+  "physical_solution": "Verify correct NS-3 fluid and level. Perform line pressure recovery procedure. Check for internal leaks at side cover gasket. If pressure unrecoverable: CVT replacement or remanufactured unit required.",
+  "technical_solution": {
+    "uds_services": ["$22 ReadDataByIdentifier (CVT line pressure, belt ratio, step motor position)","$31 RoutineControl (adaptation reset)","$10 ExtendedDiagnosticSession"],
+    "elm327_feasibility": "Partial — P17F0 readable via Mode $03 or $19 to TCM. CVT line pressure DID via $22 to TCM 0x7E1 with CONSULT emulation addressing. ELM327 $31 for adaptation reset accessible on 2012-2016 models. CONSULT III+ preferred for full CVT data.",
+    "server_free": true,
+    "preconditions": [
+      "Verify NS-3 fluid ONLY installed (never Dexron/generic — instant further damage)",
+      "Fluid level checked at operating temperature (35-45°C)",
+      "No physical damage to CVT (no metallic debris in fluid)",
+      "Engine at normal operating temperature"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"STOP: Verify fluid type first. If generic CVT fluid was used during service, the Jatco belt coating is already compromised. NS-3 only. If wrong fluid used: drain completely, refill NS-3, but prognosis for full recovery is poor — advise customer."},
+      {"step":2,"type":"send_uds","description":"Read CVT line pressure: $22 [CVT_LINE_PRESS_DID] to TCM 0x7E1. Target at idle: 350-450 kPa. Target at stall: 900-1100 kPa. P17F0 sets when measured pressure < 300 kPa. Near zero pressure = pump failure or severe internal leak."},
+      {"step":3,"type":"send_uds","description":"Read belt ratio and step motor position: $22 [BELT_RATIO_DID] and $22 [STEP_MOTOR_DID]. If ratio stuck (step motor not moving): step motor failure separate from pressure issue. Belt ratio should vary smoothly 0.4 to 2.4 across driving range."},
+      {"step":4,"type":"instruct_mechanic","description":"LINE PRESSURE RECOVERY ATTEMPT (mild cases): Perform complete NS-3 fluid exchange (not just drain — use flush machine or multi-drain). 8-10 quarts total exchange on JF011E. Fresh NS-3 often restores 100-150 kPa of pressure in mild cases."},
+      {"step":5,"type":"send_uds","description":"Adaptation reset after fluid exchange: $31 01 [CVT_ADAPT_ROUTINE] to TCM. Clears learned belt clamp pressures so TCM recalibrates with fresh fluid."},
+      {"step":6,"type":"instruct_mechanic","description":"DRIVE CYCLE AFTER RESET: 10 minutes gentle driving. No WOT. Allow CVT to cycle through full ratio range at light throttle. TCM relearns pressure requirements. Monitor: no sudden RPM flare, smooth acceleration."},
+      {"step":7,"type":"instruct_mechanic","description":"REPLACEMENT CRITERIA: P17F0 persists after complete fluid exchange + reset = internal pump wear, side cover leak, or belt/pulley wear. Options: (1) Jatco remanufactured exchange unit, (2) transmission specialist rebuild. CVT repair cost typically $3,500-$5,000. Set expectation with customer early."},
+      {"step":8,"type":"verify","description":"After successful recovery: P17F0 cleared, line pressure at idle 400+ kPa, smooth acceleration, no RPM flare. Monitor for 30-day recurrence. If P17F0 returns within 30 days: CVT replacement required."}
+    ],
+    "oem_notes": {
+      "Nissan/Infiniti": "JF011E (RE0F10A): Altima/Sentra/Rogue 2002-2018. Most common failure. Capacity: 8.7 quarts total. JF016E (RE0F10D): Rogue/Murano 2014+. Capacity: 9.3 quarts. NS-3 fluid mandatory — part number Nissan 999MP-NS300P. Jatco CVT extended warranty: Nissan extended CVT coverage to 10 years/120k miles on many 2012-2017 models with P17F0 — ALWAYS check warranty status before recommending customer pay for repair. Nissan TSB NTB16-076: CVT control valve body replacement for persistent P17F0 on 2015-2018 Altima."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}

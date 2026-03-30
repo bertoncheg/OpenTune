@@ -1,0 +1,51 @@
+{
+  "service_type": "ride_height_sensor_calibration",
+  "category": "suspension",
+  "title": "Ride Height / Level Sensor Calibration",
+  "description": "Calibrates ride height sensors after sensor replacement or suspension component service. Affects headlight leveling, air suspension control, AFS (Adaptive Front Steering), and load-leveling systems.",
+  "oem_coverage": ["Toyota/Lexus","Honda/Acura","Nissan/Infiniti","Ford","GM","BMW","VW/Audi","Stellantis","Hyundai/Kia"],
+  "vehicles_seen": [
+    {"make":"BMW","model":"7 Series","year":2018,"engine":"3.0L B58"},
+    {"make":"VW","model":"Touareg","year":2017,"engine":"3.6L V6"},
+    {"make":"Toyota","model":"Land Cruiser","year":2019,"engine":"5.7L 3UR-FE"},
+    {"make":"Audi","model":"A6 Allroad","year":2016,"engine":"3.0T TFSI"}
+  ],
+  "common_symptoms": ["headlight leveling fault after suspension work","air suspension height error","automatic headlights aim incorrectly","suspension warning light after sensor replacement"],
+  "physical_solution": "Park vehicle on flat level surface unloaded. Execute ride height sensor calibration routine. Vehicle learns reference height for all subsequent leveling calculations.",
+  "technical_solution": {
+    "uds_services": ["$31 RoutineControl","$2E WriteDataByIdentifier","$10 ExtendedDiagnosticSession","$22 ReadDataByIdentifier"],
+    "elm327_feasibility": "Partial — BMW leveling sensor DID write via $22 read + $2E write accessible on F-series. VW/Audi ride height adaptation in CDC/air suspension module accessible pre-2019. Toyota HID leveling sensor $31 routine. Gateway restrictions on 2018+ Stellantis, 2019+ VW SFD.",
+    "server_free": true,
+    "preconditions": [
+      "Vehicle on flat level surface (use alignment rack or confirmed flat floor)",
+      "Vehicle unloaded (driver only, no cargo, fuel tank 1/2 to full)",
+      "All suspension components fully installed and torqued",
+      "All tires at correct pressure",
+      "Vehicle at rest, engine ON (some OEMs require running for sensor check)"
+    ],
+    "procedure_steps": [
+      {"step":1,"type":"instruct_mechanic","description":"Park vehicle on certified flat surface. No slopes, no ramps. Vehicle in normal ride height (not on jack stands). All doors closed. Driver seat occupied for some OEMs."},
+      {"step":2,"type":"send_uds","description":"Enter air suspension or leveling control module extended session: $10 03. Module addresses: BMW VDC 0x60, VW/Audi air suspension 0x34, Toyota VDIM/leveling 0x7C0."},
+      {"step":3,"type":"send_uds","description":"Read current ride height sensor values: $22 [HEIGHT_DID] for each corner (FL, FR, RL, RR). Values should be near reference spec. Note deviation from expected ride height."},
+      {"step":4,"type":"send_uds","description":"Execute ride height calibration: $31 01 [HEIGHT_CALIB_ROUTINE]. For $2E path: $2E [HEIGHT_OFFSET_DID] [REFERENCE_VALUE] to write zero-point offset for each sensor."},
+      {"step":5,"type":"instruct_mechanic","description":"After calibration: check headlight aiming. For HID/LED vehicles: aim projectors on flat wall 25ft away. Headlight leveling should automatically adjust with load changes."},
+      {"step":6,"type":"verify","description":"Bounce each corner of vehicle (push down and release). Suspension should return to reference height. Load vehicle with weight (250 lbs in trunk): rear should level automatically on air suspension vehicles."}
+    ],
+    "oem_notes": {
+      "Toyota/Lexus": "Land Cruiser/LX: KDSS + leveling sensors. HID auto-leveling sensor at front and rear. $31 calibration routine via Techstream or ELM327 extended session. Must be on flat surface, engine running.",
+      "Honda/Acura": "Most models: fixed HID level sensor (no active leveling). MDX/Pilot: rear leveling sensor for load compensation. HDS path. ELM327: limited, most Honda leveling is passive.",
+      "Nissan/Infiniti": "Infiniti Q70/QX80: air suspension leveling. CONSULT III+ for calibration. ELM327 $31 accessible on older platforms. Nissan Armada: auto-leveling rear suspension sensor calibration.",
+      "Ford": "Ford Expedition/Navigator: air suspension leveling. IDS calibration. ELM327 accessible pre-2018. F-150: optional air suspension (Raptor/Tremor). Headlight leveling sensors on Fusion/Edge: $31 calibration.",
+      "GM": "Cadillac Escalade/CT6, Chevy Suburban: active air suspension. GDS2 ride height calibration. Headlight leveling on most trucks: $2E write to leveling module. ELM327 accessible pre-2018.",
+      "BMW": "Air suspension on 5/6/7 series and X5/X7. VDC (Vertical Dynamics Control) at 0x60. $22 DID reads per-corner height. $2E write for offset calibration. ISTA preferred for full calibration on G-series. F-series: ELM327 accessible.",
+      "VW/Audi": "CDC (Continuous Damping Control) module at 0x34. Air suspension (AIRMATIC equiv): Audi allroad, Touareg, Q7. Ride height adaptation via ODIS/VCDS. $2E write accessible pre-2019 SFD. All 4 corner sensors must be calibrated separately.",
+      "Stellantis": "Ram 1500 EAS (Electronic Air Suspension) leveling. wiTECH 2018+. Pre-2018: ELM327 accessible. Jeep Grand Cherokee: air suspension height calibration same path.",
+      "Hyundai/Kia": "Genesis G90 / EQ900: air suspension with leveling. GDS2 calibration. ELM327 $31 accessible pre-2019. Most mainstream Hyundai/Kia: passive HID leveling only, no calibration needed."
+    }
+  },
+  "success_rate": 0.0,
+  "total_cases": 0,
+  "outcomes": [],
+  "source_runs": ["KB_EXPANSION_2026_03_30"],
+  "last_updated": "2026-03-30T00:00:00Z"
+}
