@@ -83,10 +83,17 @@ class OllamaSetup:
 
     def __init__(self, model: str = "llama3.2:3b"):
         self.model = model
+        self.error_message = ""
 
     def auto_setup(self) -> bool:
+        if not is_ollama_running():
+            self.error_message = "Ollama is not running. Install it at https://ollama.ai/download"
+            return False
         result = auto_setup(self.model)
-        return result is not None
+        if result is None:
+            self.error_message = "Failed to pull model. Try: ollama pull "
+            return False
+        return True
 
 def auto_setup(preferred_model: str = "llama3.2:3b") -> str | None:
     """
