@@ -6,15 +6,27 @@ Free forever. Gets smarter forever.
 
 ---
 
-## The Problem
+## The Problem — And The Opportunity
 
 Dealer diagnostic tools cost $80,000. Independent mechanics are locked out.
 
-The mechanic is skilled. The tool is the bottleneck.
+But that is not the real problem.
 
-Snap-on: $3,500. Autel: $15,000. Bosch: $2,500+. All of them just run menus.
+The real problem is that every mechanic in the world is solving the same faults in isolation — on forums, in notes, in their head — and none of it connects. A mechanic in Houston figures out a rare KDSS fault on a 2007 GX470. A mechanic in São Paulo is staring at the exact same fault tomorrow. They will never meet. The knowledge dies with the session.
 
-**OpenTune thinks.**
+Meanwhile, the software world solved this twenty years ago. Linux did not beat Unix because one company out-engineered another. It won because a million engineers contributed to one shared foundation that nobody owned. npm has over two million packages — built by strangers for strangers, stacked into something no single company could have funded. Stack Overflow turned individual answers into a permanent global knowledge layer. The pattern is always the same: **open contribution compounds faster than any closed team can move.**
+
+The automotive repair world has never had that. Until now.
+
+**OpenTune is not just a diagnostic tool. It is the foundation for a unified, ever-feeding vehicle diagnostic engine** — one that gets smarter every time any mechanic anywhere uses it. Every fault cleared, every procedure engineered, every outcome logged feeds back into a shared knowledge base that belongs to the community, not to Snap-on, not to Autel, not to any dealer network.
+
+The math is simple: if 1,000 mechanics contribute one diagnostic outcome each, we have 1,000 solved problems. If 100,000 mechanics contribute, we have the most comprehensive free diagnostic database ever built — covering makes, models, edge cases, and failure modes that no $15,000 proprietary tool even knows exist.
+
+**This window is open right now. The earlier you contribute, the more the community inherits from your experience.** The mechanic who logs ten sessions in month one shapes what the tool knows in year three.
+
+And this is just the beginning. The same engine that diagnoses faults will soon power vehicle tuning — mapping fuel trims, analyzing sensor baselines, recommending calibration changes. Instead of spending hours searching forums for someone who maybe tuned the same engine five years ago, you open OpenTune. The community already figured it out. It is waiting for you.
+
+**Open diagnostics time. Nothing accelerates faster than community effort.**
 
 ---
 
@@ -22,7 +34,7 @@ Snap-on: $3,500. Autel: $15,000. Bosch: $2,500+. All of them just run menus.
 
 Connect an ELM327 adapter. OpenTune reads every ECU, surfaces every fault, and if a solution exists it runs it. If one does not exist — it engineers one from first principles using Claude.
 
-Every outcome gets logged to a community knowledge base that nobody owns and nobody can take away.
+Every outcome gets logged to the community knowledge base that nobody owns and nobody can take away.
 
 - Scans all ECUs on connect — reads every DTC with plain-English descriptions
 - Monitors live vehicle data in real time — flags anomalies as they happen
