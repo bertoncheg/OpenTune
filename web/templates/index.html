@@ -2,98 +2,88 @@
 {% block title %}OpenTune — Dashboard{% endblock %}
 {% block content %}
 <div class="container">
-  <div class="page-header">
-    <h1>// dashboard</h1>
-    <p>Open source vehicle diagnostics — community knowledge, zero gatekeeping.</p>
-  </div>
 
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-value">{{ stats.total_procedures }}</div>
-      <div class="stat-label">Total Procedures</div>
+      <div class="stat-label">Procedures</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.verified_procedures }}</div>
-      <div class="stat-label">Verified by Community</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.total_services }}</div>
-      <div class="stat-label">Listed Services</div>
+      <div class="stat-label">Community Verified</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.top_makes | length }}</div>
       <div class="stat-label">Vehicle Makes</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.top_systems | length }}</div>
+      <div class="stat-label">Systems Covered</div>
+    </div>
   </div>
 
   <div class="hero">
-    <h2>The dealer charged $800 to read a code you already know.</h2>
-    <p>OpenTune puts factory-level diagnostics in the hands of every mechanic. Connect your OBD2 adapter, run the terminal, and let the community knowledge base do the rest. Free. Always.</p>
+    <h2>Factory-level diagnostics. Zero gatekeeping.</h2>
+    <p>OpenTune connects via OBD2, reads every system, and engineers solutions from first principles. Every repair trains the knowledge base. Free forever. Gets smarter with every fix.</p>
     <div class="hero-actions">
       <a href="/browse" class="btn btn-primary">Browse Knowledge Base</a>
-      <a href="/services" class="btn btn-outline">Find a Shop</a>
-      <a href="/submit" class="btn btn-outline">Contribute a Fix</a>
+      <a href="/services" class="btn btn-outline">Services Directory</a>
+      <a href="/submit" class="btn btn-outline">+ Contribute a Fix</a>
     </div>
   </div>
 
-  <div class="grid-2">
-    <div>
-      <div class="top-list">
-        <div class="top-list-header">Top Makes</div>
-        {% for item in stats.top_makes %}
-        <a href="/browse?make={{ item.make }}" class="top-list-item" style="text-decoration:none; color:inherit;">
-          <span>{{ item.make or "Universal" }}</span>
-          <span class="top-list-count">{{ item.count }}</span>
-        </a>
-        {% else %}
-        <div class="top-list-item" style="color:var(--text-muted)">No data yet</div>
-        {% endfor %}
-      </div>
+  <div class="grid-2" style="margin-bottom:2rem;">
+    <div class="top-list">
+      <div class="top-list-header">Top Makes</div>
+      {% for item in stats.top_makes %}
+      <a href="/browse?make={{ item.make }}" class="top-list-item" style="text-decoration:none;color:inherit;">
+        <span>{{ item.make }}</span>
+        <span class="top-list-count">{{ item.count }}</span>
+      </a>
+      {% else %}
+      <div class="top-list-item" style="color:var(--text-muted)">No data yet</div>
+      {% endfor %}
     </div>
-    <div>
-      <div class="top-list">
-        <div class="top-list-header">Top Systems</div>
-        {% for item in stats.top_systems %}
-        <a href="/browse?system={{ item.system }}" class="top-list-item" style="text-decoration:none; color:inherit;">
-          <span>{{ item.system }}</span>
-          <span class="top-list-count">{{ item.count }}</span>
-        </a>
-        {% else %}
-        <div class="top-list-item" style="color:var(--text-muted)">No data yet</div>
-        {% endfor %}
-      </div>
+    <div class="top-list">
+      <div class="top-list-header">Top Systems</div>
+      {% for item in stats.top_systems %}
+      <a href="/browse?system={{ item.system }}" class="top-list-item" style="text-decoration:none;color:inherit;">
+        <span>{{ item.system }}</span>
+        <span class="top-list-count">{{ item.count }}</span>
+      </a>
+      {% else %}
+      <div class="top-list-item" style="color:var(--text-muted)">No data yet</div>
+      {% endfor %}
     </div>
   </div>
 
   {% if recent %}
-  <div style="margin-top: 2rem;">
-    <div class="page-header">
-      <h1>// recent procedures</h1>
-    </div>
-    <div class="cards-grid">
-      {% for proc in recent %}
-      <a href="/procedure/{{ proc.id }}" class="proc-card">
-        <div class="proc-card-title">{{ proc.title }}</div>
-        <div class="proc-card-meta">
-          {% if proc.system %}<span class="tag tag-system">{{ proc.system }}</span>{% endif %}
-          {% if proc.make %}<span class="tag tag-make">{{ proc.make }}</span>{% endif %}
-          {% for dtc in (proc.dtc_codes or [])[:2] %}
-          <span class="tag tag-dtc">{{ dtc }}</span>
-          {% endfor %}
-        </div>
-        {% if proc.outcome_summary %}
-        <div class="proc-card-summary">{{ proc.outcome_summary }}</div>
-        {% endif %}
-        <div class="proc-card-footer">
-          <span>{{ proc.verified_count or 0 }} verified</span>
-          {% if (proc.verified_count or 0) > 0 %}<span class="verified-badge">✓ community verified</span>{% endif %}
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-    <div style="margin-top:1.5rem;">
-      <a href="/browse" class="btn btn-outline">View all procedures →</a>
-    </div>
+  <div class="page-header">
+    <h1>// recent</h1>
+  </div>
+  <div class="cards-grid">
+    {% for proc in recent %}
+    <a href="/procedure/{{ proc.id }}" class="proc-card">
+      <div class="proc-card-title">{{ proc.title }}</div>
+      <div class="proc-card-meta">
+        {% if proc.system %}<span class="tag tag-system">{{ proc.system }}</span>{% endif %}
+        {% if proc.make %}<span class="tag tag-make">{{ proc.make }}</span>{% endif %}
+        {% for dtc in (proc.dtc_codes or [])[:2] %}
+        <span class="tag tag-dtc">{{ dtc }}</span>
+        {% endfor %}
+      </div>
+      {% if proc.outcome_summary %}
+      <div class="proc-card-summary">{{ proc.outcome_summary }}</div>
+      {% endif %}
+      <div class="proc-card-footer">
+        <span>{{ proc.verified_count or 0 }} verified</span>
+        {% if (proc.verified_count or 0) > 0 %}<span class="verified-badge">✓ verified</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <div style="margin-top:1.5rem;">
+    <a href="/browse" class="btn btn-outline">View all procedures →</a>
   </div>
   {% endif %}
 </div>

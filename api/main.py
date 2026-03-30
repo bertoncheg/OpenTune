@@ -1,17 +1,21 @@
 ﻿"""
-OpenTune Knowledge API â€” FastAPI application.
-Run: uvicorn api.main:app --reload --port 8765
+OpenTune Knowledge API + Web Dashboard
+Run: python -m uvicorn api.main:app --port 8765
 """
 from __future__ import annotations
 
 import json
+import re as _re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from api.db import (
@@ -35,6 +39,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_WEB_DIR = Path(__file__).parent.parent / "web"
+app.mount("/static", StaticFiles(directory=str(_WEB_DIR / "static")), name="static")
+_templates = Jinja2Templates(directory=str(_WEB_DIR / "templates"))
+
 
 @app.on_event("startup")
 def startup():
@@ -42,7 +50,7 @@ def startup():
 
 
 # ---------------------------------------------------------------------------
-# Request / Response models
+# Pydantic models
 # ---------------------------------------------------------------------------
 
 class SubmitProcedureRequest(BaseModel):
@@ -64,8 +72,7 @@ class VerifyRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _decode_json_fields(proc: dict) -> dict:
-    """Parse JSON string fields back to Python objects for API responses."""
+def _decode(proc: dict) -> dict:
     for field in ("dtc_codes", "symptoms", "steps", "vehicles_confirmed"):
         val = proc.get(field)
         if isinstance(val, str):
@@ -78,8 +85,7 @@ def _decode_json_fields(proc: dict) -> dict:
 
 
 def _summary(proc: dict) -> dict:
-    """Return a trimmed summary dict (no steps detail)."""
-    p = _decode_json_fields(dict(proc))
+    p = _decode(dict(proc))
     return {
         "id": p.get("id"),
         "title": p.get("title"),
@@ -93,179 +99,122 @@ def _summary(proc: dict) -> dict:
         "outcome_summary": p.get("outcome_summary"),
         "verified_count": p.get("verified_count"),
         "confidence": p.get("confidence"),
-        "score": p.get("score"),
+    }
+
+
+def _db_stats() -> dict:
+    procs = get_all_procedures()
+    total = len(procs)
+    verified = sum(1 for p in procs if (p.get("verified_count") or 0) > 0)
+    make_counts: dict[str, int] = {}
+    system_counts: dict[str, int] = {}
+    for p in procs:
+        m = p.get("make") or "Universal"
+        make_counts[m] = make_counts.get(m, 0) + 1
+        s = p.get("system") or "Other"
+        system_counts[s] = system_counts.get(s, 0) + 1
+    top_makes = [{"make": k, "count": v} for k, v in sorted(make_counts.items(), key=lambda x: -x[1])[:5]]
+    top_systems = [{"system": k, "count": v} for k, v in sorted(system_counts.items(), key=lambda x: -x[1])[:5]]
+    return {
+        "total_procedures": total,
+        "verified_procedures": verified,
+        "top_makes": top_makes,
+        "top_systems": top_systems,
     }
 
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# JSON API  (all under /api/)
 # ---------------------------------------------------------------------------
 
-@app.get("/health")
-def health():
+@app.get("/api/health")
+def api_health():
     procs = get_all_procedures()
-    return {"status": "ok", "procedures_count": len(procs), "version": VERSION}
+    return {"status": "ok", "procedures": len(procs), "version": VERSION}
 
 
-@app.get("/search")
-def search(
-    q: str = Query(..., description="Search query"),
+@app.get("/api/stats")
+def api_stats():
+    return _db_stats()
+
+
+@app.get("/api/search")
+def api_search(
+    q: str = Query(...),
     make: Optional[str] = Query(None),
     system: Optional[str] = Query(None),
     limit: int = Query(10, ge=1, le=100),
 ):
     procs = get_all_procedures()
-
-    # Pre-filter by make/system if provided
     if make:
         procs = [p for p in procs if (p.get("make") or "").lower() == make.lower()]
     if system:
         procs = [p for p in procs if (p.get("system") or "").lower() == system.lower()]
-
-    if not procs:
-        return []
-
-    results = search_procedures(q, procs, top_k=limit)
+    results = search_procedures(q, procs or get_all_procedures(), top_k=limit)
     return [_summary(r) for r in results]
 
 
-@app.get("/procedure/{proc_id}")
-def get_procedure(proc_id: str):
-    proc = get_procedure_by_id(proc_id)
-    if not proc:
-        raise HTTPException(status_code=404, detail="Procedure not found")
-    return _decode_json_fields(proc)
-
-
-@app.get("/browse")
-def browse(
+@app.get("/api/browse")
+def api_browse(
     make: Optional[str] = Query(None),
     system: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
 ):
     procs = get_all_procedures()
-
     if make:
         procs = [p for p in procs if (p.get("make") or "").lower() == make.lower()]
     if system:
         procs = [p for p in procs if (p.get("system") or "").lower() == system.lower()]
-
     return [_summary(p) for p in procs[:limit]]
 
 
-@app.post("/submit", status_code=201)
-def submit_procedure(body: SubmitProcedureRequest):
+@app.get("/api/procedure/{proc_id}")
+def api_get_procedure(proc_id: str):
+    proc = get_procedure_by_id(proc_id)
+    if not proc:
+        raise HTTPException(status_code=404, detail="Not found")
+    return _decode(proc)
+
+
+@app.post("/api/submit", status_code=201)
+def api_submit(body: SubmitProcedureRequest):
     now = datetime.now(timezone.utc).isoformat()
     proc_id = str(uuid.uuid4())
-
     proc = {
-        "id": proc_id,
-        "title": body.title,
-        "system": body.system,
-        "make_family": body.make,
-        "make": body.make,
-        "model": "",
-        "year_min": None,
-        "year_max": None,
-        "dtc_codes": body.dtc_codes,
-        "symptoms": body.symptoms,
-        "steps": body.steps,
-        "outcome_summary": body.outcome_summary,
-        "verified_count": 0,
-        "vehicles_confirmed": [],
-        "confidence": 0.0,
-        "contributor": body.contributor,
-        "created_at": now,
-        "updated_at": now,
-        "embedding": None,
+        "id": proc_id, "title": body.title, "system": body.system,
+        "make_family": body.make, "make": body.make, "model": "",
+        "year_min": None, "year_max": None,
+        "dtc_codes": body.dtc_codes, "symptoms": body.symptoms,
+        "steps": body.steps, "outcome_summary": body.outcome_summary,
+        "verified_count": 0, "vehicles_confirmed": [], "confidence": 0.0,
+        "contributor": body.contributor, "created_at": now, "updated_at": now, "embedding": None,
     }
-
     upsert_procedure(proc)
-
-    text = build_procedure_text(proc)
-    emb_bytes = embed_text(text)
-    save_embedding(proc_id, emb_bytes)
-
-    result = get_procedure_by_id(proc_id)
-    return _decode_json_fields(result)
+    save_embedding(proc_id, embed_text(build_procedure_text(proc)))
+    return _decode(get_procedure_by_id(proc_id))
 
 
-@app.post("/verify/{proc_id}")
-def verify_procedure(proc_id: str, body: VerifyRequest):
+@app.post("/api/verify/{proc_id}")
+def api_verify(proc_id: str, body: VerifyRequest):
     updated = increment_verified(proc_id, body.vehicle)
     if not updated:
-        raise HTTPException(status_code=404, detail="Procedure not found")
-    return _decode_json_fields(updated)
-
-
-@app.get("/stats")
-def stats():
-    procs = get_all_procedures()
-    total = len(procs)
-    verified = sum(1 for p in procs if (p.get("verified_count") or 0) > 0)
-
-    make_counts: dict[str, int] = {}
-    system_counts: dict[str, int] = {}
-    for p in procs:
-        m = p.get("make") or "unknown"
-        make_counts[m] = make_counts.get(m, 0) + 1
-        s = p.get("system") or "unknown"
-        system_counts[s] = system_counts.get(s, 0) + 1
-
-    top_makes = sorted(make_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-    top_systems = sorted(system_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-
-    return {
-        "total_procedures": total,
-        "verified_procedures": verified,
-        "top_makes": [{"make": k, "count": v} for k, v in top_makes],
-        "top_systems": [{"system": k, "count": v} for k, v in top_systems],
-    }
+        raise HTTPException(status_code=404, detail="Not found")
+    return _decode(updated)
 
 
 # ---------------------------------------------------------------------------
-# Web Dashboard (Jinja2 templates)
+# Web Dashboard
 # ---------------------------------------------------------------------------
-import re as _re
-from fastapi import Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-
-_WEB_DIR = Path(__file__).parent.parent / "web"
-app.mount("/static", StaticFiles(directory=str(_WEB_DIR / "static")), name="static")
-_templates = Jinja2Templates(directory=str(_WEB_DIR / "templates"))
-
-from api.db import get_all_services, upsert_service, init_services_table
-
-import uuid as _uuid
-from datetime import datetime as _dt, timezone as _tz
-
-
-@app.on_event("startup")
-def startup_services():
-    init_services_table()
-
-
-def _nav(page: str) -> str:
-    return page
-
-
-# â”€â”€ Home / Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/", response_class=HTMLResponse)
 def web_index(request: Request):
-    st = stats()
+    st = _db_stats()
     procs = get_all_procedures()
-    services = get_all_services()
-    st["total_services"] = len(services)
-    recent = [_summary(p) for p in procs[-6:]][::-1]
-    return _templates.TemplateResponse(request=request, name="index.html", context={"active": "home",
-        "stats": st, "recent": recent
+    recent = [_summary(p) for p in reversed(procs[-6:])]
+    return _templates.TemplateResponse(request=request, name="index.html", context={
+        "active": "home", "stats": st, "recent": recent,
     })
 
-
-# â”€â”€ Browse / Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/browse", response_class=HTMLResponse)
 def web_browse(request: Request, q: str = "", make: str = "", system: str = ""):
@@ -274,29 +223,29 @@ def web_browse(request: Request, q: str = "", make: str = "", system: str = ""):
     all_systems = sorted(set(p.get("system") or "" for p in procs if p.get("system")))
 
     if q:
-        filtered = [p for p in procs if (make == "" or (p.get("make") or "").lower() == make.lower()) and (system == "" or (p.get("system") or "").lower() == system.lower())]
-        results = search_procedures(q, filtered if filtered else procs, top_k=50)
+        pool = [p for p in procs
+                if (not make or (p.get("make") or "").lower() == make.lower())
+                and (not system or (p.get("system") or "").lower() == system.lower())]
+        results = search_procedures(q, pool or procs, top_k=50)
     else:
-        results = [p for p in procs if (make == "" or (p.get("make") or "").lower() == make.lower()) and (system == "" or (p.get("system") or "").lower() == system.lower())]
+        results = [p for p in procs
+                   if (not make or (p.get("make") or "").lower() == make.lower())
+                   and (not system or (p.get("system") or "").lower() == system.lower())]
 
-    summaries = [_summary(p) for p in results]
-    return _templates.TemplateResponse(request=request, name="browse.html", context={"active": "browse",
-        "procedures": summaries,
+    return _templates.TemplateResponse(request=request, name="browse.html", context={
+        "active": "browse", "procedures": [_summary(p) for p in results],
         "query": q, "makes": all_makes, "systems": all_systems,
-        "selected_make": make, "selected_system": system
+        "selected_make": make, "selected_system": system,
     })
 
-
-# â”€â”€ Procedure Detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/procedure/{proc_id}", response_class=HTMLResponse)
 def web_procedure(request: Request, proc_id: str):
     proc = get_procedure_by_id(proc_id)
     if not proc:
         return HTMLResponse("<h1>Not found</h1>", status_code=404)
-    proc = _decode_json_fields(proc)
-    return _templates.TemplateResponse(request=request, name="procedure.html", context={"active": "browse",
-        "procedure": proc, "verify_success": False
+    return _templates.TemplateResponse(request=request, name="procedure.html", context={
+        "active": "browse", "procedure": _decode(proc), "verify_success": False,
     })
 
 
@@ -306,18 +255,15 @@ def web_verify(request: Request, proc_id: str, vehicle: str = Form("")):
     proc = get_procedure_by_id(proc_id)
     if not proc:
         return HTMLResponse("<h1>Not found</h1>", status_code=404)
-    proc = _decode_json_fields(proc)
-    return _templates.TemplateResponse(request=request, name="procedure.html", context={"active": "browse",
-        "procedure": proc, "verify_success": True
+    return _templates.TemplateResponse(request=request, name="procedure.html", context={
+        "active": "browse", "procedure": _decode(proc), "verify_success": True,
     })
 
 
-# â”€â”€ Submit Procedure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 @app.get("/submit", response_class=HTMLResponse)
 def web_submit_get(request: Request):
-    return _templates.TemplateResponse(request=request, name="submit.html", context={"active": "submit",
-        "success": False, "error": None
+    return _templates.TemplateResponse(request=request, name="submit.html", context={
+        "active": "submit", "success": False, "error": None,
     })
 
 
@@ -334,73 +280,64 @@ def web_submit_post(
     contributor: str = Form("community"),
 ):
     if not title or not system or not steps_text:
-        return _templates.TemplateResponse(request=request, name="submit.html", context={"active": "submit",
-            "success": False, "error": "Title, system, and steps are required."
+        return _templates.TemplateResponse(request=request, name="submit.html", context={
+            "active": "submit", "success": False,
+            "error": "Title, system, and steps are required.",
         })
 
-    def _split(s):
-        return [x.strip() for x in s.split(",") if x.strip()]
-
+    def _split(s): return [x.strip() for x in s.split(",") if x.strip()]
     def _parse_steps(raw):
-        lines = [l.strip() for l in raw.splitlines() if l.strip()]
-        steps = []
-        for line in lines:
-            clean = _re.sub(r"^\d+[\.\)]\s*", "", line)
-            steps.append({"action": clean})
-        return steps
+        return [{"action": _re.sub(r"^\d+[\.\)]\s*", "", l.strip())}
+                for l in raw.splitlines() if l.strip()]
 
-    now = _dt.now(_tz.utc).isoformat()
-    proc_id = str(_uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    proc_id = str(uuid.uuid4())
     proc = {
         "id": proc_id, "title": title, "system": system,
         "make_family": make, "make": make, "model": "",
         "year_min": None, "year_max": None,
-        "dtc_codes": _split(dtc_codes),
-        "symptoms": _split(symptoms),
-        "steps": _parse_steps(steps_text),
-        "outcome_summary": outcome_summary,
-        "verified_count": 0, "vehicles_confirmed": [],
-        "confidence": 0.0,
+        "dtc_codes": _split(dtc_codes), "symptoms": _split(symptoms),
+        "steps": _parse_steps(steps_text), "outcome_summary": outcome_summary,
+        "verified_count": 0, "vehicles_confirmed": [], "confidence": 0.0,
         "contributor": contributor or "community",
         "created_at": now, "updated_at": now, "embedding": None,
     }
     upsert_procedure(proc)
     try:
-        from api.embeddings import build_procedure_text, embed_text
-        from api.db import save_embedding
         save_embedding(proc_id, embed_text(build_procedure_text(proc)))
     except Exception:
         pass
-    return _templates.TemplateResponse(request=request, name="submit.html", context={"active": "submit",
-        "success": True, "error": None
+    return _templates.TemplateResponse(request=request, name="submit.html", context={
+        "active": "submit", "success": True, "error": None,
     })
 
 
-# â”€â”€ Services Directory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ---------------------------------------------------------------------------
+# Services Directory  (knowledge engine map)
+# ---------------------------------------------------------------------------
 
-# System descriptions for the directory
-_SYSTEM_DESCRIPTIONS = {
-    "Engine": "Internal combustion, sensors, misfires, timing, fuel delivery",
+_SYSTEM_DESC = {
+    "Engine": "Misfires, sensors, timing, fuel delivery, idle issues",
     "Transmission": "Shift behavior, solenoids, fluid codes, TCM faults",
-    "Brakes": "ABS, pad wear, caliper, master cylinder, brake fluid",
-    "Suspension": "Ride height, struts, control arms, alignment codes",
+    "Brakes": "ABS, pad wear, caliper, master cylinder, EPB",
+    "Suspension": "Ride height, struts, control arms, KDSS, alignment",
     "Electrical": "Wiring, fuses, grounds, CAN bus, module communication",
     "HVAC": "A/C, heater core, blend doors, refrigerant, compressor",
     "Exhaust / Emissions": "Catalytic converter, O2 sensors, EGR, EVAP",
-    "Fuel System": "Injectors, pump, pressure, high-pressure direct injection",
-    "Steering": "Power steering, EPS, rack, angle sensor calibration",
-    "Body / Lighting": "Exterior lights, body control module, door modules",
-    "TPMS": "Sensor registration, relearn procedures, pressure monitoring",
+    "Fuel System": "Injectors, pump, pressure, direct injection",
+    "Steering": "EPS, rack, angle sensor calibration, SAS reset",
+    "Body / Lighting": "BCM, exterior lights, door modules",
+    "TPMS": "Sensor registration, relearn, pressure monitoring",
     "ABS / Traction": "Wheel speed sensors, ABS module, stability control",
-    "Hybrid / EV": "HV battery, inverter, regenerative braking, charging",
-    "reference": "Reference data — PID maps, ECU specs, wiring diagrams",
+    "Hybrid / EV": "HV battery, inverter, regen braking, charging",
+    "Reference": "PID maps, ECU specs, wiring diagrams, lookup tables",
 }
+
 
 @app.get("/services", response_class=HTMLResponse)
 def web_services(request: Request):
     procs = get_all_procedures()
 
-    # Build system categories
     system_map: dict[str, list] = {}
     for p in procs:
         s = p.get("system") or "Other"
@@ -410,21 +347,19 @@ def web_services(request: Request):
     for sys_name, sys_procs in sorted(system_map.items(), key=lambda x: -len(x[1])):
         dtcs = []
         for p in sys_procs:
-            import json as _json
             codes = p.get("dtc_codes")
             if isinstance(codes, str):
-                try: codes = _json.loads(codes)
+                try: codes = json.loads(codes)
                 except: codes = []
             dtcs.extend(codes or [])
-        dtcs = list(dict.fromkeys(dtcs))  # dedupe, preserve order
+        dtcs = list(dict.fromkeys(dtcs))
         categories.append({
             "system": sys_name,
             "count": len(sys_procs),
-            "description": _SYSTEM_DESCRIPTIONS.get(sys_name, "Diagnostic procedures and repair guides"),
+            "description": _SYSTEM_DESC.get(sys_name, "Diagnostic procedures and repair guides"),
             "dtcs": dtcs,
         })
 
-    # Makes
     make_map: dict[str, int] = {}
     for p in procs:
         m = p.get("make") or ""
@@ -432,68 +367,13 @@ def web_services(request: Request):
             make_map[m] = make_map.get(m, 0) + 1
     makes = [{"make": k, "count": v} for k, v in sorted(make_map.items(), key=lambda x: -x[1])]
 
-    # Top verified
     top_verified = sorted(
         [_summary(p) for p in procs if (p.get("verified_count") or 0) > 0],
         key=lambda x: x.get("verified_count") or 0, reverse=True
     )[:6]
+    recent = [_summary(p) for p in reversed(procs[-6:])]
 
-    # Recently added
-    recent = [_summary(p) for p in procs[-6:]][::-1]
-
-    return _templates.TemplateResponse(request=request, name="services.html", context={"active": "services",
-        "categories": categories,
-        "makes": makes,
-        "top_verified": top_verified,
-        "recent": recent,
+    return _templates.TemplateResponse(request=request, name="services.html", context={
+        "active": "services", "categories": categories, "makes": makes,
+        "top_verified": top_verified, "recent": recent,
     })
-
-
-@app.get("/services/register", response_class=HTMLResponse)
-def web_register_get(request: Request):
-    return _templates.TemplateResponse(request=request, name="register_service.html", context={"active": "services",
-        "success": False, "error": None
-    })
-
-
-@app.post("/services/register", response_class=HTMLResponse)
-def web_register_post(
-    request: Request,
-    name: str = Form(""),
-    service_type: str = Form("shop"),
-    city: str = Form(""),
-    state: str = Form(""),
-    country: str = Form("US"),
-    specialties: str = Form(""),
-    description: str = Form(""),
-    website: str = Form(""),
-    phone: str = Form(""),
-    email: str = Form(""),
-):
-    if not name or not city:
-        return _templates.TemplateResponse(request=request, name="register_service.html", context={"active": "services",
-            "success": False, "error": "Name and city are required."
-        })
-    svc = {
-        "id": str(_uuid.uuid4()), "name": name,
-        "service_type": service_type, "city": city, "state": state,
-        "country": country or "US", "specialties": specialties,
-        "description": description, "website": website,
-        "phone": phone, "email": email, "verified": 0,
-        "created_at": _dt.now(_tz.utc).isoformat(),
-    }
-    upsert_service(svc)
-    return _templates.TemplateResponse(request=request, name="register_service.html", context={"active": "services",
-        "success": True, "error": None
-    })
-
-
-# â”€â”€ API stats endpoint alias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-@app.get("/api/stats")
-def api_stats():
-    return stats()
-
-
-
-
