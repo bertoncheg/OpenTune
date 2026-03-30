@@ -378,26 +378,74 @@ def web_submit_post(
 
 # â”€â”€ Services Directory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+# System descriptions for the directory
+_SYSTEM_DESCRIPTIONS = {
+    "Engine": "Internal combustion, sensors, misfires, timing, fuel delivery",
+    "Transmission": "Shift behavior, solenoids, fluid codes, TCM faults",
+    "Brakes": "ABS, pad wear, caliper, master cylinder, brake fluid",
+    "Suspension": "Ride height, struts, control arms, alignment codes",
+    "Electrical": "Wiring, fuses, grounds, CAN bus, module communication",
+    "HVAC": "A/C, heater core, blend doors, refrigerant, compressor",
+    "Exhaust / Emissions": "Catalytic converter, O2 sensors, EGR, EVAP",
+    "Fuel System": "Injectors, pump, pressure, high-pressure direct injection",
+    "Steering": "Power steering, EPS, rack, angle sensor calibration",
+    "Body / Lighting": "Exterior lights, body control module, door modules",
+    "TPMS": "Sensor registration, relearn procedures, pressure monitoring",
+    "ABS / Traction": "Wheel speed sensors, ABS module, stability control",
+    "Hybrid / EV": "HV battery, inverter, regenerative braking, charging",
+    "reference": "Reference data — PID maps, ECU specs, wiring diagrams",
+}
+
 @app.get("/services", response_class=HTMLResponse)
-def web_services(request: Request, q: str = "", specialty: str = "", service_type: str = ""):
-    svcs = get_all_services(service_type=service_type or None, specialty=specialty or None)
-    if q:
-        ql = q.lower()
-        svcs = [s for s in svcs if ql in (s.get("name") or "").lower()
-                or ql in (s.get("city") or "").lower()
-                or ql in (s.get("description") or "").lower()
-                or ql in (s.get("specialties") or "").lower()]
-    all_specialties = sorted(set(
-        sp.strip()
-        for s in get_all_services()
-        for sp in (s.get("specialties") or "").split(",")
-        if sp.strip()
-    ))
+def web_services(request: Request):
+    procs = get_all_procedures()
+
+    # Build system categories
+    system_map: dict[str, list] = {}
+    for p in procs:
+        s = p.get("system") or "Other"
+        system_map.setdefault(s, []).append(p)
+
+    categories = []
+    for sys_name, sys_procs in sorted(system_map.items(), key=lambda x: -len(x[1])):
+        dtcs = []
+        for p in sys_procs:
+            import json as _json
+            codes = p.get("dtc_codes")
+            if isinstance(codes, str):
+                try: codes = _json.loads(codes)
+                except: codes = []
+            dtcs.extend(codes or [])
+        dtcs = list(dict.fromkeys(dtcs))  # dedupe, preserve order
+        categories.append({
+            "system": sys_name,
+            "count": len(sys_procs),
+            "description": _SYSTEM_DESCRIPTIONS.get(sys_name, "Diagnostic procedures and repair guides"),
+            "dtcs": dtcs,
+        })
+
+    # Makes
+    make_map: dict[str, int] = {}
+    for p in procs:
+        m = p.get("make") or ""
+        if m:
+            make_map[m] = make_map.get(m, 0) + 1
+    makes = [{"make": k, "count": v} for k, v in sorted(make_map.items(), key=lambda x: -x[1])]
+
+    # Top verified
+    top_verified = sorted(
+        [_summary(p) for p in procs if (p.get("verified_count") or 0) > 0],
+        key=lambda x: x.get("verified_count") or 0, reverse=True
+    )[:6]
+
+    # Recently added
+    recent = [_summary(p) for p in procs[-6:]][::-1]
+
     return _templates.TemplateResponse(request=request, name="services.html", context={"active": "services",
-        "services": svcs, "query": q,
-        "specialties": all_specialties,
-        "selected_specialty": specialty,
-        "selected_type": service_type,
+        "categories": categories,
+        "makes": makes,
+        "top_verified": top_verified,
+        "recent": recent,
     })
 
 
@@ -445,6 +493,7 @@ def web_register_post(
 @app.get("/api/stats")
 def api_stats():
     return stats()
+
 
 
 

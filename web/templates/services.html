@@ -1,90 +1,87 @@
 ﻿{% extends "base.html" %}
-{% block title %}Services Directory — OpenTune{% endblock %}
+{% block title %}Services Directory — OpenTune Knowledge Engine{% endblock %}
 {% block content %}
 <div class="container">
   <div class="page-header">
     <h1>// services directory</h1>
-    <p>Independent shops and mobile mechanics using OpenTune. Real diagnostics, fair prices.</p>
+    <p>A structured map of everything the OpenTune knowledge engine covers. Click any category to browse procedures.</p>
   </div>
 
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-    <form method="get" action="/services" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
-      <input class="search-input" type="text" name="q" placeholder="Search shops, cities, specialties…" value="{{ query or '' }}" style="min-width:260px;">
-      <select name="specialty" class="filter-select" onchange="this.form.submit()">
-        <option value="">All Specialties</option>
-        {% for s in specialties %}
-        <option value="{{ s }}" {% if selected_specialty == s %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
-      </select>
-      <select name="service_type" class="filter-select" onchange="this.form.submit()">
-        <option value="">All Types</option>
-        <option value="shop" {% if selected_type == 'shop' %}selected{% endif %}>Shop</option>
-        <option value="mobile" {% if selected_type == 'mobile' %}selected{% endif %}>Mobile Mechanic</option>
-        <option value="dealership" {% if selected_type == 'dealership' %}selected{% endif %}>Dealership</option>
-        <option value="specialty" {% if selected_type == 'specialty' %}selected{% endif %}>Specialty</option>
-      </select>
-      <button type="submit" class="btn btn-outline btn-sm">Search</button>
-      {% if query or selected_specialty or selected_type %}
-      <a href="/services" class="btn btn-outline btn-sm">Clear</a>
-      {% endif %}
-    </form>
-    <a href="/services/register" class="btn btn-primary">+ List Your Shop</a>
-  </div>
-
-  <div class="result-count">Showing <span>{{ services | length }}</span> services</div>
-
-  {% if services %}
-  <div class="cards-grid">
-    {% for svc in services %}
-    <div class="service-card">
-      <div class="service-card-header">
+  <!-- System Categories -->
+  <div class="proc-section-title" style="margin-bottom:1.5rem;">By System</div>
+  <div class="cards-grid" style="margin-bottom:2.5rem;">
+    {% for cat in categories %}
+    <a href="/browse?system={{ cat.system }}" class="proc-card" style="text-decoration:none;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
-          <div class="service-name">{{ svc.name }}</div>
-          <div class="service-type">{{ svc.service_type | title }}</div>
+          <div class="proc-card-title">{{ cat.system }}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem; font-family:var(--font);">{{ cat.description }}</div>
         </div>
-        {% if svc.verified %}
-        <div class="verified-shield">✓ Verified</div>
-        {% endif %}
+        <span class="top-list-count" style="min-width:32px; text-align:center;">{{ cat.count }}</span>
       </div>
-
-      <div class="service-location">📍 {{ svc.city }}{% if svc.state %}, {{ svc.state }}{% endif %}{% if svc.country and svc.country != 'US' %} · {{ svc.country }}{% endif %}</div>
-
-      {% if svc.description %}
-      <div style="font-size:0.85rem; color:var(--text-dim); line-height:1.5;">{{ svc.description }}</div>
-      {% endif %}
-
-      {% if svc.specialties %}
-      <div class="service-specialties">
-        {% for spec in svc.specialties.split(',') %}
-        <span class="tag tag-make">{{ spec.strip() }}</span>
+      {% if cat.dtcs %}
+      <div style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.25rem;">
+        {% for dtc in cat.dtcs[:4] %}
+        <span class="tag tag-dtc">{{ dtc }}</span>
         {% endfor %}
+        {% if cat.dtcs|length > 4 %}<span style="font-size:0.75rem;color:var(--text-muted);">+{{ cat.dtcs|length - 4 }} more</span>{% endif %}
       </div>
       {% endif %}
-
-      <div class="service-footer">
-        <div style="display:flex; gap:1rem; align-items:center;">
-          {% if svc.website %}
-          <a href="{{ svc.website }}" target="_blank" class="service-contact">🌐 Website</a>
-          {% endif %}
-          {% if svc.phone %}
-          <a href="tel:{{ svc.phone }}" class="service-contact">📞 {{ svc.phone }}</a>
-          {% endif %}
-          {% if svc.email %}
-          <a href="mailto:{{ svc.email }}" class="service-contact">✉ Email</a>
-          {% endif %}
-        </div>
-        <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font);">uses OpenTune</span>
-      </div>
+    </a>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📂</div>
+      <p>No procedures in the knowledge base yet.</p>
+      <br>
+      <a href="/submit" class="btn btn-primary" style="margin-top:0.5rem;">Submit the first one →</a>
     </div>
     {% endfor %}
   </div>
-  {% else %}
-  <div class="empty-state">
-    <div class="empty-icon">🔧</div>
-    <p>No services listed yet{% if query %} matching "{{ query }}"{% endif %}.</p>
-    <br>
-    <a href="/services/register" class="btn btn-primary" style="margin-top:0.5rem;">Be the first to list your shop →</a>
+
+  {% if makes %}
+  <!-- Makes Coverage -->
+  <div class="proc-section-title" style="margin-bottom:1.5rem;">By Vehicle Make</div>
+  <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-bottom:2.5rem;">
+    {% for item in makes %}
+    <a href="/browse?make={{ item.make }}" class="proc-card" style="text-decoration:none; flex-direction:row; align-items:center; gap:1rem; padding:0.875rem 1.25rem; min-width:160px;">
+      <div>
+        <div style="font-weight:600; font-size:0.9rem;">{{ item.make or "Universal" }}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); font-family:var(--font);">{{ item.count }} procedure{{ 's' if item.count != 1 else '' }}</div>
+      </div>
+    </a>
+    {% endfor %}
   </div>
   {% endif %}
+
+  <!-- KB Stats row -->
+  <div class="grid-2">
+    <div class="top-list">
+      <div class="top-list-header">Most Verified Procedures</div>
+      {% for proc in top_verified %}
+      <a href="/procedure/{{ proc.id }}" class="top-list-item" style="text-decoration:none;color:inherit;">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ proc.title }}</span>
+        <span class="top-list-count">✓ {{ proc.verified_count }}</span>
+      </a>
+      {% else %}
+      <div class="top-list-item" style="color:var(--text-muted)">None verified yet</div>
+      {% endfor %}
+    </div>
+    <div class="top-list">
+      <div class="top-list-header">Recently Added</div>
+      {% for proc in recent %}
+      <a href="/procedure/{{ proc.id }}" class="top-list-item" style="text-decoration:none;color:inherit;">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ proc.title }}</span>
+        {% if proc.system %}<span class="tag tag-system" style="font-size:0.7rem;">{{ proc.system }}</span>{% endif %}
+      </a>
+      {% else %}
+      <div class="top-list-item" style="color:var(--text-muted)">No procedures yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+    <a href="/browse" class="btn btn-outline">Browse all procedures →</a>
+    <a href="/submit" class="btn btn-primary">+ Contribute a fix</a>
+  </div>
 </div>
 {% endblock %}

@@ -1,12 +1,12 @@
-"""
-Welcome Wizard � First-run setup flow for OpenTune.
+﻿"""
+Welcome Wizard ï¿½ First-run setup flow for OpenTune.
 
 Screens:
-  1 � Identity / branding
-  2 � Ollama local AI setup (with install offer)
-  3 � Tier explanation
-  4 � Optional API key entry
-  5 � Ready to launch
+  1 ï¿½ Identity / branding
+  2 ï¿½ Ollama local AI setup (with install offer)
+  3 ï¿½ Tier explanation
+  4 ï¿½ Optional API key entry
+  5 ï¿½ Ready to launch
 """
 from __future__ import annotations
 
@@ -35,11 +35,11 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 LOGO = r"""
-     ������+ ������+ �������+���+   ��+
-    ��+---��+��+--��+��+----+����+  ���
-    ���   ���������++�����+  ��+��+ ���
-    ���   �����+---+ ��+--+  ���+��+���
-    +������++���     �������+��� +�����
+     ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½+ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½+ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½+ï¿½ï¿½ï¿½+   ï¿½ï¿½+
+    ï¿½ï¿½+---ï¿½ï¿½+ï¿½ï¿½+--ï¿½ï¿½+ï¿½ï¿½+----+ï¿½ï¿½ï¿½ï¿½+  ï¿½ï¿½ï¿½
+    ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½++ï¿½ï¿½ï¿½ï¿½ï¿½+  ï¿½ï¿½+ï¿½ï¿½+ ï¿½ï¿½ï¿½
+    ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½+---+ ï¿½ï¿½+--+  ï¿½ï¿½ï¿½+ï¿½ï¿½+ï¿½ï¿½ï¿½
+    +ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½++ï¿½ï¿½ï¿½     ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½+ï¿½ï¿½ï¿½ +ï¿½ï¿½ï¿½ï¿½ï¿½
      +-----+ +-+     +------++-+  +---+
               T U N E
 """
@@ -61,7 +61,7 @@ WRENCH_USB = r"""
 """
 
 TAGLINE = "Free. Open. Gets smarter with every fix."
-MISSION = "The diagnostic database that belongs to everyone � not to Snap-on."
+MISSION = "The diagnostic database that belongs to everyone ï¿½ not to Snap-on."
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -108,7 +108,7 @@ def _install_ollama_windows() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Screen 1 � Identity
+# Screen 1 ï¿½ Identity
 # ---------------------------------------------------------------------------
 
 def screen_identity() -> None:
@@ -145,7 +145,7 @@ def screen_identity() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Screen 2 � Ollama Setup (with install offer)
+# Screen 2 ï¿½ Ollama Setup (with install offer)
 # ---------------------------------------------------------------------------
 
 def screen_ollama_setup(ollama_model: str = "llama3.2:3b") -> bool:
@@ -157,11 +157,11 @@ def screen_ollama_setup(ollama_model: str = "llama3.2:3b") -> bool:
                 Text("\n  ??  Local AI Engine Setup\n\n", style="bold white"),
                 Text(
                     "  Ollama runs a private AI model on your machine.\n"
-                    "  No internet. No API key. Completely free � forever.\n",
+                    "  No internet. No API key. Completely free ï¿½ forever.\n",
                     style="dim white"
                 ),
             ),
-            title="[bold cyan]Step 1 of 4 � Local AI[/bold cyan]",
+            title="[bold cyan]Step 1 of 4 ï¿½ Local AI[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
         )
@@ -176,15 +176,44 @@ def screen_ollama_setup(ollama_model: str = "llama3.2:3b") -> bool:
             console.print(
                 Panel(
                     Text.assemble(
-                        Text("  ??  Ollama not detected on this machine.\n\n", style="bold yellow"),
+                        Text("  Ollama not detected on this machine.\n\n", style="bold yellow"),
+                        Text("  Here is how OpenTune AI works:\n\n", style="bold white"),
+
+                        Text("  [ FREE ]  ", style="bold green"),
+                        Text("Local model (Ollama)\n", style="bold white"),
                         Text(
-                            "  Ollama is a free local AI runtime. Install it once,\n"
-                            "  run AI diagnostics offline forever.\n",
-                            style="dim"
+                            "           Runs on your machine. No internet. No API key.\n"
+                            "           Handles routine tasks: DTC lookups, code explanations,\n"
+                            "           known procedures, basic chat. Fast. Private. Always free.\n\n",
+                            style="dim white"
+                        ),
+
+                        Text("  [ CLOUD ] ", style="bold cyan"),
+                        Text("API key model\n", style="bold white"),
+                        Text(
+                            "           Cloud AI for harder problems: first-principles\n"
+                            "           engineering, edge cases, multi-system failures,\n"
+                            "           vehicles with no prior community data.\n\n",
+                            style="dim white"
+                        ),
+
+                        Text(
+                            "  The logic:  simple task = free local model.\n"
+                            "              complex task = smarter cloud model.\n"
+                            "              OpenTune decides. You approve.\n\n",
+                            style="white"
+                        ),
+
+                        Text(
+                            "  Either way — every result, every procedure, every fix\n"
+                            "  feeds the knowledge base. The database grows regardless\n"
+                            "  of which AI powered it. That is the whole point.\n",
+                            style="bold green"
                         ),
                     ),
+                    title="[bold yellow]  AI Not Found[/bold yellow]",
                     border_style="yellow",
-                    padding=(1, 2),
+                    padding=(1, 3),
                 )
             )
             console.print()
@@ -249,7 +278,7 @@ def screen_ollama_setup(ollama_model: str = "llama3.2:3b") -> bool:
                 _save_ollama_disabled()
                 return False
 
-        # --- Ollama is running � pull model if needed ---
+        # --- Ollama is running ï¿½ pull model if needed ---
         setup = OllamaSetup(model=ollama_model)
         console.print("  [cyan]Ollama detected. Checking model...[/cyan]")
         success = setup.auto_setup()
@@ -307,7 +336,7 @@ def _save_ollama_disabled() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Screen 3 � Tier Explanation
+# Screen 3 ï¿½ Tier Explanation
 # ---------------------------------------------------------------------------
 
 def screen_tiers() -> None:
@@ -318,7 +347,7 @@ def screen_tiers() -> None:
             Text.assemble(
                 Text("\n  How OpenTune AI works:\n\n", style="bold white"),
                 Text("  ?  ", style="bold green"),
-                Text("Free � Local AI     ", style="bold green"),
+                Text("Free ï¿½ Local AI     ", style="bold green"),
                 Text("Runs on your machine. Handles most jobs. No cost ever.\n", style="white"),
                 Text("\n"),
                 Text("  ?  ", style="bold yellow"),
@@ -336,7 +365,7 @@ def screen_tiers() -> None:
                     style="dim white"
                 ),
             ),
-            title="[bold cyan]Step 2 of 4 � AI Tiers[/bold cyan]",
+            title="[bold cyan]Step 2 of 4 ï¿½ AI Tiers[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
         )
@@ -345,7 +374,7 @@ def screen_tiers() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Screen 4 � API Key (optional)
+# Screen 4 ï¿½ API Key (optional)
 # ---------------------------------------------------------------------------
 
 def screen_api_key() -> Optional[str]:
@@ -360,7 +389,7 @@ def screen_api_key() -> Optional[str]:
                     style="dim"
                 ),
             ),
-            title="[bold cyan]Step 3 of 4 � API Key[/bold cyan]",
+            title="[bold cyan]Step 3 of 4 ï¿½ API Key[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
         )
@@ -410,7 +439,7 @@ def screen_api_key() -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# Screen 5 � Ready
+# Screen 5 ï¿½ Ready
 # ---------------------------------------------------------------------------
 
 def screen_ready() -> None:
@@ -465,3 +494,5 @@ def run_wizard(skip_ollama: bool = False) -> None:
     except KeyboardInterrupt:
         console.print("\n\n  [dim]Setup cancelled. You can re-run the wizard from Settings.[/dim]\n")
         mark_first_run_complete()
+
+
