@@ -1016,7 +1016,7 @@ def _render_knowledge_entries(system: str, entries: list[dict]) -> None:
             f"[bold white]{entry.get('service_type', '-')}[/bold white]\n"
             f"[dim]Success rate:[/dim] [{rate_color}]{rate:.0%}[/{rate_color}]  "
             f"[dim]Cases:[/dim] [white]{cases}[/white]\n\n"
-            f"[dim]Vehicles:[/dim] {', '.join(entry.get('vehicles_seen', [])[:3])}\n\n"
+            f"[dim]Vehicles:[/dim] {', '.join((v.get('make','') + ' ' + v.get('model','')).strip() if isinstance(v, dict) else str(v) for v in entry.get('vehicles_seen', [])[:3])}\n\n"
             f"[dim]Symptoms:[/dim] {'; '.join(entry.get('common_symptoms', [])[:3])}\n\n"
             f"[dim]Solution:[/dim] {entry.get('physical_solution', '-')[:200]}",
             border_style="dim cyan",
