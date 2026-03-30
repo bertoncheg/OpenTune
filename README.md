@@ -14,6 +14,8 @@ But that is not the real problem.
 
 The real problem is that every mechanic in the world is solving the same faults in isolation — on forums, in notes, in their head — and none of it connects. A mechanic in Houston figures out a rare KDSS fault on a 2007 GX470. A mechanic in São Paulo is staring at the exact same fault tomorrow. They will never meet. The knowledge dies with the session.
 
+There is another force at work too. Every time a manufacturer locks a protocol, encrypts a calibration file, or paywalls a reset procedure — they are not protecting their product. They are handing us a roadmap. Every locked system we encounter during this journey gets documented, gets understood, and gets added to the community knowledge base. The more aggressively they lock things down, the faster the community moves to unlock them. History is consistent on this: DRM did not stop piracy, it accelerated reverse engineering. Locked bootloaders did not stop custom ROMs, they created XDA. Every wall they build tells us exactly where the value is.
+
 Meanwhile, the software world solved this twenty years ago. Linux did not beat Unix because one company out-engineered another. It won because a million engineers contributed to one shared foundation that nobody owned. npm has over two million packages — built by strangers for strangers, stacked into something no single company could have funded. Stack Overflow turned individual answers into a permanent global knowledge layer. The pattern is always the same: **open contribution compounds faster than any closed team can move.**
 
 The automotive repair world has never had that. Until now.
@@ -179,3 +181,4 @@ MIT — open source, open diagnostics.
 ---
 
 *Built for the mechanic who is better than the tool they can afford.*
+
