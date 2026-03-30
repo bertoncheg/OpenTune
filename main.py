@@ -1531,20 +1531,50 @@ def main() -> None:
     profiles = VehicleProfileManager()
 
     if not obd_connected:
-        # No adapter: show full menu in locked state, AI/KB still available
+        # No adapter: show tier brief + full menu in locked state
+        from rich.text import Text as _T
         console.print(Panel(
-            "[bold yellow]No OBD adapter detected.[/bold yellow]\n\n"
-            "[white]All features are shown below. OBD features will unlock when you connect your adapter.[/white]\n"
-            "[dim]Chat and Knowledge Base are fully available right now.[/dim]",
+            _T.assemble(
+                _T("  No OBD adapter detected.\n\n", style="bold yellow"),
+                _T("  How OpenTune AI works:\n\n", style="bold white"),
+                _T("  TIER 1  FREE     ", style="bold green"),
+                _T("Local model (Ollama)\n", style="bold white"),
+                _T("                   Runs on your hardware. No internet. No API key.\n"
+                   "                   DTC lookups, code explanations, known procedures,\n"
+                   "                   routine chat. Fast. Private. Always free.\n\n", style="dim white"),
+                _T("  TIER 2  CLOUD    ", style="bold cyan"),
+                _T("API key model\n", style="bold white"),
+                _T("                   Harder problems. First-principles engineering.\n"
+                   "                   Edge cases, rare failures, vehicles with no prior data.\n"
+                   "                   You bring the key. You control the spend.\n\n", style="dim white"),
+                _T("  TIER 3  DEEP     ", style="bold magenta"),
+                _T("Full reasoning model\n", style="bold white"),
+                _T("                   Maximum capability. Multi-system analysis.\n"
+                   "                   Unknown failure modes. Complex wiring faults.\n"
+                   "                   Only fires when you approve it.\n\n", style="dim white"),
+                _T("  OpenTune starts at Tier 1 every time. Steps up only when needed, with your approval.\n\n", style="white"),
+                _T("  Regardless of tier: every outcome feeds the knowledge base. That is how it grows.\n", style="bold green"),
+                _T("\n  OBD features are locked below. Chat and Knowledge Base are live now.", style="dim yellow"),
+            ),
             border_style="yellow",
-            title="[yellow]CONNECT YOUR OBD DONGLE[/yellow]",
+            title="[yellow]NO OBD DONGLE - CONNECT TO UNLOCK[/yellow]",
+            padding=(1, 2),
         ))
         console.print()
 
-        # Stub connection and scan result for menu compatibility
+        # Stub objects for menu compatibility
         conn = OBDConnection(mode=mode, port=port)
         from core.scanner import ScanResult
-        scan_result = ScanResult(dtcs=[], vehicle_display="No vehicle", vin="N/A", ecus=[])
+        from core.connection import LiveData
+        _stub_live = LiveData()
+        scan_result = ScanResult(
+            vehicle_display="No vehicle connected",
+            vin="N/A",
+            dtcs=[],
+            live_snapshot=_stub_live,
+            ecu_map={},
+            duration_s=0.0,
+        )
         live_monitor = LiveMonitor(conn)
         ai_monitor = AIMonitor(live_monitor)
         engineer = ProcedureEngineer(knowledge_engine=knowledge)
