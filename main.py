@@ -2,7 +2,7 @@
 OpenTune v0.1.0
 Open Diagnostics. Infinite Solutions.
 
-Entry point — terminal UI, connection flow, chat loop, session logging.
+Entry point - terminal UI, connection flow, chat loop, session logging.
 """
 from __future__ import annotations
 
@@ -46,12 +46,11 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 OPENTUNE_ASCII = r"""
- ██████╗ ██████╗ ███████╗███╗   ██╗████████╗██╗   ██╗███╗   ██╗███████╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██║   ██║████╗  ██║██╔════╝
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║   ██║   ██║   ██║██╔██╗ ██║█████╗
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██║   ██║██║╚██╗██║██╔══╝
-╚██████╔╝██║     ███████╗██║ ╚████║   ██║   ╚██████╔╝██║ ╚████║███████╗
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝"""
+   ___  ____  ____  _  _  ____  _  _  _  _  ____ 
+  / _ \(  _ \( ___)( \( )(_  _)( )( )( \( )( ___)
+ ( (_) )) __/ )__)  )  (   )(   )()(  )  (  )__) 
+  \___/(__)  (____)(_)\_) (__)  \__/ (_)\_)(____)  
+"""
 
 TAGLINE = "Open Diagnostics. Infinite Solutions."
 
@@ -61,21 +60,21 @@ def first_run_setup(router: IntelligenceRouter) -> None:
     table = Table(show_header=False, box=None, padding=(0, 1))
 
     if router.ollama_available:
-        table.add_row("✅", "Tier 1 · Local (free)", f"[dim]{router._ollama_model}[/dim]")
+        table.add_row("[dim]--[/dim]", "Tier 1 - Local (free)", "[dim]Ollama not running -- install at ollama.ai[/dim]")
     else:
-        table.add_row("⚪", "Tier 1 · Local (free)", "[dim]Ollama not running — install at ollama.ai[/dim]")
+        table.add_row("[dim]--[/dim]", "Tier 1 - Local (free)", "[dim]Ollama not running -- install at ollama.ai[/dim]")
 
     if router.cloud_available:
-        table.add_row("✅", "Tier 2 · Cloud Efficient", "[dim]~$0.002/session[/dim]")
-        table.add_row("✅", "Tier 3 · Cloud Power", "[dim]~$0.08/session[/dim]")
+        table.add_row("...-...", "Tier 2 -. Cloud Efficient", "[dim]~$0.002/session[/dim]")
+        table.add_row("...-...", "Tier 3 -. Cloud Power", "[dim]~$0.08/session[/dim]")
     else:
-        table.add_row("❌", "Tier 2 · Cloud Efficient", "[dim]Add API_KEY to .env to unlock[/dim]")
-        table.add_row("❌", "Tier 3 · Cloud Power", "[dim]Add API_KEY to .env to unlock[/dim]")
+        table.add_row("...-", "Tier 2 -. Cloud Efficient", "[dim]Add API_KEY to .env to unlock[/dim]")
+        table.add_row("...-", "Tier 3 -. Cloud Power", "[dim]Add API_KEY to .env to unlock[/dim]")
 
     console.print(Panel(table, title="[bold cyan]Intelligence Tiers[/bold cyan]", border_style="cyan"))
 
 
-def render_launch_screen(mode: ConnectionMode, vehicle_display: str = "—", vin: str = "—") -> None:
+def render_launch_screen(mode: ConnectionMode, vehicle_display: str = "-", vin: str = "-") -> None:
     console.clear()
 
     # ASCII art with cyan/blue gradient
@@ -96,7 +95,7 @@ def render_launch_screen(mode: ConnectionMode, vehicle_display: str = "—", vin
 
     # Info bar
     mode_label = Text()
-    mode_label.append("  MODE  ", style="bold black on cyan" if mode == ConnectionMode.SIM else "bold black on green")
+    mode_label.append("  MODE  ", style="bold black on green")
     mode_label.append(f"  {mode.value.upper()}  ", style="bold white")
 
     version_text = Text(f"  v{OPENTUNE_VERSION}  ", style="dim white")
@@ -176,7 +175,7 @@ def render_live_data_panel(data: LiveData) -> None:
         "battery_voltage": "Battery Voltage",
     }
     units = {
-        "rpm": "RPM", "coolant_temp": "°C", "intake_air_temp": "°C",
+        "rpm": "RPM", "coolant_temp": "-C", "intake_air_temp": "-C",
         "throttle_pos": "%", "engine_load": "%", "maf": "g/s",
         "map": "kPa", "vehicle_speed": "km/h", "fuel_trim_short_b1": "%",
         "fuel_trim_long_b1": "%", "o2_b1s1": "V", "battery_voltage": "V",
@@ -209,13 +208,13 @@ def render_scan_result(result: ScanResult) -> None:
         ecu_table.add_row(ecu, Text(status, style=style))
 
     console.print(
-        Panel(ecu_table, title=f"[cyan]ECU MAP — {result.vehicle_display}[/cyan]", border_style="cyan")
+        Panel(ecu_table, title=f"[cyan]ECU MAP - {result.vehicle_display}[/cyan]", border_style="cyan")
     )
 
     render_dtc_table(result.dtcs)
     render_live_data_panel(result.live_snapshot)
 
-    console.print(f"[dim]Scan completed in {result.duration_s:.2f}s  •  VIN: {result.vin}[/dim]")
+    console.print(f"[dim]Scan completed in {result.duration_s:.2f}s  -  VIN: {result.vin}[/dim]")
     console.print()
 
 
@@ -245,7 +244,7 @@ def render_procedure(proc: EngineeredProcedure) -> None:
 
     if proc.safety_notes:
         for note in proc.safety_notes:
-            console.print(f"[bold yellow]  ⚠  {note}[/bold yellow]")
+            console.print(f"[bold yellow]  ...  {note}[/bold yellow]")
         console.print()
 
     console.print(f"[bold cyan]Steps ({len(proc.steps)}):[/bold cyan]")
@@ -253,7 +252,7 @@ def render_procedure(proc: EngineeredProcedure) -> None:
     for step in proc.steps:
         console.print(f"  [cyan]{step.step_number:>2}.[/cyan] [white]{step.description}[/white]")
         if step.expected_result:
-            console.print(f"      [dim]→ Expected: {step.expected_result}[/dim]")
+            console.print(f"      [dim]' Expected: {step.expected_result}[/dim]")
     console.print()
 
 
@@ -291,7 +290,7 @@ def execute_procedure(
             if data:
                 snap = data.snapshot()
                 if pid == "all":
-                    result_str = f"Snapshot captured: RPM={snap.get('rpm', 0):.0f}, Coolant={snap.get('coolant_temp', 0):.1f}°C"
+                    result_str = f"Snapshot captured: RPM={snap.get('rpm', 0):.0f}, Coolant={snap.get('coolant_temp', 0):.1f}-C"
                 else:
                     val = snap.get(pid, "N/A")
                     result_str = f"{pid} = {val}"
@@ -337,7 +336,7 @@ def execute_procedure(
         elif step.action_type == "wait":
             secs = step.action_data.get("seconds", 3)
             reason = step.action_data.get("reason", "stabilizing")
-            console.print(f"  [dim]Waiting {secs}s — {reason}...[/dim]")
+            console.print(f"  [dim]Waiting {secs}s - {reason}...[/dim]")
             for i in range(int(secs)):
                 time.sleep(1)
                 console.print(f"  [dim]  {i+1}/{secs}[/dim]", end="\r")
@@ -389,24 +388,24 @@ def display_alerts(alerts: list) -> None:
                 "monitor": "dim yellow",
             }.get(alert.urgency, "yellow")
             console.print(
-                f"\n[{urgency_style}]  ⚡ ANOMALY [{alert.urgency.upper()}][/{urgency_style}] "
+                f"\n[{urgency_style}]  ... ANOMALY [{alert.urgency.upper()}][/{urgency_style}] "
                 f"[white]{raw.pid_name.upper()}:[/white] {alert.interpretation}"
             )
             if alert.likely_causes:
                 console.print(f"  [dim]Possible causes: {', '.join(alert.likely_causes[:2])}[/dim]")
-            console.print(f"  [dim]→ {alert.suggested_action}[/dim]")
+            console.print(f"  [dim]' {alert.suggested_action}[/dim]")
         else:
             # Raw AnomalyAlert
             style = "bold red" if alert.severity == "critical" else "bold yellow"
-            console.print(f"\n  [{style}]⚡ {alert.message}[/{style}]")
+            console.print(f"\n  [{style}]... {alert.message}[/{style}]")
 
 
 # ---------------------------------------------------------------------------
-# Plan summary (conversational — shown before confirmation)
+# Plan summary (conversational - shown before confirmation)
 # ---------------------------------------------------------------------------
 
 def render_plan_summary(proc: EngineeredProcedure) -> None:
-    """Show a brief, conversational plan — not the full procedure panel."""
+    """Show a brief, conversational plan -  not the full procedure panel."""
     conf_color = "green" if proc.confidence >= 0.8 else "yellow" if proc.confidence >= 0.6 else "red"
 
     console.print(f"[bold white]Plan:[/bold white]  [dim]({proc.title})[/dim]")
@@ -419,7 +418,7 @@ def render_plan_summary(proc: EngineeredProcedure) -> None:
                       f"[dim]Confidence: [{conf_color}]{proc.confidence:.0%}[/{conf_color}][/dim]")
     if proc.safety_notes:
         for note in proc.safety_notes:
-            console.print(f"  [bold yellow]  ⚠  {note}[/bold yellow]")
+            console.print(f"  [bold yellow]  ...  {note}[/bold yellow]")
     console.print()
 
 
@@ -479,7 +478,7 @@ def feature_dtc_history(scanner: ECUScanner) -> None:
 
 def feature_freeze_frame(scanner: ECUScanner, active_dtcs: list[DTC]) -> None:
     if not active_dtcs:
-        console.print("[dim]No active DTCs — no freeze frames available.[/dim]")
+        console.print("[dim]No active DTCs - no freeze frames available.[/dim]")
         try:
             Prompt.ask("[dim]Press ENTER to return[/dim]", default="")
         except (KeyboardInterrupt, EOFError):
@@ -492,7 +491,7 @@ def feature_freeze_frame(scanner: ECUScanner, active_dtcs: list[DTC]) -> None:
     console.print()
 
     for i, dtc in enumerate(active_dtcs):
-        console.print(f"  [bold cyan]{i + 1}.[/bold cyan] {dtc.code} — {dtc.description[:60]}")
+        console.print(f"  [bold cyan]{i + 1}.[/bold cyan] {dtc.code} - {dtc.description[:60]}")
     console.print(f"  [bold cyan]{len(active_dtcs) + 1}.[/bold cyan] [dim]Back to menu[/dim]")
     console.print()
 
@@ -522,7 +521,7 @@ def feature_freeze_frame(scanner: ECUScanner, active_dtcs: list[DTC]) -> None:
     pid_labels = {
         "rpm": ("Engine RPM", "RPM"),
         "vehicle_speed": ("Vehicle Speed", "km/h"),
-        "coolant_temp": ("Coolant Temp", "°C"),
+        "coolant_temp": ("Coolant Temp", "-C"),
         "engine_load": ("Engine Load", "%"),
         "fuel_trim_short_b1": ("Short Fuel Trim B1", "%"),
         "throttle_pos": ("Throttle Position", "%"),
@@ -571,11 +570,11 @@ def feature_readiness_monitors(scanner: ECUScanner) -> None:
     not_ready: list[str] = []
     for mon in result.monitors:
         if not mon.supported:
-            status = Text("— NOT SUPPORTED", style="dim")
+            status = Text("- NOT SUPPORTED", style="dim")
         elif mon.complete:
-            status = Text("✅ READY", style="bold green")
+            status = Text("...-... READY", style="bold green")
         else:
-            status = Text("⚠  NOT READY", style="bold yellow")
+            status = Text("...  NOT READY", style="bold yellow")
             not_ready.append(mon.name)
         table.add_row(mon.name, mon.category, status)
 
@@ -587,7 +586,7 @@ def feature_readiness_monitors(scanner: ECUScanner) -> None:
             f"[bold yellow]{len(not_ready)} monitor(s) not complete:[/bold yellow] "
             f"{', '.join(not_ready)}\n\n"
             "[dim]Drive cycle required before emissions test.\n"
-            "Typically: highway cruise 55–65 mph + city stop-and-go cycle.\n"
+            "Typically: highway cruise 55-65 mph + city stop-and-go cycle.\n"
             "Check manufacturer drive cycle procedure for exact requirements.[/dim]",
             title="[yellow]EMISSIONS GUIDANCE[/yellow]",
             border_style="yellow",
@@ -635,7 +634,7 @@ def feature_component_test(conn: OBDConnection) -> None:
         # Safety warning + confirmation
         console.print()
         console.print(Panel(
-            f"[bold yellow]⚠  SAFETY WARNING[/bold yellow]\n\n{test.safety_warning}",
+            f"[bold yellow]...  SAFETY WARNING[/bold yellow]\n\n{test.safety_warning}",
             border_style="yellow",
         ))
         console.print()
@@ -655,10 +654,10 @@ def feature_component_test(conn: OBDConnection) -> None:
             result = tester.run_test(test)
 
         if result.success:
-            console.print(f"\n  [bold green]✅ {result.message}[/bold green]  "
+            console.print(f"\n  [bold green]...-... {result.message}[/bold green]  "
                           f"[dim]({result.duration_seconds:.1f}s)[/dim]")
         else:
-            console.print(f"\n  [bold red]✗ {result.message}[/bold red]")
+            console.print(f"\n  [bold red]...-- {result.message}[/bold red]")
         console.print()
 
 
@@ -703,8 +702,8 @@ def feature_procedure_history(logger: SessionLogger) -> None:
             fixed_count += 1
         table.add_row(
             date_str,
-            rec.get("vehicle", "—")[:22],
-            rec.get("procedure", "—")[:40],
+            rec.get("vehicle", "-")[:22],
+            rec.get("procedure", "-")[:40],
             Text(outcome.upper(), style=outcome_styles.get(outcome, "white")),
             rec.get("notes", "")[:24],
         )
@@ -871,7 +870,7 @@ def feature_export_report(
             "o2_b1s1": "O2 B1S1", "battery_voltage": "Battery Voltage",
         }
         units = {
-            "rpm": "RPM", "coolant_temp": "°C", "engine_load": "%", "maf": "g/s",
+            "rpm": "RPM", "coolant_temp": "-C", "engine_load": "%", "maf": "g/s",
             "throttle_pos": "%", "vehicle_speed": "km/h", "fuel_trim_short_b1": "%",
             "fuel_trim_long_b1": "%", "o2_b1s1": "V", "battery_voltage": "V",
         }
@@ -885,7 +884,7 @@ def feature_export_report(
     lines += ["", "-" * 72, "  PROCEDURES RUN THIS VIN", "-" * 72]
     if procedure_records:
         for rec in procedure_records:
-            lines.append(f"  {rec.get('timestamp', '')[:10]}  {rec.get('procedure', '—')[:50]}  "
+            lines.append(f"  {rec.get('timestamp', '')[:10]}  {rec.get('procedure', '-')[:50]}  "
                          f"[{rec.get('outcome', '?').upper()}]")
     else:
         lines.append("  None logged for this VIN.")
@@ -926,13 +925,13 @@ def _generate_ai_recommendations(scan_result: ScanResult, live_data) -> str:
         dtc_text = ", ".join(d.code for d in scan_result.dtcs) or "none"
         return (
             f"  Active codes: {dtc_text}\n"
-            "  [API key required for AI recommendations — add ANTHROPIC_API_KEY to .env]"
+            "  [API key required for AI recommendations - add ANTHROPIC_API_KEY to .env]"
         )
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         dtc_block = "\n".join(
-            f"    {d.code} — {d.description} (ECU: {d.ecu}, severity: {d.severity})"
+            f"    {d.code} - {d.description} (ECU: {d.ecu}, severity: {d.severity})"
             for d in scan_result.dtcs
         ) or "    None"
         live_block = ""
@@ -942,7 +941,7 @@ def _generate_ai_recommendations(scan_result: ScanResult, live_data) -> str:
         prompt = (
             f"Vehicle: {scan_result.vehicle_display}\nVIN: {scan_result.vin}\n\n"
             f"Active DTCs:\n{dtc_block}\n\nLive data:\n{live_block}\n\n"
-            "Write 3–5 concise actionable recommendations for the mechanic. "
+            "Write 3-5 concise actionable recommendations for the mechanic. "
             "Reference specific codes and sensor values. Plain text, no markdown."
         )
         response = client.messages.create(
@@ -1014,12 +1013,12 @@ def _render_knowledge_entries(system: str, entries: list[dict]) -> None:
         cases = entry.get("total_cases", 0)
         rate_color = "green" if rate >= 0.85 else "yellow" if rate >= 0.6 else "red"
         console.print(Panel(
-            f"[bold white]{entry.get('service_type', '—')}[/bold white]\n"
+            f"[bold white]{entry.get('service_type', '-')}[/bold white]\n"
             f"[dim]Success rate:[/dim] [{rate_color}]{rate:.0%}[/{rate_color}]  "
             f"[dim]Cases:[/dim] [white]{cases}[/white]\n\n"
             f"[dim]Vehicles:[/dim] {', '.join(entry.get('vehicles_seen', [])[:3])}\n\n"
             f"[dim]Symptoms:[/dim] {'; '.join(entry.get('common_symptoms', [])[:3])}\n\n"
-            f"[dim]Solution:[/dim] {entry.get('physical_solution', '—')[:200]}",
+            f"[dim]Solution:[/dim] {entry.get('physical_solution', '-')[:200]}",
             border_style="dim cyan",
         ))
 
@@ -1030,7 +1029,7 @@ def _render_knowledge_entries(system: str, entries: list[dict]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Feature 2 (Live Process Scan) — existing live_scan wrapper
+# Feature 2 (Live Process Scan) - existing live_scan wrapper
 # ---------------------------------------------------------------------------
 
 def feature_live_process_scan(conn: OBDConnection, scan_result: ScanResult) -> None:
@@ -1046,7 +1045,7 @@ def feature_live_process_scan(conn: OBDConnection, scan_result: ScanResult) -> N
 
     def _progress(elapsed: float, total: float) -> None:
         pct = min(int(elapsed / total * 40), 40)
-        bar = "█" * pct + "░" * (40 - pct)
+        bar = "--" * pct + "-'" * (40 - pct)
         console.print(f"  [{bar}]  {elapsed:.0f}/{total:.0f}s", end="\r")
 
     with console.status("[cyan]Collecting data...[/cyan]", spinner="arc"):
@@ -1091,8 +1090,9 @@ def run_main_menu(
     logger: SessionLogger,
     profiles: VehicleProfileManager,
     knowledge: KnowledgeEngine,
+    obd_connected: bool = True,
 ) -> None:
-    scanner = ECUScanner(conn)
+    scanner = ECUScanner(conn) if obd_connected else None
 
     import importlib.util as _ilu
     _settings_ui_available = _ilu.find_spec("ui.settings") is not None
@@ -1102,35 +1102,53 @@ def run_main_menu(
         if _settings_ui_available else ""
     )
 
-    MENU = (
-        "\n"
-        "   [bold white][1][/bold white]  DTC Scan\n"
-        "   [bold white][2][/bold white]  Live Process Scan\n"
-        "   [bold white][3][/bold white]  DTC History\n"
-        "   [bold white][4][/bold white]  Freeze Frame\n"
-        "   [bold white][5][/bold white]  Readiness Monitors\n"
-        "   [bold white][6][/bold white]  Component Test\n"
-        "   [bold white][7][/bold white]  Procedure History\n"
-        "   [bold white][8][/bold white]  Vehicle Profiles\n"
-        "   [bold white][9][/bold white]  Export Report\n"
-        "   [bold cyan][K][/bold cyan]  Knowledge Base — browse catalogued solutions\n"
-        "   [bold cyan][0][/bold cyan]  Chat — describe problem to AI\n"
-        + _settings_entry +
-        "   [bold red][Q][/bold red]  Quit\n"
-    )
+    # OBD-required features are shown dimmed when not connected
+    def _obd_item(key: str, label: str) -> str:
+        if obd_connected:
+            return f"   [bold white][{key}][/bold white]  {label}\n"
+        else:
+            return f"   [dim][{key}]  {label}  [yellow]- connect OBD dongle[/yellow][/dim]\n"
+
+    def _no_obd() -> None:
+        console.print()
+        console.print(Panel(
+            "[bold yellow]OBD dongle not connected.[/bold yellow]\n\n"
+            "[white]Plug in your ELM327 adapter and restart OpenTune to use this feature.[/white]",
+            border_style="yellow",
+            title="[yellow]CONNECT OBD DONGLE[/yellow]",
+        ))
+        console.print()
 
     while True:
-        # Drain and display any anomaly alerts
-        if ANTHROPIC_API_KEY:
-            alerts = ai_monitor.drain_enriched()
-        else:
-            alerts = live_monitor.drain_alerts()
-        if alerts:
-            display_alerts(alerts)
+        if obd_connected:
+            if ANTHROPIC_API_KEY:
+                alerts = ai_monitor.drain_enriched()
+            else:
+                alerts = live_monitor.drain_alerts()
+            if alerts:
+                display_alerts(alerts)
+
+        MENU = (
+            "\n"
+            + _obd_item("1", "DTC Scan")
+            + _obd_item("2", "Live Process Scan")
+            + _obd_item("3", "DTC History")
+            + _obd_item("4", "Freeze Frame")
+            + _obd_item("5", "Readiness Monitors")
+            + _obd_item("6", "Component Test")
+            + "   [bold white][7][/bold white]  Procedure History\n"
+            + "   [bold white][8][/bold white]  Vehicle Profiles\n"
+            + _obd_item("9", "Export Report")
+            + "   [bold cyan][K][/bold cyan]  Knowledge Base\n"
+            + "   [bold cyan][0][/bold cyan]  Chat\n"
+            + _settings_entry
+            + "   [bold red][Q][/bold red]  Quit\n"
+        )
+
+        menu_title = "[bold cyan]OPENTUNE MENU[/bold cyan]" if obd_connected else "[bold cyan]OPENTUNE MENU[/bold cyan]  [dim yellow](OBD not connected)[/dim yellow]"
 
         console.print()
-        console.print(Panel(MENU, title="[bold cyan]OPENTUNE MENU[/bold cyan]",
-                            border_style="cyan", padding=(0, 2)))
+        console.print(Panel(MENU, title=menu_title, border_style="cyan", padding=(0, 2)))
         console.print()
 
         try:
@@ -1144,6 +1162,7 @@ def run_main_menu(
             break
 
         elif choice == "1":
+            if not obd_connected: _no_obd(); continue
             console.print("[dim]Re-scanning ECUs...[/dim]")
             with console.status("[cyan]Scanning...[/cyan]", spinner="arc"):
                 new_result = scanner.full_scan()
@@ -1151,18 +1170,23 @@ def run_main_menu(
             scan_result.dtcs[:] = new_result.dtcs
 
         elif choice == "2":
+            if not obd_connected: _no_obd(); continue
             feature_live_process_scan(conn, scan_result)
 
         elif choice == "3":
+            if not obd_connected: _no_obd(); continue
             feature_dtc_history(scanner)
 
         elif choice == "4":
+            if not obd_connected: _no_obd(); continue
             feature_freeze_frame(scanner, scan_result.dtcs)
 
         elif choice == "5":
+            if not obd_connected: _no_obd(); continue
             feature_readiness_monitors(scanner)
 
         elif choice == "6":
+            if not obd_connected: _no_obd(); continue
             feature_component_test(conn)
 
         elif choice == "7":
@@ -1172,6 +1196,7 @@ def run_main_menu(
             feature_vehicle_profiles(profiles, conn)
 
         elif choice == "9":
+            if not obd_connected: _no_obd(); continue
             feature_export_report(scan_result, live_monitor, logger)
 
         elif choice == "K":
@@ -1186,7 +1211,6 @@ def run_main_menu(
 
         else:
             console.print("[dim]  Invalid option.[/dim]")
-
 
 def _run_chat_session(
     conn: OBDConnection,
@@ -1281,15 +1305,15 @@ def run_chat_loop(
             help_table.add_row("dtcs", "List active DTCs")
             help_table.add_row("help", "Show this help")
             help_table.add_row("quit", "Exit OpenTune")
-            help_table.add_row("<anything>", "Describe a problem — AI engineers a solution")
+            help_table.add_row("<anything>", "Describe a problem -  AI engineers a solution")
             console.print(Panel(help_table, title="[cyan]COMMANDS[/cyan]", border_style="dim"))
             continue
 
         # ----------------------------------------------------------------
-        # All other input goes to the AI — two-phase diagnostic flow
+        # All other input goes to the AI - two-phase diagnostic flow
         # ----------------------------------------------------------------
         console.print()
-        console.print("[dim cyan]Before I run anything — let me check what the system sees.[/dim cyan]")
+        console.print("[dim cyan]Before I run anything - let me check what the system sees.[/dim cyan]")
         console.print()
 
         live_data = live_monitor.get_current_data()
@@ -1308,7 +1332,7 @@ def run_chat_loop(
         # Display findings
         if understanding.data_highlights:
             for highlight in understanding.data_highlights:
-                console.print(f"  [cyan]→[/cyan] {highlight}")
+                console.print(f"  [cyan]'[/cyan] {highlight}")
             console.print()
 
         # Check for known OBDAgent procedures
@@ -1342,7 +1366,7 @@ def run_chat_loop(
         # Show brief plan summary + safety notes
         render_plan_summary(proc)
 
-        # Natural-language confirmation — never a blunt Y/N gate
+        # Natural-language confirmation - never a blunt Y/N gate
         try:
             confirm_raw = Prompt.ask("[bold white]Ready to start?[/bold white]", default="yes")
         except (KeyboardInterrupt, EOFError):
@@ -1421,10 +1445,9 @@ def run_chat_loop(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="opentune",
-        description="OpenTune — Open Diagnostics. Infinite Solutions.",
+        description="OpenTune -  Open Diagnostics. Infinite Solutions.",
     )
     mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("--sim", action="store_true", default=False, help="Simulation mode")
     mode_group.add_argument("--real", action="store_true", help="Real ELM327 adapter")
     parser.add_argument("--port", default=None, help="Serial port for ELM327 (e.g. /dev/ttyUSB0)")
     parser.add_argument("--skip-wizard", action="store_true", default=False,
@@ -1461,162 +1484,108 @@ def _print_boot_header() -> None:
     console.print()
 
 
-def _show_no_adapter_message() -> None:
-    """Show the 'no adapter' panel and wait for the user to continue."""
-    from rich.text import Text as _Text
-    console.print(Panel(
-        _Text.assemble(
-            _Text("⚠️  No OBD adapter detected.\n\n", style="bold yellow"),
-            _Text(
-                "You can still use OpenTune's AI assistant for:\n"
-                "  • Fault code lookups\n"
-                "  • Repair procedure guidance\n"
-                "  • Technical questions\n\n"
-                "Plug in your adapter anytime — it'll connect automatically.",
-                style="white",
-            ),
-        ),
-        border_style="yellow",
-        title="[yellow]NO ADAPTER[/yellow]",
-    ))
-    console.print()
-    try:
-        Prompt.ask("[dim][ Continue to Chat → ][/dim]", default="")
-    except (KeyboardInterrupt, EOFError):
-        pass
-
-
-def select_mode_interactive() -> tuple[ConnectionMode, Optional[str]]:
-    """Show mode selection screen and return (mode, port). Called only when no CLI flag passed."""
-    while True:
-        console.print()
-        panel_content = (
-            "\n"
-            "   [bold white][1][/bold white]  [cyan]SIM[/cyan]   — Simulation  [dim](no adapter needed)[/dim]\n"
-            "\n"
-            "   [bold white][2][/bold white]  [cyan]REAL[/cyan]  — ELM327 Hardware\n"
-        )
-        console.print(Panel(
-            panel_content,
-            title="[bold cyan]Select Connection Mode[/bold cyan]",
-            border_style="cyan",
-            padding=(0, 2),
-        ))
-
-        try:
-            choice = Prompt.ask("\n[bold cyan]Mode[/bold cyan]", default="1").strip()
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Exiting.[/dim]")
-            sys.exit(0)
-
-        if choice == "1":
-            return ConnectionMode.SIM, None
-
-        if choice == "2":
-            try:
-                port_input = Prompt.ask(
-                    "[dim]Port (press Enter to auto-detect, or type e.g. COM4 or /dev/tty.usbserial-0001)[/dim]",
-                    default="",
-                ).strip()
-            except (KeyboardInterrupt, EOFError):
-                console.print("\n[dim]Exiting.[/dim]")
-                sys.exit(0)
-            return ConnectionMode.REAL, port_input or None
-
-        console.print("[bold red]  Invalid choice — enter 1 or 2[/bold red]")
-
-
 def main() -> None:
     args = parse_args()
 
     from config import DEFAULT_PORT
 
-    # ── Welcome wizard (first run only) ──────────────────────────────────
+    # Welcome wizard (first run only)
     if not args.skip_wizard:
         from config.settings_manager import is_first_run
         if is_first_run():
             from ui.welcome import run_wizard
             run_wizard()
 
-    # ── Boot header: logo + tagline ───────────────────────────────────────
     _print_boot_header()
 
-    # ── OBD adapter detection ─────────────────────────────────────────────
     from obd.detector import detect_adapter, AdapterPoller
 
-    if args.sim:
-        # Simulation mode: skip real scan, proceed directly
-        detected_port = detect_adapter(sim=True, show_progress=False)  # returns "SIM"
-        mode = ConnectionMode.SIM
-        port = args.port or DEFAULT_PORT
-    elif args.real:
-        # Force real mode: use specified port or auto-detect
-        if args.port:
-            detected_port = args.port
-        else:
-            detected_port = detect_adapter(sim=False, show_progress=True)
-        if detected_port:
-            console.print(
-                f"[bold green]✅ OBD Adapter connected — {detected_port} — Ready to scan[/bold green]"
-            )
-            console.print()
-        mode = ConnectionMode.REAL
-        port = detected_port or DEFAULT_PORT
+    # Detect adapter
+    if args.real and args.port:
+        detected_port = args.port
     else:
-        # Auto-detect: if adapter found → live OBD interface; else → chat interface
         detected_port = detect_adapter(sim=False, show_progress=True)
-        if detected_port:
-            console.print(
-                f"[bold green]✅ OBD Adapter connected — {detected_port} — Ready to scan[/bold green]"
-            )
-            console.print()
-            mode = ConnectionMode.REAL
-            port = detected_port
-        else:
-            _show_no_adapter_message()
-            mode = ConnectionMode.SIM
-            port = args.port or DEFAULT_PORT
 
-    # ── Background hot-plug poller ────────────────────────────────────────
+    obd_connected = bool(detected_port)
+    port = detected_port or args.port or DEFAULT_PORT
+    mode = ConnectionMode.REAL
+
+    # Hot-plug poller - notifies when dongle is plugged in mid-session
     def _on_adapter_connect(hotplug_port: str) -> None:
         console.print()
         console.print(Panel(
-            f"[bold green]🔌 OBD adapter detected! Press S to switch to Live Scan[/bold green]\n"
-            f"[dim]Port: {hotplug_port}[/dim]",
+            f"[bold green]OBD adapter detected on {hotplug_port}[/bold green]\n"
+            "[dim]Restart OpenTune to connect to your vehicle.[/dim]",
             border_style="green",
+            title="[green]ADAPTER DETECTED[/green]",
         ))
 
-    poller = AdapterPoller(on_connect=_on_adapter_connect, sim=args.sim)
+    poller = AdapterPoller(on_connect=_on_adapter_connect, sim=False)
     poller.start()
 
-    # Show launch screen (no vehicle info yet)
-    render_launch_screen(mode)
+    # Init shared components (always available)
+    logger = SessionLogger()
+    base_path = Path(__file__).parent
+    knowledge = KnowledgeEngine(base_path)
+    knowledge.seed_initial_knowledge()
+    profiles = VehicleProfileManager()
 
-    # Connect
-    console.print(f"[dim]Connecting in [bold]{mode.value.upper()}[/bold] mode...[/dim]")
+    if not obd_connected:
+        # No adapter: show full menu in locked state, AI/KB still available
+        console.print(Panel(
+            "[bold yellow]No OBD adapter detected.[/bold yellow]\n\n"
+            "[white]All features are shown below. OBD features will unlock when you connect your adapter.[/white]\n"
+            "[dim]Chat and Knowledge Base are fully available right now.[/dim]",
+            border_style="yellow",
+            title="[yellow]CONNECT YOUR OBD DONGLE[/yellow]",
+        ))
+        console.print()
+
+        # Stub connection and scan result for menu compatibility
+        conn = OBDConnection(mode=mode, port=port)
+        from core.scanner import ScanResult
+        scan_result = ScanResult(dtcs=[], vehicle_display="No vehicle", vin="N/A", ecus=[])
+        live_monitor = LiveMonitor(conn)
+        ai_monitor = AIMonitor(live_monitor)
+        engineer = ProcedureEngineer(knowledge_engine=knowledge)
+
+        try:
+            run_main_menu(
+                conn, scan_result, live_monitor, ai_monitor,
+                engineer, logger, profiles, knowledge,
+                obd_connected=False,
+            )
+        finally:
+            poller.stop()
+        return
+
+    # Adapter found - connect normally
+    console.print(f"[bold green]OBD Adapter connected: {detected_port}[/bold green]")
+    console.print()
+
+    render_launch_screen(mode)
+    console.print("[dim]Connecting...[/dim]")
     console.print()
 
     conn = OBDConnection(mode=mode, port=port)
-
     with console.status("[cyan]Establishing connection...[/cyan]", spinner="dots"):
         connected = conn.connect()
 
     if not connected:
         console.print(Panel(
             f"[bold red]Connection failed[/bold red]\n\n"
-            f"[white]Could not connect to {'ELM327 adapter' if mode == ConnectionMode.REAL else 'simulator'}.[/white]\n"
+            f"[white]Could not connect to ELM327 adapter.[/white]\n"
             f"[dim]Port: {port}[/dim]",
             border_style="red",
         ))
+        poller.stop()
         sys.exit(1)
 
     vehicle = conn.vehicle
     vehicle_display = vehicle.display_name() if vehicle else "Unknown"
     vin = vehicle.vin if vehicle else "UNKNOWN"
 
-    # Refresh launch screen with vehicle info
     render_launch_screen(mode, vehicle_display, vin)
-
     console.print(f"[green]  Connected to [bold]{vehicle_display}[/bold]  (VIN: {vin})[/green]")
     console.print()
 
@@ -1628,26 +1597,15 @@ def main() -> None:
 
     render_scan_result(scan_result)
 
-    # Start live monitor
     live_monitor = LiveMonitor(conn)
     live_monitor.start()
 
-    # Start AI monitor
     ai_monitor = AIMonitor(live_monitor)
     if ANTHROPIC_API_KEY:
         ai_monitor.start()
 
-    # Init logger, knowledge engine, vehicle profiles
-    logger = SessionLogger()
-    base_path = Path(__file__).parent
-    knowledge = KnowledgeEngine(base_path)
-    knowledge.seed_initial_knowledge()
-    profiles = VehicleProfileManager()
-
-    # Init engineer with knowledge engine
     engineer = ProcedureEngineer(knowledge_engine=knowledge)
 
-    # Show intelligence tier status
     try:
         from config import OLLAMA_MODEL
         _router = IntelligenceRouter(api_key=__import__("config").API_KEY, ollama_model=OLLAMA_MODEL)
@@ -1658,15 +1616,14 @@ def main() -> None:
 
     if not ANTHROPIC_API_KEY:
         console.print(Panel(
-            "[bold yellow]No ANTHROPIC_API_KEY found[/bold yellow]\n\n"
+            "[bold yellow]No API key configured[/bold yellow]\n\n"
             "[white]Running in scan-only mode.[/white]\n"
-            "[dim]Set ANTHROPIC_API_KEY in .env to enable AI procedure engineering.[/dim]",
+            "[dim]Add your API key in Settings to enable AI procedure engineering.[/dim]",
             border_style="yellow",
-            title="[yellow]API KEY MISSING[/yellow]",
+            title="[yellow]AI OFFLINE[/yellow]",
         ))
         console.print()
 
-    # Auto-save vehicle profile
     if conn.vehicle:
         v = conn.vehicle
         profiles.save_profile(
@@ -1674,11 +1631,11 @@ def main() -> None:
             year=v.year, engine=v.engine,
         )
 
-    # Main menu
     try:
         run_main_menu(
             conn, scan_result, live_monitor, ai_monitor,
             engineer, logger, profiles, knowledge,
+            obd_connected=True,
         )
     finally:
         poller.stop()
@@ -1695,3 +1652,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
